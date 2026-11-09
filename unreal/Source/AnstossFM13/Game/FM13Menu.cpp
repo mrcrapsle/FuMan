@@ -87,6 +87,14 @@ namespace
 	}
 
 	FString Geld(int64 V) { return UFM13GameInstance::FormatMoney(V); }
+
+	// Spielvorbereitung: Ansatz des Gegners, auf den die Woche ausgerichtet wird
+	const TCHAR* PrepKeys[] = { TEXT("P"), TEXT("B"), TEXT("K") };
+	const TCHAR* PrepLabels[] = { TEXT("gegen Pressing"), TEXT("gegen Ballbesitz"), TEXT("gegen Konter") };
+	const TCHAR* PrepNamen[] = { TEXT("Pressing"), TEXT("Ballbesitz"), TEXT("Konter") }; // so meldet GetTactics().Prep die Wahl
+	// Derbywoche
+	const TCHAR* DerbyKeys[] = { TEXT("stimmung"), TEXT("praemie"), TEXT("kampfansage") };
+	const TCHAR* DerbyLabels[] = { TEXT("Stimmung machen"), TEXT("Derby-Praemie"), TEXT("Kampfansage") };
 }
 
 void SFM13Menu::Construct(const FArguments& InArgs)
@@ -272,15 +280,26 @@ TSharedRef<SWidget> SFM13Menu::BuildTable()
 			Knopf(FString::Printf(TEXT("%d. Liga"), L + 1), FOnClicked::CreateSP(this, &SFM13Menu::OnTableLevel, L), L == Liga ? CKnopfAktiv : CKnopf, 11)
 		];
 	Box->AddSlot().AutoHeight()[Ligen];
-	Box->AddSlot().AutoHeight()[Ueberschrift(FM13::LeagueName(Liga))];
+	const TCHAR* Arten[] = { TEXT("Gesamt"), TEXT("Heim"), TEXT("Auswaerts") };
+	TSharedRef<SHorizontalBox> Modi = SNew(SHorizontalBox);
+	for (int32 M = 0; M < 3; ++M)
+		Modi->AddSlot().AutoWidth().Padding(FMargin(0.f, 4.f, 4.f, 0.f))
+		[
+			Knopf(Arten[M], FOnClicked::CreateSP(this, &SFM13Menu::OnTableMode, M), M == TableMode ? CKnopfAktiv : CKnopf, 11)
+		];
+	Box->AddSlot().AutoHeight()[Modi];
+	Box->AddSlot().AutoHeight()[Ueberschrift(FString(FM13::LeagueName(Liga)) + (TableMode == 1 ? TEXT(" - Heimtabelle") : (TableMode == 2 ? TEXT(" - Auswaertstabelle") : TEXT(""))))];
 	const TArray<float> B = { 40.f, 300.f, 40.f, 40.f, 40.f, 40.f, 80.f, 60.f, 50.f };
 	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pl."), TEXT("Verein"), TEXT("Sp"), TEXT("S"), TEXT("U"), TEXT("N"), TEXT("Tore"), TEXT("Diff"), TEXT("Pkt") }, B, CGedimmt, false, nullptr, true)];
-	for (const FFM13TableRowView& R : G->GetTable(Liga))
+	for (const FFM13TableRowView& R : G->GetTableSplit(Liga, TableMode))
 	{
 		const FLinearColor Farbe = R.bOwn ? CAkzent : ((R.Rank <= 2 && Liga > 0) ? CGut : ((R.Rank >= 17 && Liga < FM13::NumLeagues - 1) ? CSchlecht : CText));
 		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[Zeile({ FString::FromInt(R.Rank), R.Club, FString::FromInt(R.Played), FString::FromInt(R.Won), FString::FromInt(R.Drawn),
 			FString::FromInt(R.Lost), FString::Printf(TEXT("%d:%d"), R.GoalsFor, R.GoalsAgainst), FString::Printf(TEXT("%+d"), R.GoalDiff), FString::FromInt(R.Points) }, B, Farbe, R.bOwn)];
 	}
+	const TArray<FString> Statistik = G->GetLeagueStats(Liga);
+	if (Statistik.Num()) Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Statistik der Liga"))];
+	for (const FString& Z : Statistik) Box->AddSlot().AutoHeight()[Txt(Z, CGedimmt, 12)];
 	return Box;
 }
 
@@ -290,21 +309,32 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
 	if (!G) return Box;
 	const int32 Auswahl = Controller.IsValid() ? Controller->Selection : -1;
-	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 130.f, 100.f, 60.f };
+	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 60.f, 110.f, 130.f, 100.f, 60.f };
 	Box->AddSlot().AutoHeight()[BuildOffers(false)];
-	Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("* = Startelf (beste Elf im %s, Verletzte und Gesperrte fehlen)"), *G->GetTactics().Formation), CGedimmt, 11)];
-	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
+	const FFM13TacticsView Taktik = G->GetTactics();
+	Box->AddSlot().AutoHeight()
+	[
+		SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center)[Txt(Taktik.bManualLineup
+			? FString::Printf(TEXT("* = Startelf, von Hand aufgestellt (%s). Fehlende Plaetze fuellt das Spiel auf."), *Taktik.Formation)
+			: FString::Printf(TEXT("* = Startelf, automatisch (beste Elf im %s, Verletzte und Gesperrte fehlen)"), *Taktik.Formation), CGedimmt, 11)]
+		+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(10.f, 0.f))[Knopf(TEXT("Automatisch aufstellen"), FOnClicked::CreateSP(this, &SFM13Menu::OnAutoLineup), Taktik.bManualLineup ? CKnopfAktiv : CKnopf, 11)]
+	];
+	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Moral"), TEXT("Charakter"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
 	const TArray<FFM13PlayerView> Kader = G->GetSquad();
 	for (int32 i = 0; i < Kader.Num(); ++i)
 	{
 		const FFM13PlayerView& P = Kader[i];
 		TSharedRef<SHorizontalBox> Knoepfe = SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[SNew(SBox).WidthOverride(70.f)[Knopf(P.bInStartingEleven ? TEXT("Raus") : TEXT("Rein"),
+				FOnClicked::CreateSP(this, &SFM13Menu::OnToggleLineup, P.Id), P.bInStartingEleven ? CKnopf : FLinearColor(0.08f, 0.35f, 0.20f, 1.f), 11)]]
 			+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(TEXT("Verlaengern"), FOnClicked::CreateSP(this, &SFM13Menu::OnRenew, P.Id), CKnopf, 11)]
 			+ SHorizontalBox::Slot().AutoWidth()[Knopf(TEXT("Verkaufen"), FOnClicked::CreateSP(this, &SFM13Menu::OnSell, P.Id), FLinearColor(0.35f, 0.10f, 0.10f, 1.f), 11)];
 		FString Name = P.InjuredMatchdays > 0 ? FString::Printf(TEXT("%s (verletzt %d)"), *P.Name, P.InjuredMatchdays) : P.Name;
 		if (P.SuspendedMatchdays > 0) Name += FString::Printf(TEXT(" (gesperrt %d)"), P.SuspendedMatchdays);
+		if (P.bBenched) Name += TEXT(" (draussen)");
 		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[Zeile({ P.Position + (P.bInStartingEleven ? TEXT(" *") : TEXT("")), Name, FString::FromInt(P.Strength),
-			FString::FromInt(P.Potential), FString::FromInt(P.Age), FString::FromInt(P.GoalsSeason), Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
+			FString::FromInt(P.Potential), FString::FromInt(P.Age), FString::FromInt(P.GoalsSeason), FString::FromInt(P.Morale), P.Character, Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
 			B, (P.InjuredMatchdays > 0 || P.SuspendedMatchdays > 0) ? CSchlecht : (P.ContractYears <= 1 ? CAkzent : CText), i == Auswahl, Knoepfe)];
 	}
 	return Box;
@@ -486,6 +516,21 @@ TSharedRef<SWidget> SFM13Menu::BuildCups()
 			!C.bOwnEntered ? TEXT("nicht qualifiziert") : (C.bOwnAlive ? TEXT("dabei") : TEXT("ausgeschieden"))))];
 		for (const FString& Z : C.LastRound) Box->AddSlot().AutoHeight()[Txt(Z, CGedimmt, 12)];
 	}
+	const FFM13EuropeView E = G->GetEurope();
+	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Europapokal"))];
+	if (!E.bActive)
+		Box->AddSlot().AutoHeight()[Txt(E.bQualifiedNext ? FString(TEXT("Qualifiziert fuer die naechste Saison!"))
+			: FString(TEXT("Nicht dabei. Platz 1 bis 4 der Bundesliga oder der DFB-Pokalsieg bringen dich hinein.")), E.bQualifiedNext ? CGut : CGedimmt)];
+	else
+	{
+		Box->AddSlot().AutoHeight()[Txt(E.Winner.IsEmpty() ? TEXT("Stand: ") + E.Stage : TEXT("Sieger: ") + E.Winner, E.Winner.IsEmpty() ? CText : CGut, 14, true)];
+		if (E.GroupA.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Gruppe A"), CAkzent, 13, true)];
+		for (const FString& Z : E.GroupA) Box->AddSlot().AutoHeight()[Txt(Z, CText, 12)];
+		if (E.GroupB.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Gruppe B"), CAkzent, 13, true)];
+		for (const FString& Z : E.GroupB) Box->AddSlot().AutoHeight()[Txt(Z, CText, 12)];
+		for (const FString& Z : E.KnockOut) Box->AddSlot().AutoHeight()[Txt(Z, CAkzent, 12)];
+		for (const FString& Z : E.LastResults) Box->AddSlot().AutoHeight()[Txt(Z, CGedimmt, 12)];
+	}
 	Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 10.f))[Txt(TEXT("Unterhalb der 3. Liga fuehrt der Weg in den DFB-Pokal nur ueber den Landespokal."), CGedimmt, 11)];
 	return Box;
 }
@@ -518,6 +563,11 @@ TSharedRef<SWidget> SFM13Menu::BuildCareer()
 	Box->AddSlot().AutoHeight()[Ueberschrift(FString::Printf(TEXT("Erfolge (%d von %d)"), Frei, Erfolge.Num()))];
 	for (const FFM13AchievementView& E : Erfolge)
 		Box->AddSlot().AutoHeight()[Txt(E.bUnlocked ? FString::Printf(TEXT("[x] %s (Saison %d)"), *E.Label, E.Season) : FString(TEXT("[ ] ")) + E.Label, E.bUnlocked ? CGut : CGedimmt, 12)];
+
+	const TArray<FString> Auszeichnungen = G->GetAwards();
+	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Auszeichnungen"))];
+	if (!Auszeichnungen.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Am Saisonende kuert die Liga Torschuetzenkoenig, Spieler und Talent der Saison."), CGedimmt, 12)];
+	for (const FString& Z : Auszeichnungen) Box->AddSlot().AutoHeight()[Txt(Z, CAkzent, 12)];
 
 	const TArray<FFM13LegendView> Legenden = G->GetLegends();
 	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Vereinslegenden"))];
@@ -575,6 +625,56 @@ TSharedRef<SWidget> SFM13Menu::BuildTactics()
 		T.MatchStrength, T.ElfStrength, T.StyleBonus, T.FormationBonus, T.MatchupBonus, T.FitnessCostPercent), CAkzent)];
 	if (!T.Predictable.IsEmpty())
 		Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Achtung: Du spielst berechenbar (%s). Gegner stellen sich darauf ein."), *T.Predictable), CSchlecht, 12)];
+	if (!T.NextOpponent.IsEmpty())
+	{
+		Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Prognose: Sieg %d   Remis %d   Niederlage %d (Prozent). Moral der Elf %+.1f."),
+			T.ForecastWin, T.ForecastDraw, T.ForecastLoss, T.MoraleBonus), CText, 13, true)];
+
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Kabinenansprache"))];
+		TSharedRef<SHorizontalBox> Ansprachen = SNew(SHorizontalBox);
+		for (int32 i = 0; i < T.TalkKeys.Num(); ++i)
+			Ansprachen->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))
+			[
+				Knopf(FString::Printf(TEXT("%s (%+.1f)"), T.TalkLabels.IsValidIndex(i) ? *T.TalkLabels[i] : *T.TalkKeys[i], T.TalkBonuses.IsValidIndex(i) ? T.TalkBonuses[i] : 0.f),
+					FOnClicked::CreateSP(this, &SFM13Menu::OnTalk, i), T.TalkKeys[i] == T.PendingTalk ? CKnopfAktiv : CKnopf, 12)
+			];
+		Box->AddSlot().AutoHeight()[Ansprachen];
+		Box->AddSlot().AutoHeight()[Txt(T.PendingTalk.IsEmpty() ? FString(TEXT("Noch keine Ansprache fuer dieses Spiel. Dieselbe Ansprache nutzt sich ab."))
+			: FString(TEXT("Gewaehlt fuer das naechste Spiel.")), CGedimmt, 11)];
+
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Spielvorbereitung"))];
+		TSharedRef<SHorizontalBox> Vorbereitung = SNew(SHorizontalBox);
+		for (int32 i = 0; i < 3; ++i)
+			Vorbereitung->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))
+			[
+				Knopf(PrepLabels[i], FOnClicked::CreateSP(this, &SFM13Menu::OnPrep, i), T.Prep == PrepNamen[i] ? CKnopfAktiv : CKnopf, 12)
+			];
+		Box->AddSlot().AutoHeight()[Vorbereitung];
+		Box->AddSlot().AutoHeight()[Txt(TEXT("Triffst du den Ansatz des Gegners, gibt es +2,5 Staerke. Der Chef-Analyst oben nennt nur den Grundstil."), CGedimmt, 11)];
+
+		if (!T.Rival.IsEmpty())
+		{
+			Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Derby gegen ") + T.Rival)];
+			Box->AddSlot().AutoHeight()[Txt(T.MatchdaysToDerby < 0 ? FString(TEXT("In dieser Saison kein Derby mehr."))
+				: (T.MatchdaysToDerby == 0 ? FString(TEXT("Das naechste Spiel ist das Derby!")) : FString::Printf(TEXT("Derby in %d Spieltagen."), T.MatchdaysToDerby)),
+				T.MatchdaysToDerby == 0 ? CAkzent : CText)];
+			if (T.MatchdaysToDerby >= 0 && T.MatchdaysToDerby <= 3)
+			{
+				TSharedRef<SHorizontalBox> Derby = SNew(SHorizontalBox);
+				for (int32 i = 0; i < 3; ++i)
+				{
+					const bool bGebucht = T.DerbyPreps.Contains(DerbyKeys[i]);
+					const FString Name = i == 0 ? FString::Printf(TEXT("%s (%s)"), DerbyLabels[i], *Geld(T.DerbyStimmungCost)) : FString(DerbyLabels[i]);
+					Derby->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))
+					[
+						Knopf(bGebucht ? Name + TEXT(" - gebucht") : Name, FOnClicked::CreateSP(this, &SFM13Menu::OnDerbyPrep, i), bGebucht ? CKnopfAktiv : CKnopf, 12)
+					];
+				}
+				Box->AddSlot().AutoHeight()[Derby];
+				Box->AddSlot().AutoHeight()[Txt(TEXT("Stimmung +1,5 Staerke, Praemie +5 Moral fuer die Elf, Kampfansage +1 (verlorenes Derby kostet dann mehr)."), CGedimmt, 11)];
+			}
+		}
+	}
 
 	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Formation"))];
 	TSharedRef<SHorizontalBox> Formationen = SNew(SHorizontalBox);
@@ -763,6 +863,64 @@ FReply SFM13Menu::OnNewGame()
 		G->NewGame(TEXT("1.FC Moritz Leipzig"));
 		Status(TEXT("Neue Karriere in der 6. Liga gestartet."));
 	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnToggleLineup(int32 PlayerId)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; if (!G->ToggleLineupPlayer(PlayerId, Grund)) Status(Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnAutoLineup()
+{
+	if (UFM13GameInstance* G = Game.Get()) { G->AutoLineup(); Status(TEXT("Die beste Elf steht wieder automatisch auf dem Platz.")); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnTalk(int32 Index)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		const FFM13TacticsView T = G->GetTactics();
+		FString Grund;
+		if (!T.TalkKeys.IsValidIndex(Index)) Status(TEXT("Unbekannte Ansprache."));
+		else Status(G->ChooseTalk(T.TalkKeys[Index], Grund) ? TEXT("Ansprache fuer das naechste Spiel gewaehlt.") : Grund);
+	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnPrep(int32 Index)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		FString Grund;
+		if (Index < 0 || Index > 2) Status(TEXT("Unbekannter Ansatz."));
+		else Status(G->SetMatchPrep(PrepKeys[Index], Grund) ? FString::Printf(TEXT("Training ausgerichtet: %s."), PrepLabels[Index]) : Grund);
+	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnDerbyPrep(int32 Index)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		FString Grund;
+		if (Index < 0 || Index > 2) Status(TEXT("Unbekannte Vorbereitung."));
+		else Status(G->BookDerbyPrep(DerbyKeys[Index], Grund) ? FString::Printf(TEXT("%s gebucht."), DerbyLabels[Index]) : Grund);
+	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnTableMode(int32 Mode)
+{
+	TableMode = FMath::Clamp(Mode, 0, 2);
 	Refresh();
 	return FReply::Handled();
 }

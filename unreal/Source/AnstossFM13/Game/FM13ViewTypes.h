@@ -27,6 +27,9 @@ struct FFM13PlayerView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 YellowCards = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 SeasonsAtClub = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Archetype;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Character;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Morale = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bBenched = false;
 };
 
 USTRUCT(BlueprintType)
@@ -191,11 +194,39 @@ struct FFM13TacticsView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString NextOpponent;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 NextOpponentStrength = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bNextHome = true;
-	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString OppPlan;
-	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bOppReacted = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString OppPlan;        // öffentlicher Grundstil des Gegners
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bOppReacted = false; // nur nach dem Spiel bekannt, hier immer false
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 MatchupBonus = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Predictable;   // leer = nicht berechenbar
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Referee;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bManualLineup = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> TalkKeys;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> TalkLabels;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<float> TalkBonuses;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString PendingTalk;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Prep;           // gewählte Vorbereitung (leer = keine)
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ForecastWin = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ForecastDraw = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ForecastLoss = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") float MoraleBonus = 0.f;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Rival;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 MatchdaysToDerby = -1;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DerbyPreps;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 DerbyStimmungCost = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13EuropeView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bActive = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bQualifiedNext = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Stage;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Winner;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> GroupA;     // fertige Tabellenzeilen
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> GroupB;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> KnockOut;   // Halbfinale und Finale
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> LastResults;
 };
 
 USTRUCT(BlueprintType)

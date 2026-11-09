@@ -22,3 +22,9 @@ const TCHAR* FM13PositionName(EFM13Position Pos)
 	default: return TEXT("ST");
 	}
 }
+
+const TCHAR* FM13CharacterName(uint8 Character)
+{
+	static const TCHAR* Namen[] = { TEXT("Ruhig"), TEXT("Emotional"), TEXT("Ehrgeizig"), TEXT("Selbstbewusst"), TEXT("Bescheiden"), TEXT("Hitzkoepfig") };
+	return Namen[Character % 6];
+}

@@ -31,6 +31,7 @@ enum class EFM13Expectation : uint8 { Favorit = 0, Offen = 1, Aussenseiter = 2 }
 enum class EFM13SeasonOutcome : uint8 { Stayed = 0, Promoted = 1, Relegated = 2 };
 
 const TCHAR* FM13PositionName(EFM13Position Pos);
+const TCHAR* FM13CharacterName(uint8 Character);
 
 struct FFM13Player
 {
@@ -51,6 +52,8 @@ struct FFM13Player
 	int32 YellowCards = 0;      // Gelbe Karten der Saison, jede fünfte sperrt
 	int32 SeasonsAtClub = 0;    // für Legenden beim Karriereende
 	uint8 Archetype = 0;        // Entwicklungstyp (FM13Dev), aus der Id abgeleitet
+	uint8 Character = 0;        // characterPool: Ruhig, Emotional, Ehrgeizig, Selbstbewusst, Bescheiden, Hitzkoepfig
+	int32 Morale = 65;          // 5 bis 100
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };
@@ -104,6 +107,35 @@ struct FFM13Legend
 	int32 Goals = 0;
 	int32 BestStrength = 0;
 	int32 RetiredSeason = 0;
+};
+
+// Europapokal (js/europe.js, „Champions Cup“): zwei Vierergruppen, Halbfinale mit Hin- und Rückspiel, Finale
+struct FFM13EuroTeam
+{
+	FString Name;
+	int32 Strength = 80;
+	int32 Played = 0, Won = 0, Drawn = 0, Lost = 0, GoalsFor = 0, GoalsAgainst = 0;
+	int32 Points() const { return Won * 3 + Drawn; }
+};
+
+struct FFM13EuroTie
+{
+	FString A, B;                 // A hat im Hinspiel Heimrecht
+	int32 Leg1A = -1, Leg1B = -1, Leg2A = -1, Leg2B = -1;
+	bool bPenalties = false;
+	FString Winner;
+};
+
+struct FFM13Europe
+{
+	bool bActive = false;         // Wettbewerb läuft in dieser Saison (eigener Verein dabei)
+	TArray<FFM13EuroTeam> Groups[2];
+	int32 GroupRound = 0;         // gespielte Gruppenspieltage (0 bis 6)
+	TArray<FFM13EuroTie> Semis;
+	FFM13EuroTie Final;
+	FString Winner;
+	FString OwnStage;             // "Gruppe", "Halbfinale", "Finale", "Sieger"
+	TArray<FString> LastResults;  // Ergebnisse des letzten Europapokal-Spieltags
 };
 
 struct FFM13RelegationResult
@@ -199,6 +231,11 @@ struct FFM13OwnMatchReport
 	FString OppArchetype;       // geplanter Ansatz des Gegners (Pressing, Ballbesitz, Konter, neutral)
 	int32 TacticBonus = 0;      // Taktik-Duell: +2, 0 oder -2
 	TArray<FString> Cards;      // Rote Karten und Sperren
+	FString Talk;               // gehaltene Kabinenansprache
+	float TalkBonus = 0.f;
+	float PrepBonus = 0.f;      // Spielvorbereitung (richtig getippt +2,5)
+	float DerbyBonus = 0.f;
+	bool bDerby = false;
 	TArray<FString> Injuries;   // in diesem Spiel verletzt
 	FString Competition;        // "Liga", "DFB-Pokal", "Landespokal"
 	bool bPenalties = false;
@@ -217,5 +254,6 @@ struct FFM13SeasonSummary
 	TArray<FString> NewYouth;  // neue Talente
 	TArray<FString> NewLegends;
 	TArray<FString> NewAchievements;
+	TArray<FString> Awards;     // Auszeichnungen der Saison (Torjäger, Spieler, Trainer)
 	FFM13RelegationResult Relegation;
 };

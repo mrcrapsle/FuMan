@@ -105,7 +105,7 @@ int main()
 		PRUEFE(GI.SetFormation("5-4-1", Grund) && GI.GetTactics().Formation == FString("5-4-1"), "Formation ueber die GameInstance");
 		PRUEFE(GI.SetTacticStyle("pressing", Grund) && GI.GetTactics().StyleBonus == 2, "Spielstil ueber die GameInstance");
 		PRUEFE(!GI.SetTacticStyle("tiki", Grund) && !Grund.IsEmpty(), "Unbekannter Stil erklaert sich");
-		PRUEFE(GI.GetAchievements().Num() == 13, "13 Erfolge in der Ansicht");
+		PRUEFE(GI.GetAchievements().Num() == 15, "15 Erfolge in der Ansicht");
 		PRUEFE(!GI.GetSponsor().Name.IsEmpty(), "Sponsor in der Ansicht");
 		Taste("T");
 		PRUEFE(PC.Page == EFM13Page::Taktik, "Taste T oeffnet die Taktik");

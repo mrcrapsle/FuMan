@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach Runde A: **14 portiert, 23 teilweise, 97 offen, 11 entfallen** (von 145 Modulen in `js/`).
+Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 145 Modulen in `js/`).
 
 ## Ordner
 
@@ -51,10 +51,10 @@ Stand nach Runde A: **14 portiert, 23 teilweise, 97 offen, 11 entfallen** (von 1
 |---|---:|---|---|---|
 | `opponent-tactics.js` | 98 | portiert | Gegner-Taktik | FM13Tactics, PrepareOppPlan (Runde A) |
 | `tactic-system.js` | 67 | teilweise | Taktik-Bilanz | Taktik-Seite im Menü (Bilanz je Kombination offen) |
-| `squad.js` | 1022 | teilweise | Kader, Formationen | Kader-Seite, Formationen (Aufstellung von Hand offen) |
+| `squad.js` | 1022 | teilweise | Kader, Formationen | Kader-Seite, Formationen Aufstellung von Hand, Moral und Charakter (Runde B) |
 | `matchprep.js` | 940 | offen | SPIELVORBEREITUNG (Phase 26.1): Aufstellungs- und Taktikvorlagen sowie der Spieltag-Check |  |
-| `match-prep.js` | 86 | offen | Gegnervorbereitung (Phase 22.2): der Trainingsschwerpunkt "Match-Prep" war eine Scheinwahl |  |
-| `match-scout.js` | 74 | offen | Spielprognose des Chef-Analysten für das nächste Ligaspiel: simuliert die Partie mehrfach |  |
+| `match-prep.js` | 86 | portiert | Spielvorbereitung | SetMatchPrep: Ansatz des Gegners treffen gibt +2,5 (1:1), Taktik-Seite |
+| `match-scout.js` | 74 | teilweise | Spielprognose | Forecast aus der Torerwartung (Sieg/Remis/Niederlage), Taktik-Seite |
 | `match-live.js` | 1536 | offen | LIVE-STATISTIK |  |
 | `live-3d.js` | 362 | teilweise | 3D-Livespiel | 3D-Stadion mit Spielern und Ball (echtes Livespiel offen) |
 | `spielphysik.js` | 1437 | offen | Spielphysik im Livespiel: Ball und 22 Spieler werden physikalisch berechnet (Schwerkraft, |  |
@@ -62,9 +62,9 @@ Stand nach Runde A: **14 portiert, 23 teilweise, 97 offen, 11 entfallen** (von 1
 | `set-piece-drills.js` | 87 | offen | Standards einstudieren (Phase 22.3): "Standards" ist eine echte Einheit im Wochenplan |  |
 | `reaktionsspiel.js` | 234 | offen | Reaktionsspiele bei Standards (Elfmeter, Freistoß, Ecke): Ein Cursor läuft über eine Leist |  |
 | `co-trainer-live.js` | 213 | offen | Co-Trainer im Livespiel (Phase 21.3): nach jeder Szene prüft der Co-Trainer (staffMembers. |  |
-| `pregame-talk.js` | 119 | offen | Kabinenansprache vor dem Anpfiff (Phase 22.1): im Spielvorbericht (#prematch-talk-box) wäh |  |
+| `pregame-talk.js` | 119 | portiert | Kabinenansprache | ChooseTalk: drei Ansprachen, Bonus nach Lage und Abnutzung (1:1), Taktik-Seite |
 | `referee-critique.js` | 135 | offen | Schiedsrichter-Kritik nach dem Spiel (Phase 22.4): das Livespiel merkt sich strittige |  |
-| `derby-week.js` | 224 | offen | Derby-Woche (Phase 21.1): ab 3 Spieltagen vor einem Derby (seit 24.2 nach Ort, isDerbyOppo |  |
+| `derby-week.js` | 224 | teilweise | Derby-Woche | Rivale, Stimmung, Prämie, Kampfansage mit Folgen (Runde B); Fan-Aktionen offen |
 | `ausschreitungen.js` | 216 | offen | Ausschreitungen (Board-Karte "Ausschreitungen mehr ausbauen"): |  |
 | `ausschreitungen-szene.js` | 260 | offen | Ausschreitungen als Bild (Canvas): Szene im Fanblock nach dem Abpfiff (Fenster), Effekt im |  |
 | `live-fenster.js` | 138 | entfällt | Livespiel-Fenster im Browser | eigene Seite in Unreal |
@@ -77,10 +77,10 @@ Stand nach Runde A: **14 portiert, 23 teilweise, 97 offen, 11 entfallen** (von 1
 | `landescup.js` | 201 | portiert | Landespokal | FM13Cup, Qualifikation für den DFB-Pokal |
 | `cup-live.js` | 210 | offen | Pokal als Livespiel: An Pokal-Spieltagen spielt der Nutzer die eigene Partie im DFB-Pokal, |  |
 | `cup-final.js` | 182 | offen | Pokalfinale als Großereignis (DFB-Pokal und Landespokal): drei Spieltage vor dem Endspiel |  |
-| `europe.js` | 646 | offen | CHAMPIONS CUP (EUROPAPOKAL) |  |
+| `europe.js` | 646 | teilweise | Champions Cup | Zwei Vierergruppen, Halbfinale, Finale, Prämien, Qualifikation (Runde B); Auslosung vereinfacht |
 | `national-team.js` | 172 | offen | Länderspiele & Turniere: feste Länderspielpausen nach den Spieltagen 6, 13, 24 und 30. |  |
-| `league-awards.js` | 100 | offen | Liga-Auszeichnungen am Saisonende: Torjägerkanone, Elf der Saison, Trainer des Jahres und |  |
-| `league-stats.js` | 145 | offen | Liga-Statistiken (Reiter "Statistik" auf dem Liga-Bildschirm): Torjägerliste der ganzen |  |
+| `league-awards.js` | 100 | teilweise | Liga-Auszeichnungen | Torschützenkönig, Spieler und Talent der Saison (Runde B); Elf der Saison offen |
+| `league-stats.js` | 145 | teilweise | Liga-Statistik | Heim-/Auswärtstabelle, Liga-Statistik (Runde B); Torjägerliste aller Vereine offen |
 | `promotion-boost.js` | 53 | offen | Aufstiegsschub (Phase 25.18): KI-Aufsteiger rücken beim Saisonwechsel in evolveAiTeamStren |  |
 | `season-events.js` | 243 | offen | Saison-Ereignisse (Phase 15): Saisoneröffnung vor dem 1. Spieltag, Hallenturnier in der |  |
 | `season-preview.js` | 151 | offen | Saisonvorschau & Experten-Check: vor jeder Saison tippen die Experten die komplette Tabell |  |
@@ -229,7 +229,7 @@ Stand nach Runde A: **14 portiert, 23 teilweise, 97 offen, 11 entfallen** (von 1
 
 ## Nächste Runden (Vorschlag)
 
-1. **Runde B, Spiel:** Aufstellung von Hand, Matchvorbereitung und Spielprognose, Kabinenansprache, Derby-Woche, Live-Statistik, Europapokal, Liga-Auszeichnungen und -Statistik.
+1. **Runde B, Spiel (erledigt, Live-Statistik offen):** Aufstellung von Hand, Matchvorbereitung und Spielprognose, Kabinenansprache, Derby-Woche, Live-Statistik, Europapokal, Liga-Auszeichnungen und -Statistik.
 2. **Runde C, Kader:** Spielerstatistik und Noten, Kabine und Mannschaftsrat, Vertragsverhandlung und Ultimatum, Bonusklauseln, Leihen, zweite Mannschaft, Frauenteam.
 3. **Runde D, Transfers:** Transferpoker, Medizincheck, Vorverträge, Rückkauf, Gerüchte, Scouting, Transferstrategie.
 4. **Runde E, Wirtschaft:** Finanzzentrale, Fair Play, Merchandising, Industrie, Rohstoffe, Holding, Aktien, Wetten, Immobilien.

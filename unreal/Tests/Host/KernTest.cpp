@@ -533,7 +533,7 @@ static void TestRundeA()
 	W.ConcludeSeason(); // Saison 1 ist vorbei: Abschluss prüft die Erfolge
 	W.PlayMatchday();
 	PRUEFE(W.Achievements.ContainsByPredicate([](const FFM13Achievement& A) { return A.Id == FString(TEXT("millionaer")); }), "Erfolg Millionaer");
-	PRUEFE(FFM13World::AchievementCount() == 13 && FFM13World::AchievementLabel(TEXT("meister")).Contains(TEXT("Meister")), "Erfolgsliste");
+	PRUEFE(FFM13World::AchievementCount() == 15 && FFM13World::AchievementLabel(TEXT("meister")).Contains(TEXT("Meister")), "Erfolgsliste");
 	PRUEFE(W.Records.LongestUnbeatenStreak >= W.Records.UnbeatenStreak, "Serie ohne Niederlage gefuehrt");
 
 	// Saisonende: Entwicklung, Legenden, Relegation
@@ -542,11 +542,13 @@ static void TestRundeA()
 	V.Squad[0].Age = 37; V.Squad[0].SeasonsAtClub = 6; V.Squad[0].GoalsCareer = 12;
 	const FString LegName = V.Squad[0].Name;
 	while (V.PlayMatchday()) {}
+	TArray<int32> VorherIds;
+	for (const FFM13Player& P : V.Squad) VorherIds.Add(P.Id);
 	const FFM13SeasonSummary S = V.ConcludeSeason();
 	PRUEFE(V.Legends.Num() >= 1 && V.Legends[0].Name == LegName && S.NewLegends.Contains(LegName), "Vereinslegende beim Karriereende");
-	int32 MitSaison = 0;
-	for (const FFM13Player& P : V.Squad) if (P.SeasonsAtClub >= 1) ++MitSaison;
-	PRUEFE(MitSaison >= 12, "Saisons im Verein werden gezaehlt (%d Spieler mit einer Saison)", MitSaison);
+	int32 Falsch = 0;
+	for (const FFM13Player& P : V.Squad) if (VorherIds.Contains(P.Id) && P.SeasonsAtClub < 1) ++Falsch;
+	PRUEFE(Falsch == 0, "Saisons im Verein werden gezaehlt (%d ohne Zaehlung)", Falsch);
 
 	// Relegation: Platz 16 bzw. 3 spielen zwei Partien
 	int32 Relegationen = 0, Gewonnen = 0;
@@ -577,6 +579,111 @@ static void TestRundeA()
 	FString F;
 	PRUEFE(FM13Save::Decode(Text, L, F) && FM13Save::Encode(L) == Text, "Spielstand mit Taktik, Sponsor, Angeboten, Erfolgen (%s)", *F);
 	PRUEFE(L.Formation == W.Formation && L.Sponsor.Name == W.Sponsor.Name && L.Achievements.Num() == W.Achievements.Num(), "Neue Felder nach dem Laden");
+}
+
+static void TestRundeB()
+{
+	std::printf("Runde B: Aufstellung, Moral, Ansprache, Vorbereitung, Prognose, Derby, Europapokal, Auszeichnungen\n");
+	FFM13World W;
+	W.NewGame(TEXT("Aufstellungsverein"), 41);
+	FString Grund;
+	// Eigene Aufstellung: Spieler raus, Ersatz kommt automatisch, außerhalb der Position -10
+	const TArray<int32> Auto = W.StartingEleven();
+	const int32 Raus = Auto[3];
+	PRUEFE(W.ToggleLineupPlayer(Raus, Grund) && W.ManualLineup.Num() == 10 && !W.StartingEleven().Contains(Raus) && W.StartingEleven().Num() == 11, "Spieler raus, Elf wird ohne ihn aufgefuellt");
+	TArray<int32> BankIds;
+	for (const FFM13Player& P : W.Squad) if (!W.ManualLineup.Contains(P.Id) && P.Id != Raus && P.IsAvailable()) BankIds.Add(P.Id);
+	PRUEFE(BankIds.Num() >= 2 && W.ToggleLineupPlayer(BankIds[0], Grund) && W.StartingEleven().Contains(BankIds[0]) && W.ManualLineup.Num() == 11, "Bankspieler eingewechselt");
+	PRUEFE(!W.ToggleLineupPlayer(BankIds[1], Grund) && Grund.Contains(TEXT("voll")), "Volle Elf nimmt niemanden mehr auf");
+	PRUEFE(W.ToggleLineupPlayer(Raus, Grund) == false, "Herausgenommener kommt nicht ueber die volle Elf zurueck");
+	// Elf nur aus Torhütern und Stürmern: Positionsstrafe senkt die Stärke
+	TArray<int32> Falsch;
+	for (const FFM13Player& P : W.Squad) if ((P.Pos == EFM13Position::ST || P.Pos == EFM13Position::TW) && Falsch.Num() < 6) Falsch.Add(P.Id);
+	for (const FFM13Player& P : W.Squad) if (P.Pos == EFM13Position::ABW && Falsch.Num() < 11) Falsch.Add(P.Id);
+	const int32 StaerkeAuto = (W.ClearManualLineup(), W.OwnStrength());
+	PRUEFE(W.SetManualLineup(Falsch, Grund) && W.OwnStrength() < StaerkeAuto, "Falsche Positionen kosten Staerke (%d < %d)", W.OwnStrength(), StaerkeAuto);
+	W.ClearManualLineup();
+	// Verletzte Stammkraft in der eigenen Elf wird ersetzt
+	TArray<int32> Elf = W.StartingEleven();
+	W.SetManualLineup(Elf, Grund);
+	W.FindPlayer(Elf[0])->InjuredMatchdays = 3;
+	PRUEFE(!W.StartingEleven().Contains(Elf[0]) && W.StartingEleven().Num() == 11, "Verletzte aus der eigenen Elf werden ersetzt");
+	W.FindPlayer(Elf[0])->InjuredMatchdays = 0;
+	W.ClearManualLineup();
+
+	// Kabinenansprache wie computePregameTalkBonus()
+	for (FFM13Player& P : W.Squad) { P.Character = 0; P.Morale = 65; } // alle ruhig
+	const float Fokus = W.TalkBonus(TEXT("fokus"));
+	const float Druck = W.TalkBonus(TEXT("druck"));
+	PRUEFE(Fokus >= 1.75f - 0.01f && Fokus <= 2.5f + 0.01f, "Fokus mit ruhiger Elf: Lage + 1,0 (%.2f)", Fokus);
+	PRUEFE(std::fabs(Druck - 0.5f) < 0.01f, "Druck ohne Ehrgeizige: 0,5 (%.2f)", Druck);
+	W.TalkHistory = { TEXT("fokus"), TEXT("fokus") };
+	PRUEFE(std::fabs(W.TalkBonus(TEXT("fokus")) - FMath::RoundToInt(Fokus * 5.f) / 10.f) < 0.11f, "Dreimal dieselbe Rede: halber Effekt");
+	PRUEFE(W.ChooseTalk(TEXT("mut"), Grund) && W.PendingTalk == FString(TEXT("mut")) && !W.ChooseTalk(TEXT("bitten"), Grund), "Ansprache waehlen");
+
+	// Moral wirkt ab 75 und unter 35
+	for (FFM13Player& P : W.Squad) P.Morale = 80;
+	PRUEFE(W.MoraleBonus() == 1.f, "Hohe Moral +1");
+	for (FFM13Player& P : W.Squad) P.Morale = 30;
+	PRUEFE(W.MoraleBonus() == -1.f, "Tiefe Moral -1");
+	for (FFM13Player& P : W.Squad) P.Morale = 60;
+
+	// Spielvorbereitung: richtig getippt +2,5
+	PRUEFE(W.SetMatchPrep(W.OppPlanArchetype, Grund) && W.MatchPrepBonus() == 2.5f, "Vorbereitung richtig getippt");
+	PRUEFE(W.SetMatchPrep(FM13Tactics::CounterTo(W.OppPlanArchetype), Grund) && W.MatchPrepBonus() == 0.f, "Falsch getippt: kein Bonus");
+	PRUEFE(!W.SetMatchPrep(TEXT('X'), Grund), "Unbekannter Ansatz abgelehnt");
+
+	// Prognose
+	int32 S = 0, U = 0, N = 0;
+	W.Forecast(S, U, N);
+	PRUEFE(S + U + N == 100 && S > 0 && N > 0, "Prognose ergibt 100 Prozent (%d/%d/%d)", S, U, N);
+
+	// Derby: Rivale in der Liga, Vorbereitung nur in den 3 Spieltagen davor
+	PRUEFE(!W.RivalName.IsEmpty() && W.OwnLeague().FindClub(W.RivalName) >= 0, "Rivale in der eigenen Liga (%s)", *W.RivalName);
+	int32 Gebucht = 0, Derbys = 0;
+	W.Money = 10000000;
+	for (int32 i = 0; i < 34; ++i)
+	{
+		const int32 Abstand = W.MatchdaysToDerby();
+		if (Abstand >= 0 && Abstand <= 3 && W.BookDerbyPrep(TEXT("stimmung"), Grund)) ++Gebucht;
+		if (Abstand > 3 || Abstand < 0) PRUEFE(!W.BookDerbyPrep(TEXT("kampfansage"), Grund), "Ohne Derby keine Vorbereitung");
+		if (W.IsDerbyNext()) { W.BookDerbyPrep(TEXT("kampfansage"), Grund); PRUEFE(W.OwnMatchStrength(W.OppPlanArchetype) >= W.OwnStrength(), "Derby-Bonus wirkt"); }
+		W.PlayMatchday();
+		if (W.LastReport.bDerby) { ++Derbys; PRUEFE(W.LastReport.DerbyBonus >= 2.5f - 0.01f, "Derby mit Choreo und Kampfansage (%.1f)", W.LastReport.DerbyBonus); }
+	}
+	PRUEFE(Derbys == 2 && Gebucht == 2, "Zwei Derbys je Saison, beide vorbereitet (%d, %d)", Derbys, Gebucht);
+
+	// Auszeichnungen
+	W.ConcludeSeason();
+	PRUEFE(W.AwardHistory.Num() >= 1, "Auszeichnungen am Saisonende (%d)", W.AwardHistory.Num());
+
+	// Europapokal: ein sehr starker Bundesligist qualifiziert sich und spielt Gruppe, Halbfinale, Finale
+	FFM13World E;
+	E.NewGame(TEXT("Europaverein"), 77, 0);
+	for (FFM13Player& P : E.Squad) P.Strength = 97;
+	while (E.PlayMatchday()) {}
+	PRUEFE(E.OwnRank() <= 4, "Starker Verein unter den ersten vier (%d)", E.OwnRank());
+	E.ConcludeSeason();
+	PRUEFE(E.Europe.bActive && E.Europe.Groups[0].Num() == 4 && E.Europe.Groups[1].Num() == 4, "Zwei Vierergruppen");
+	bool bEigenDabei = false;
+	for (int32 G = 0; G < 2; ++G) for (const FFM13EuroTeam& T : E.Europe.Groups[G]) if (T.Name == E.ClubName) bEigenDabei = true;
+	PRUEFE(bEigenDabei, "Eigener Verein in einer Gruppe");
+	for (FFM13Player& P : E.Squad) P.Strength = 97;
+	int32 EuroSpiele = 0;
+	while (E.PlayMatchday()) if (E.LastCupReport.bPlayed && E.LastCupReport.Competition == FString(TEXT("Champions Cup"))) ++EuroSpiele;
+	PRUEFE(E.Europe.GroupRound == 6 && E.Europe.Semis.Num() == 2 && !E.Europe.Winner.IsEmpty(), "Gruppe, Halbfinale und Finale gespielt (Sieger %s)", *E.Europe.Winner);
+	PRUEFE(EuroSpiele >= 6, "Mindestens 6 eigene Europapokalspiele (%d)", EuroSpiele);
+	bool bStart = false;
+	for (const FFM13Booking& B : E.Bookings) if (B.Label.Contains(TEXT("Startpraemie"))) bStart = true;
+	PRUEFE(bStart, "Startpraemie gebucht");
+	PRUEFE(E.Achievements.ContainsByPredicate([](const FFM13Achievement& A) { return A.Id == FString(TEXT("europa")); }), "Erfolg Champions Cup erreicht");
+	for (int32 G = 0; G < 2; ++G) for (const FFM13EuroTeam& T : E.Europe.Groups[G]) PRUEFE(T.Played == 6, "Jedes Gruppenteam spielt 6 Mal");
+	std::printf("  Champions Cup: eigene Stufe %s, Sieger %s, %d eigene Spiele\n", *E.Europe.OwnStage, *E.Europe.Winner, EuroSpiele);
+
+	// Spielstand
+	FFM13World L;
+	FString F;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(E), L, F) && FM13Save::Encode(L) == FM13Save::Encode(E), "Spielstand mit Europapokal und Runde-B-Feldern (%s)", *F);
 }
 
 // Einfacher Manager wie scripts/longrun-bundesliga.js (aktiv): kauft Verstärkungen, verlängert Stammkräfte,
@@ -652,6 +759,7 @@ int main()
 	TestEntlassung();
 	TestPokalUndVerletzungen();
 	TestRundeA();
+	TestRundeB();
 	TestSpielstand();
 	TestBrowserImport();
 	TestBotKarriere();

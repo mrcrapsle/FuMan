@@ -38,7 +38,9 @@ public:
 	FString operator+(const FString& O) const { return FString(S + O.S); }
 	FString& operator+=(const FString& O) { S += O.S; return *this; }
 	bool Contains(const FString& O) const { return S.find(O.S) != std::string::npos; }
+	FString Left(int32 N) const { return FString(S.substr(0, (size_t)std::max(0, N))); }
 	void AppendChar(char C) { S.push_back(C); }
+	int32 ParseIntoArray(TArray<FString>& Out, const char* Delim, bool bCullEmpty) const;
 	char& operator[](int32 I) { check(I >= 0 && I < Len()); return S[I]; }
 	const char& operator[](int32 I) const { check(I >= 0 && I < Len()); return S[I]; }
 	static FString FromInt(int64 V) { return FString(std::to_string(V)); }
@@ -73,6 +75,8 @@ public:
 	T& Last() { check(Num() > 0); return V.back(); }
 	const T& Last() const { check(Num() > 0); return V.back(); }
 	void RemoveAt(int32 I) { check(IsValidIndex(I)); V.erase(V.begin() + I); }
+	int32 AddUnique(const T& X) { int32 i = IndexOfByPredicate([&X](const T& Y) { return Y == X; }); return i >= 0 ? i : Add(X); }
+	int32 Remove(const T& X) { auto It = std::remove(V.begin(), V.end(), X); int32 N = (int32)(V.end() - It); V.erase(It, V.end()); return N; }
 	template <typename P> int32 RemoveAll(P Pred) { auto It = std::remove_if(V.begin(), V.end(), Pred); int32 N = (int32)(V.end() - It); V.erase(It, V.end()); return N; }
 	template <typename P> void Sort(P Pred) { std::sort(V.begin(), V.end(), Pred); }
 	template <typename P> void StableSort(P Pred) { std::stable_sort(V.begin(), V.end(), Pred); }
@@ -86,6 +90,22 @@ public:
 	typename std::vector<T>::const_iterator begin() const { return V.begin(); }
 	typename std::vector<T>::const_iterator end() const { return V.end(); }
 };
+
+inline int32 FString::ParseIntoArray(TArray<FString>& Out, const char* Delim, bool bCullEmpty) const
+{
+	Out.Reset();
+	const std::string D(Delim);
+	std::string::size_type Start = 0;
+	while (true)
+	{
+		const std::string::size_type Pos = S.find(D, Start);
+		const std::string Teil = S.substr(Start, Pos == std::string::npos ? std::string::npos : Pos - Start);
+		if (!bCullEmpty || !Teil.empty()) Out.Add(FString(Teil));
+		if (Pos == std::string::npos) break;
+		Start = Pos + D.size();
+	}
+	return Out.Num();
+}
 
 inline FString FString::Join(const TArray<FString>& A, const char* Sep) { FString Out; for (int32 i = 0; i < A.Num(); ++i) { if (i) Out += FString(Sep); Out += A[i]; } return Out; }
 

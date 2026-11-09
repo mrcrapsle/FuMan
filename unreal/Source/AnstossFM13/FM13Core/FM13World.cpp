@@ -91,6 +91,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	Sponsor.Tier = TEXT("mittel");
 	InitCups();
 	PlanSeason();
+	PickRival();
 	RefreshMarket();
 	PrepareOppPlan();
 	AddMessage(TEXT("Willkommen"), FString::Printf(TEXT("Der Vorstand begruesst dich als neuen Trainer von %s in der %s."), *ClubName, FM13::LeagueName(LeagueLevel)));
@@ -110,6 +111,8 @@ FFM13Player FFM13World::CreatePlayer(EFM13Position Pos, int32 MinStr, int32 MaxS
 	P.Wage = FM13Economy::Wage(P.MarketValue, P.Strength);
 	P.ContractYears = Rng.RandRange(1, 3);
 	P.Archetype = FM13Dev::ArchetypeFor(P.Id);
+	P.Character = (uint8)Rng.RandRange(0, 5);
+	P.Morale = Rng.RandRange(60, 75);
 	return P;
 }
 
@@ -152,6 +155,7 @@ bool FFM13World::PlayMatchday()
 	WeatherIndex = FM13Match::RollWeather(Rng);
 
 	if (DfbPokal.NextMatchday() == Matchday) PlayCupRound(DfbPokal, true);
+	if (Europe.bActive) PlayEuropeMatchday();
 	if (Landespokal.NextMatchday() == Matchday) PlayCupRound(Landespokal, false);
 
 	for (FFM13League& L : Leagues)
@@ -225,7 +229,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	const int32 OppGoals = bHome ? AG : HG;
 
 	int32 Dummy = 0;
-	for (int32 i : BestEleven(Squad, Formation, Dummy)) Squad[i].Appearances++;
+	for (int32 i : LineupIndices(Dummy)) Squad[i].Appearances++;
 	PickScorers(OwnGoals, LastReport.Scorers);
 
 	// Vorstand: Erwartung aus der Elf ohne Taktik (wie getOwnMatchExpectation)
@@ -253,6 +257,19 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	LastReport.Referee = RefereeName();
 	LastReport.OppArchetype = FM13Tactics::ArchetypeLabel(OppPlanArchetype);
 	LastReport.TacticBonus = FM13Tactics::MatchupBonus(TacticStyle, OppPlanArchetype);
+	LastReport.PrepBonus = MatchPrepBonus();
+	LastReport.bDerby = OppName == RivalName;
+	if (!PendingTalk.IsEmpty())
+	{
+		LastReport.Talk = PendingTalk;
+		LastReport.TalkBonus = TalkBonus(PendingTalk);
+		TalkHistory.Add(PendingTalk);
+		if (TalkHistory.Num() > 5) TalkHistory.RemoveAt(0);
+	}
+	if (LastReport.bDerby && DerbyPrepMatchday == Matchday)
+		LastReport.DerbyBonus = (DerbyPreps.Contains(TEXT("stimmung")) ? 1.5f : 0.f) + (DerbyPreps.Contains(TEXT("kampfansage")) ? 1.f : 0.f);
+	ResolveMatchMood(OwnGoals, OppGoals, LastReport);
+	PendingTalk = FString();
 	TArray<FString> Gelb, Rot;
 	RollCards(LastReport, Gelb, Rot);
 	FinishOwnReport(LastReport, OppName, bHome, Gelb, Rot);
@@ -346,7 +363,7 @@ void FFM13World::CheckSeasonEndSacking(int32 Rank)
 void FFM13World::PickScorers(int32 Goals, TArray<FString>& OutNames)
 {
 	int32 Dummy = 0;
-	const TArray<int32> Elf = BestEleven(Squad, Formation, Dummy);
+	const TArray<int32> Elf = LineupIndices(Dummy);
 	static const int32 Gewicht[4] = { 0, 1, 3, 5 }; // TW, ABW, MIT, ST
 	int32 Summe = 0;
 	for (int32 i : Elf) Summe += Gewicht[(int32)Squad[i].Pos];
@@ -423,6 +440,12 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	LowBoardSatStreak = 0;
 
 	CheckAchievements(true, Rank, Outcome, &S.NewAchievements);
+	// Europapokal der nächsten Saison: Bundesliga Platz 1 bis 4 oder DFB-Pokalsieger
+	const bool bLigaPlatz = LeagueLevel == 0 && Rank <= 4;
+	bEuropeNextSeason = bLigaPlatz || DfbPokal.Winner == ClubName;
+	EuropePot = bLigaPlatz ? (Rank == 1 ? 0 : (Rank <= 3 ? 1 : 2)) : 3;
+	if (bEuropeNextSeason) AddMessage(TEXT("Europapokal!"), TEXT("Der Verein spielt naechste Saison im Champions Cup."));
+	SeasonAwards(S, Rank, Outcome);
 	AdvanceLeagues(Rank, Outcome);
 	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
 	DevelopPlayers(S);
@@ -437,6 +460,12 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	}
 	InitCups();
 	PlanSeason();
+	PickRival();
+	Europe = FFM13Europe();
+	if (bEuropeNextSeason) InitEurope();
+	bEuropeNextSeason = false;
+	ManualLineup.RemoveAll([this](int32 Id) { return !FindPlayer(Id); });
+	ManualBench.RemoveAll([this](int32 Id) { return !FindPlayer(Id); });
 	RefreshMarket();
 	IncomingOffers.Reset();
 	RecentStyles.Reset();
@@ -606,7 +635,7 @@ void FFM13World::YouthIntake(FFM13SeasonSummary& S)
 int32 FFM13World::OwnStrength() const
 {
 	int32 Staerke = 0;
-	BestEleven(Squad, Formation, Staerke);
+	LineupIndices(Staerke);
 	return Staerke;
 }
 
@@ -614,7 +643,7 @@ TArray<int32> FFM13World::StartingEleven() const
 {
 	int32 Dummy = 0;
 	TArray<int32> Ids;
-	for (int32 i : BestEleven(Squad, Formation, Dummy)) Ids.Add(Squad[i].Id);
+	for (int32 i : LineupIndices(Dummy)) Ids.Add(Squad[i].Id);
 	return Ids;
 }
 
@@ -979,7 +1008,19 @@ int32 FFM13World::OwnMatchStrength(TCHAR OppArchetype) const
 {
 	// calcTeamStrength + getTacticStyleBonus + Formationsboni + Taktik-Duell (getOwnLeagueMatchStrength)
 	const float Formationen = FM13Tactics::FormationOffBonus(Formation) + FM13Tactics::FormationDefBonus(Formation) * 0.6f;
-	return OwnStrength() + FM13Tactics::StyleBonus(TacticStyle) + FMath::RoundToInt(Formationen) + FM13Tactics::MatchupBonus(TacticStyle, OppArchetype);
+	float Zusatz = Formationen + MoraleBonus();
+	// Vorbereitung, Ansprache und Derby zählen nur im nächsten Ligaspiel (OppArchetype gesetzt)
+	if (OppArchetype)
+	{
+		Zusatz += MatchPrepBonus();
+		if (!PendingTalk.IsEmpty()) Zusatz += TalkBonus(PendingTalk);
+		if (IsDerbyNext() && DerbyPrepMatchday == Matchday)
+		{
+			if (DerbyPreps.Contains(TEXT("stimmung"))) Zusatz += 1.5f;
+			if (DerbyPreps.Contains(TEXT("kampfansage"))) Zusatz += 1.f;
+		}
+	}
+	return OwnStrength() + FM13Tactics::StyleBonus(TacticStyle) + FMath::RoundToInt(Zusatz) + FM13Tactics::MatchupBonus(TacticStyle, OppArchetype);
 }
 
 const FFM13Club* FFM13World::NextLeagueOpponent(bool* OutHome) const
@@ -1225,7 +1266,9 @@ namespace
 		{ TEXT("unbeaten-20"), TEXT("Wall aus Stahl: 20 Spiele ohne Niederlage") },
 		{ TEXT("talentschmiede"), TEXT("Talentschmiede: Jugendakademie Stufe 3") },
 		{ TEXT("grosses-stadion"), TEXT("Grosse Buehne: 25.000 Plaetze") },
-		{ TEXT("legende"), TEXT("Vereinslegende verabschiedet") }
+		{ TEXT("legende"), TEXT("Vereinslegende verabschiedet") },
+		{ TEXT("europa"), TEXT("International: Champions Cup erreicht") },
+		{ TEXT("europa-sieger"), TEXT("Europas Krone: Champions Cup gewonnen") }
 	};
 }
 
@@ -1312,6 +1355,454 @@ FFM13RelegationResult FFM13World::PlayRelegation(int32 Rank)
 	AddMessage(Titel, FString::Printf(TEXT("Gegen %s: Hinspiel %d:%d, Rueckspiel %d:%d%s."), *R.Opponent, R.Leg1Own, R.Leg1Opp, R.Leg2Own, R.Leg2Opp,
 		R.bPenalties ? TEXT(", Elfmeterschiessen") : TEXT("")));
 	return R;
+}
+
+// ---------- Aufstellung, Moral, Ansprache, Vorbereitung (Runde B) ----------
+
+TArray<int32> FFM13World::LineupIndices(int32& OutStrength) const
+{
+	if (ManualLineup.Num() == 0) return BestEleven(Squad, Formation, OutStrength);
+	// Eigene Aufstellung: Ausfälle ersetzt das Spiel automatisch durch den Besten der Position,
+	// wer außerhalb seiner Position spielt, bringt 10 Punkte weniger (wie die Vorlagen im Browserspiel)
+	int32 Rest[4];
+	for (int32 k = 0; k < 4; ++k) Rest[k] = FM13Tactics::Formation(Formation).Slots[k];
+	TArray<int32> Elf;
+	int64 Summe = 0;
+	for (int32 Id : ManualLineup)
+	{
+		const int32 i = Squad.IndexOfByPredicate([Id](const FFM13Player& P) { return P.Id == Id; });
+		if (i < 0 || !Squad[i].IsAvailable() || Elf.Contains(i) || Elf.Num() >= 11) continue;
+		Elf.Add(i);
+		const int32 Pos = (int32)Squad[i].Pos;
+		if (Rest[Pos] > 0) { Rest[Pos]--; Summe += Squad[i].Strength; }
+		else Summe += FMath::Max(1, Squad[i].Strength - 10);
+	}
+	TArray<int32> Frei;
+	for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].IsAvailable() && !Elf.Contains(i)) Frei.Add(i);
+	// Bewusst auf die Bank gesetzte Spieler kommen nur, wenn sonst niemand mehr da ist
+	Frei.Sort([this](int32 A, int32 B)
+	{
+		const bool BA = ManualBench.Contains(Squad[A].Id), BB = ManualBench.Contains(Squad[B].Id);
+		if (BA != BB) return !BA;
+		return Squad[A].Strength > Squad[B].Strength;
+	});
+	for (int32 Pos = 0; Pos < 4 && Elf.Num() < 11; ++Pos)
+		for (int32 n = 0; n < Rest[Pos] && Elf.Num() < 11; ++n)
+		{
+			const int32 k = Frei.IndexOfByPredicate([this, Pos](int32 i) { return (int32)Squad[i].Pos == Pos; });
+			if (k < 0) break;
+			Elf.Add(Frei[k]); Summe += Squad[Frei[k]].Strength; Frei.RemoveAt(k);
+			Rest[Pos]--;
+		}
+	while (Elf.Num() < 11 && Frei.Num()) { Elf.Add(Frei[0]); Summe += FMath::Max(1, Squad[Frei[0]].Strength - 10); Frei.RemoveAt(0); }
+	OutStrength = Elf.Num() ? FMath::RoundToInt((float)Summe / 11.f) : 0;
+	return Elf;
+}
+
+bool FFM13World::SetManualLineup(const TArray<int32>& Ids, FString& OutReason)
+{
+	if (Ids.Num() > 11) { OutReason = TEXT("Hoechstens 11 Spieler."); return false; }
+	for (int32 Id : Ids) if (!FindPlayer(Id)) { OutReason = TEXT("Ein Spieler ist nicht im Kader."); return false; }
+	ManualLineup = Ids;
+	ManualBench.Reset();
+	return true;
+}
+
+bool FFM13World::ToggleLineupPlayer(int32 PlayerId, FString& OutReason)
+{
+	const FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	if (!ManualLineup.Num()) ManualLineup = StartingEleven();  // ab jetzt eigene Aufstellung
+	if (ManualLineup.Contains(PlayerId)) { ManualLineup.Remove(PlayerId); ManualBench.AddUnique(PlayerId); return true; }
+	if (!P->IsAvailable()) { OutReason = TEXT("Verletzt oder gesperrt: kann nicht spielen."); return false; }
+	if (ManualLineup.Num() >= 11) { OutReason = TEXT("Die Elf ist voll. Nimm zuerst einen Spieler heraus."); return false; }
+	ManualLineup.Add(PlayerId);
+	ManualBench.Remove(PlayerId);
+	return true;
+}
+
+float FFM13World::MoraleBonus() const
+{
+	int32 Dummy = 0;
+	const TArray<int32> Elf = LineupIndices(Dummy);
+	if (!Elf.Num()) return 0.f;
+	int32 Summe = 0;
+	for (int32 i : Elf) Summe += Squad[i].Morale;
+	const int32 Schnitt = Summe / Elf.Num();
+	return Schnitt >= 75 ? 1.f : (Schnitt <= 35 ? -1.f : 0.f);
+}
+
+bool FFM13World::ChooseTalk(const FString& Type, FString& OutReason)
+{
+	if (Type != TEXT("fokus") && Type != TEXT("mut") && Type != TEXT("druck")) { OutReason = TEXT("Diese Ansprache gibt es nicht."); return false; }
+	if (!NextLeagueOpponent()) { OutReason = TEXT("Am naechsten Spieltag gibt es kein Ligaspiel."); return false; }
+	PendingTalk = Type;
+	return true;
+}
+
+float FFM13World::TalkBonus(const FString& Type) const
+{
+	// computePregameTalkBonus(): Lage (Favorit, offen, Außenseiter) plus Charaktere der Startelf
+	const FFM13Club* Opp = NextLeagueOpponent();
+	const EFM13Expectation Lage = Opp ? FM13Match::Expectation(OwnStrength(), Opp->Strength) : EFM13Expectation::Offen;
+	int32 Dummy = 0;
+	const TArray<int32> Elf = LineupIndices(Dummy);
+	auto Anteil = [this, &Elf](std::initializer_list<int32> Arten)
+	{
+		if (!Elf.Num()) return 0.f;
+		int32 n = 0;
+		for (int32 i : Elf) for (int32 A : Arten) if (Squad[i].Character == A) ++n;
+		return (float)n / (float)Elf.Num();
+	};
+	// 0 Ruhig, 1 Emotional, 2 Ehrgeizig, 3 Selbstbewusst, 4 Bescheiden, 5 Hitzköpfig
+	float B = 0.f;
+	if (Type == TEXT("fokus")) B = (Lage == EFM13Expectation::Favorit ? 1.5f : (Lage == EFM13Expectation::Offen ? 0.75f : 0.f)) + Anteil({ 0, 4 });
+	else if (Type == TEXT("mut")) B = (Lage == EFM13Expectation::Favorit ? -1.f : (Lage == EFM13Expectation::Offen ? 0.75f : 2.f)) + Anteil({ 1, 2 });
+	else if (Type == TEXT("druck")) B = 0.5f + 2.5f * Anteil({ 2, 3 }) - 2.5f * Anteil({ 1, 5 });
+	const int32 N = TalkHistory.Num();
+	if (N >= 2 && TalkHistory[N - 1] == Type && TalkHistory[N - 2] == Type) B /= 2.f;  // nutzt sich ab
+	return (float)FMath::RoundToInt(B * 10.f) / 10.f;
+}
+
+bool FFM13World::SetMatchPrep(TCHAR Archetype, FString& OutReason)
+{
+	if (Archetype != TEXT('P') && Archetype != TEXT('B') && Archetype != TEXT('K')) { OutReason = TEXT("Unbekannter Ansatz."); return false; }
+	if (!NextLeagueOpponent()) { OutReason = TEXT("Am naechsten Spieltag hast du kein Ligaspiel - die Vorbereitung greift nur in der Liga."); return false; }
+	PrepArchetype = Archetype;
+	PrepMatchday = Matchday;
+	return true;
+}
+
+float FFM13World::MatchPrepBonus() const
+{
+	// js/match-prep.js: richtig getippt +2,5 Stärke
+	return (PrepMatchday == Matchday && PrepArchetype && PrepArchetype == OppPlanArchetype) ? 2.5f : 0.f;
+}
+
+void FFM13World::ResolveMatchMood(int32 OwnGoals, int32 OppGoals, const FFM13OwnMatchReport& Report)
+{
+	const int32 Ergebnis = OwnGoals > OppGoals ? 1 : (OwnGoals == OppGoals ? 0 : -1);
+	const TArray<int32> Elf = StartingEleven();
+	for (FFM13Player& P : Squad)
+	{
+		int32 D = 0;
+		if (Elf.Contains(P.Id))
+		{
+			D = Ergebnis * 3;
+			if (Report.Talk == TEXT("druck")) D += Ergebnis > 0 ? 3 : (Ergebnis < 0 ? -4 : 0);
+		}
+		else D = -1; // Bankspieler wollen spielen
+		P.Morale = FMath::Clamp(P.Morale + D, 5, 100);
+	}
+	// Derby-Folgen (js/derby-week.js)
+	if (Report.bDerby)
+	{
+		Fans = FMath::Clamp(Fans + Ergebnis * 2, 0, 100);
+		if (DerbyPrepMatchday == Matchday)
+		{
+			if (DerbyPreps.Contains(TEXT("praemie")))
+			{
+				if (Ergebnis > 0)
+				{
+					int64 Gehalt = 0;
+					for (int32 Id : Elf) if (const FFM13Player* P = FindPlayer(Id)) Gehalt += P->Wage;
+					Book(TEXT("Derby-Praemie"), -Gehalt * 2);
+				}
+				else if (Ergebnis < 0) for (int32 Id : Elf) if (FFM13Player* P = FindPlayer(Id)) P->Morale = FMath::Max(5, P->Morale - 3);
+			}
+			if (DerbyPreps.Contains(TEXT("kampfansage")))
+			{
+				Fans = FMath::Clamp(Fans + Ergebnis * 3, 0, 100);
+				BoardSat = FMath::Clamp(BoardSat + Ergebnis * 2, 10, 100);
+			}
+			if (DerbyPreps.Contains(TEXT("stimmung")) && !Report.bHome) Fans = FMath::Min(100, Fans + 2); // Sonderzug bindet die Fans
+		}
+	}
+}
+
+// ---------- Derby-Woche ----------
+
+void FFM13World::PickRival()
+{
+	// Im Browserspiel nach Ort (club-geo.js). Hier: ein Verein mit gleichem Ortsnamen, sonst ein fester Rivale je Liga.
+	const FFM13League& L = OwnLeague();
+	TArray<FString> Woerter;
+	ClubName.ParseIntoArray(Woerter, TEXT(" "), true);
+	for (const FFM13Club& C : L.Clubs)
+	{
+		if (C.bOwn) continue;
+		for (const FString& W : Woerter) if (W.Len() >= 4 && C.Name.Contains(W)) { RivalName = C.Name; return; }
+	}
+	if (L.Clubs.Num() && RivalName.Len() && L.FindClub(RivalName) >= 0) return;  // Rivale bleibt, solange er in der Liga ist
+	TArray<FString> Namen;
+	for (const FFM13Club& C : L.Clubs) if (!C.bOwn) Namen.Add(C.Name);
+	Namen.Sort([](const FString& A, const FString& B) { return A < B; });
+	uint32 H = 7;
+	for (int32 i = 0; i < ClubName.Len(); ++i) H = H * 31 + (uint32)ClubName[i];
+	RivalName = Namen.Num() ? Namen[(int32)((H + (uint32)LeagueLevel * 13u) % (uint32)Namen.Num())] : FString();
+}
+
+bool FFM13World::IsDerbyNext() const
+{
+	const FFM13Club* Opp = NextLeagueOpponent();
+	return Opp && Opp->Name == RivalName;
+}
+
+int32 FFM13World::MatchdaysToDerby() const
+{
+	if (RivalName.IsEmpty() || !Leagues.IsValidIndex(LeagueLevel)) return -1;
+	const FFM13League& L = OwnLeague();
+	const int32 Rivale = L.FindClub(RivalName), Eigen = L.FindOwn();
+	for (const FFM13Fixture& F : L.Fixtures)
+	{
+		if (F.bPlayed || F.Matchday < Matchday || F.Matchday > Matchday + 3) continue;
+		if ((F.Home == Eigen && F.Away == Rivale) || (F.Home == Rivale && F.Away == Eigen)) return F.Matchday - Matchday;
+	}
+	return -1;
+}
+
+int64 FFM13World::DerbyPrepCost(const FString& Type) const
+{
+	static const int64 Stimmung[FM13::NumLeagues] = { 120000, 60000, 25000, 12000, 6000, 3000 };
+	return Type == TEXT("stimmung") ? Stimmung[LeagueLevel] : 0;
+}
+
+bool FFM13World::BookDerbyPrep(const FString& Type, FString& OutReason)
+{
+	if (Type != TEXT("stimmung") && Type != TEXT("praemie") && Type != TEXT("kampfansage")) { OutReason = TEXT("Unbekannte Vorbereitung."); return false; }
+	const int32 Abstand = MatchdaysToDerby();
+	if (Abstand < 0) { OutReason = TEXT("Kein Derby in den naechsten 3 Spieltagen."); return false; }
+	const int32 Tag = Matchday + Abstand;
+	if (DerbyPrepMatchday != Tag) { DerbyPreps.Reset(); DerbyPrepMatchday = Tag; }
+	if (DerbyPreps.Contains(Type)) { OutReason = TEXT("Schon gebucht."); return false; }
+	const int64 Kosten = DerbyPrepCost(Type);
+	if (Money < Kosten) { OutReason = TEXT("Nicht genug Geld."); return false; }
+	if (Kosten > 0) Book(TEXT("Derby: Choreo und Sonderzug"), -Kosten);
+	if (Type == TEXT("praemie")) for (int32 Id : StartingEleven()) if (FFM13Player* P = FindPlayer(Id)) P->Morale = FMath::Min(100, P->Morale + 5);
+	DerbyPreps.Add(Type);
+	return true;
+}
+
+// ---------- Spielprognose ----------
+
+void FFM13World::Forecast(int32& OutWin, int32& OutDraw, int32& OutLoss) const
+{
+	OutWin = OutDraw = OutLoss = 0;
+	bool bHeim = true;
+	const FFM13Club* Opp = NextLeagueOpponent(&bHeim);
+	if (!Opp) return;
+	FRandomStream Sim(Season * 7919 + Matchday * 104729 + LeagueLevel);
+	const int32 Eigen = OwnMatchStrength(OppPlanArchetype);
+	const FM13Match::FExpectedGoals Xg = bHeim
+		? FM13Match::ExpectedGoals(Eigen, Opp->Strength, EFM13Playstyle::Ausgeglichen, Opp->Playstyle)
+		: FM13Match::ExpectedGoals(Opp->Strength, Eigen, Opp->Playstyle, EFM13Playstyle::Ausgeglichen);
+	int32 S = 0, U = 0, N = 0;
+	for (int32 k = 0; k < 500; ++k)
+	{
+		const int32 H = FM13Match::Poisson(Sim, Xg.Home), A = FM13Match::Poisson(Sim, Xg.Away);
+		const int32 Wir = bHeim ? H : A, Die = bHeim ? A : H;
+		if (Wir > Die) ++S; else if (Wir == Die) ++U; else ++N;
+	}
+	OutWin = S * 100 / 500; OutDraw = U * 100 / 500; OutLoss = 100 - OutWin - OutDraw;
+}
+
+// ---------- Europapokal ----------
+
+namespace
+{
+	const TCHAR* EuroTopf[4][11] = {
+		{ TEXT("Real Madriz"), TEXT("FC Barcalona"), TEXT("Manchester Cyty"), TEXT("Liverpol FC"), TEXT("Paris St. Germaine"), TEXT("Inter Milano"), TEXT("Arsenall London") },
+		{ TEXT("Atletico Madriz"), TEXT("Juwentus Turin"), TEXT("AC Millan"), TEXT("Chelsea FC London"), TEXT("Manchester Unitad"), TEXT("SSC Neapell"), TEXT("Benfika Lissabon"), TEXT("FC Porto Portugal") },
+		{ TEXT("Ajax Amsterdaam"), TEXT("PSV Eindhofen"), TEXT("Sporting Lissabonn"), TEXT("Tottenham Hotspurr"), TEXT("AS Romm"), TEXT("Olympique Marseile"), TEXT("Galatasaray Istanbull"), TEXT("Club Bruggge"), TEXT("Feyenoordt Rotterdam") },
+		{ TEXT("Celtic Glasgoww"), TEXT("RB Salzborg"), TEXT("Schachtar Donezkk"), TEXT("Roter Stern Belgratt"), TEXT("Young Boys Bernn"), TEXT("FC Baselll"), TEXT("Fenerbahce Istanbull"), TEXT("Olympique Lyonn"), TEXT("AS Monakko"), TEXT("FC Sevillia"), TEXT("Lazio Romm") }
+	};
+	const int32 TopfStaerke[4][2] = { { 4, 2 }, { 0, -2 }, { -4, -6 }, { -8, -10 } };
+	const int32 EuroGruppenTage[6] = { 3, 7, 11, 15, 19, 23 };
+	// Paarungen je Gruppenspieltag (Indizes in der Gruppe), Rückrunde mit Heimtausch
+	const int32 EuroPaare[6][2][2] = { { { 0, 1 }, { 2, 3 } }, { { 0, 2 }, { 1, 3 } }, { { 0, 3 }, { 1, 2 } }, { { 1, 0 }, { 3, 2 } }, { { 2, 0 }, { 3, 1 } }, { { 3, 0 }, { 2, 1 } } };
+}
+
+void FFM13World::InitEurope()
+{
+	// initEuropeCup(): Feldstärke aus den vier stärksten anderen Bundesligisten, zwei Teams je Topf
+	// Indizes statt Zeiger: TArray::Sort in UE dereferenziert Zeiger, Indizes verhalten sich überall gleich
+	const TArray<FFM13Club>& BL = Leagues[0].Clubs;
+	TArray<int32> Deutsche;
+	for (int32 i = 0; i < BL.Num(); ++i) if (!BL[i].bOwn) Deutsche.Add(i);
+	Deutsche.Sort([&BL](int32 A, int32 B) { return BL[A].Strength > BL[B].Strength; });
+	int32 Mitte = 85;
+	if (Deutsche.Num() >= 4) Mitte = (BL[Deutsche[0]].Strength + BL[Deutsche[1]].Strength + BL[Deutsche[2]].Strength + BL[Deutsche[3]].Strength) / 4;
+	const int32 EigeneGruppe = Rng.RandRange(0, 1);
+	const int32 DeutscherTopf = EuropePot == 1 ? 2 : 1;
+	Europe = FFM13Europe();
+	Europe.bActive = true;
+	Europe.OwnStage = TEXT("Gruppe");
+	for (int32 Topf = 0; Topf < 4; ++Topf)
+	{
+		TArray<FString> Pool;
+		for (const TCHAR* N : EuroTopf[Topf]) if (N) Pool.Add(N);
+		for (int32 Platz = 0; Platz < 2; ++Platz)
+		{
+			const int32 Gruppe = Platz == 0 ? EigeneGruppe : 1 - EigeneGruppe;
+			FFM13EuroTeam T;
+			T.Strength = FMath::Clamp(Mitte + TopfStaerke[Topf][Platz] + Rng.RandRange(-1, 1), 45, 95);
+			if (Topf == EuropePot && Platz == 0) T.Name = ClubName;
+			else if (Topf == DeutscherTopf && Platz == 1 && Deutsche.Num()) { T.Name = BL[Deutsche[0]].Name; T.Strength = BL[Deutsche[0]].Strength; }
+			else { const int32 k = Rng.RandRange(0, Pool.Num() - 1); T.Name = Pool[k]; Pool.RemoveAt(k); }
+			Europe.Groups[Gruppe].Add(T);
+		}
+	}
+	Unlock(TEXT("europa"), nullptr);
+}
+
+void FFM13World::PlayEuropeMatchday()
+{
+	auto Spiel = [this](const FString& Heim, int32 HStr, const FString& Gast, int32 GStr, int32& OutH, int32& OutA)
+	{
+		const bool bEigenHeim = Heim == ClubName, bEigenGast = Gast == ClubName;
+		const int32 HS = bEigenHeim ? OwnMatchStrength(0) : HStr, GS = bEigenGast ? OwnMatchStrength(0) : GStr;
+		const FM13Match::FExpectedGoals Xg = FM13Match::ExpectedGoals(HS, GS, EFM13Playstyle::Ausgeglichen, EFM13Playstyle::Ausgeglichen);
+		OutH = FM13Match::Poisson(Rng, Xg.Home);
+		OutA = FM13Match::Poisson(Rng, Xg.Away);
+		if (bEigenHeim || bEigenGast)
+		{
+			FFM13OwnMatchReport& R = LastCupReport;
+			R = FFM13OwnMatchReport();
+			R.Competition = TEXT("Champions Cup");
+			R.OwnGoals = bEigenHeim ? OutH : OutA;
+			R.OppGoals = bEigenHeim ? OutA : OutH;
+			R.OwnStrength = bEigenHeim ? HS : GS;
+			R.OppStrength = bEigenHeim ? GS : HS;
+			PickScorers(R.OwnGoals, R.Scorers);
+			if (bEigenHeim)
+			{
+				R.Attendance = StadiumCapacity;   // Europapokal: ausverkauft
+				const int64 Tickets = (int64)StadiumCapacity * TicketPrice * 3 / 2;
+				Book(TEXT("Europapokal: Ticketeinnahmen"), Tickets);
+				R.Income += Tickets;
+			}
+			R.Weather = FM13Match::Weathers()[WeatherIndex].Name;
+			FinishOwnReport(R, bEigenHeim ? Gast : Heim, bEigenHeim, TArray<FString>(), TArray<FString>());
+			RollInjuries(R);
+		}
+	};
+	Europe.LastResults.Reset();
+
+	// Gruppenphase
+	for (int32 Runde = 0; Runde < 6; ++Runde)
+	{
+		if (EuroGruppenTage[Runde] != Matchday || Europe.GroupRound != Runde) continue;
+		if (Runde == 0)
+		{
+			Book(TEXT("Europapokal: Startpraemie"), 4000000);
+			AddMessage(TEXT("Champions Cup"), TEXT("Die Gruppenphase beginnt. 4.000.000 Euro Startpraemie."));
+		}
+		for (int32 G = 0; G < 2; ++G)
+			for (int32 p = 0; p < 2; ++p)
+			{
+				FFM13EuroTeam& H = Europe.Groups[G][EuroPaare[Runde][p][0]];
+				FFM13EuroTeam& A = Europe.Groups[G][EuroPaare[Runde][p][1]];
+				int32 HG = 0, AG = 0;
+				Spiel(H.Name, H.Strength, A.Name, A.Strength, HG, AG);
+				H.Played++; A.Played++; H.GoalsFor += HG; H.GoalsAgainst += AG; A.GoalsFor += AG; A.GoalsAgainst += HG;
+				if (HG > AG) { H.Won++; A.Lost++; } else if (HG < AG) { A.Won++; H.Lost++; } else { H.Drawn++; A.Drawn++; }
+				if ((H.Name == ClubName && HG > AG) || (A.Name == ClubName && AG > HG)) Book(TEXT("Europapokal: Siegpraemie"), 1500000);
+				Europe.LastResults.Add(FString::Printf(TEXT("%s - %s  %d:%d"), *H.Name, *A.Name, HG, AG));
+			}
+		Europe.GroupRound++;
+		if (Europe.GroupRound == 6)
+		{
+			for (int32 G = 0; G < 2; ++G)
+				Europe.Groups[G].Sort([](const FFM13EuroTeam& X, const FFM13EuroTeam& Y)
+				{
+					if (X.Points() != Y.Points()) return X.Points() > Y.Points();
+					return (X.GoalsFor - X.GoalsAgainst) > (Y.GoalsFor - Y.GoalsAgainst);
+				});
+			auto Halb = [](const FFM13EuroTeam& A, const FFM13EuroTeam& B) { FFM13EuroTie T; T.A = A.Name; T.B = B.Name; return T; };
+			Europe.Semis = { Halb(Europe.Groups[0][0], Europe.Groups[1][1]), Halb(Europe.Groups[1][0], Europe.Groups[0][1]) };
+			bool bDabei = false;
+			for (const FFM13EuroTie& T : Europe.Semis) if (T.A == ClubName || T.B == ClubName) bDabei = true;
+			if (bDabei)
+			{
+				Europe.OwnStage = TEXT("Halbfinale");
+				Book(TEXT("Europapokal: Halbfinale"), 8000000);
+				AddMessage(TEXT("Champions Cup Halbfinale!"), TEXT("Die Gruppe ist ueberstanden. 8.000.000 Euro Erfolgspraemie."));
+			}
+			else AddMessage(TEXT("Champions Cup"), TEXT("Aus in der Gruppenphase."));
+		}
+		return;
+	}
+
+	auto StaerkeVon = [this](const FString& N)
+	{
+		for (int32 G = 0; G < 2; ++G) for (const FFM13EuroTeam& T : Europe.Groups[G]) if (T.Name == N) return T.Strength;
+		return 80;
+	};
+	// Halbfinale: Hinspiel 27, Rückspiel 29
+	if ((Matchday == 27 || Matchday == 29) && Europe.Semis.Num() == 2)
+	{
+		for (FFM13EuroTie& T : Europe.Semis)
+		{
+			int32 H = 0, A = 0;
+			if (Matchday == 27) { Spiel(T.A, StaerkeVon(T.A), T.B, StaerkeVon(T.B), H, A); T.Leg1A = H; T.Leg1B = A; }
+			else
+			{
+				Spiel(T.B, StaerkeVon(T.B), T.A, StaerkeVon(T.A), H, A); T.Leg2B = H; T.Leg2A = A;
+				const int32 SA = T.Leg1A + T.Leg2A, SB = T.Leg1B + T.Leg2B;
+				if (SA == SB) { T.bPenalties = true; T.Winner = Rng.FRand() < 0.5f + (StaerkeVon(T.A) - StaerkeVon(T.B)) * 0.02f ? T.A : T.B; }
+				else T.Winner = SA > SB ? T.A : T.B;
+			}
+			Europe.LastResults.Add(FString::Printf(TEXT("%s - %s  %d:%d"), Matchday == 27 ? *T.A : *T.B, Matchday == 27 ? *T.B : *T.A, H, A));
+		}
+		if (Matchday == 29)
+		{
+			Europe.Final.A = Europe.Semis[0].Winner;
+			Europe.Final.B = Europe.Semis[1].Winner;
+			if (Europe.Final.A == ClubName || Europe.Final.B == ClubName) { Europe.OwnStage = TEXT("Finale"); AddMessage(TEXT("Champions Cup Finale!"), TEXT("Der Verein steht im Endspiel.")); }
+		}
+		return;
+	}
+	// Finale am Spieltag 31
+	if (Matchday == 31 && !Europe.Final.A.IsEmpty() && Europe.Winner.IsEmpty())
+	{
+		FFM13EuroTie& F = Europe.Final;
+		int32 H = 0, A = 0;
+		Spiel(F.A, StaerkeVon(F.A), F.B, StaerkeVon(F.B), H, A);
+		F.Leg1A = H; F.Leg1B = A;
+		if (H == A) { F.bPenalties = true; F.Winner = Rng.FRand() < 0.5f + (StaerkeVon(F.A) - StaerkeVon(F.B)) * 0.02f ? F.A : F.B; }
+		else F.Winner = H > A ? F.A : F.B;
+		Europe.Winner = F.Winner;
+		Europe.LastResults.Add(FString::Printf(TEXT("Finale: %s - %s  %d:%d%s"), *F.A, *F.B, H, A, F.bPenalties ? TEXT(" n.E.") : TEXT("")));
+		if (F.Winner == ClubName)
+		{
+			Europe.OwnStage = TEXT("Sieger");
+			Book(TEXT("Europapokal: Titel"), 25000000);
+			BoardSat = FMath::Min(100, BoardSat + 15);
+			Fans = FMath::Min(100, Fans + 15);
+			AddMessage(TEXT("Champions Cup gewonnen!"), TEXT("Der Verein ist die Nummer eins in Europa. 25.000.000 Euro Praemie."));
+			Unlock(TEXT("europa-sieger"), nullptr);
+		}
+	}
+}
+
+// ---------- Auszeichnungen ----------
+
+void FFM13World::SeasonAwards(FFM13SeasonSummary& S, int32 Rank, EFM13SeasonOutcome Outcome)
+{
+	// league-awards.js (vereinfacht): Torjäger und Spieler der Saison im eigenen Verein, Trainer der Saison
+	const FFM13Player* Torjaeger = nullptr;
+	const FFM13Player* Bester = nullptr;
+	for (const FFM13Player& P : Squad)
+	{
+		if (!Torjaeger || P.GoalsSeason > Torjaeger->GoalsSeason) Torjaeger = &P;
+		const int32 Wert = P.Appearances * 2 + P.GoalsSeason * 3 + P.Strength;
+		if (!Bester || Wert > Bester->Appearances * 2 + Bester->GoalsSeason * 3 + Bester->Strength) Bester = &P;
+	}
+	if (Torjaeger && Torjaeger->GoalsSeason > 0) S.Awards.Add(FString::Printf(TEXT("Torjaeger: %s (%d Tore)"), *Torjaeger->Name, Torjaeger->GoalsSeason));
+	if (Bester) S.Awards.Add(FString::Printf(TEXT("Spieler der Saison: %s"), *Bester->Name));
+	if (Rank == 1 || Outcome == EFM13SeasonOutcome::Promoted || Rank <= SeasonTarget - 5) S.Awards.Add(TEXT("Trainer der Saison: du"));
+	for (const FString& A : S.Awards) AwardHistory.Add(FString::Printf(TEXT("Saison %d: %s"), Season, *A));
+	if (S.Awards.Num()) AddMessage(TEXT("Auszeichnungen der Saison"), FString::Join(S.Awards, TEXT(", ")));
 }
 
 // ---------- Hilfen ----------

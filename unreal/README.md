@@ -2,7 +2,7 @@
 
 Portierung des Browserspiels in ein Unreal-Engine-5-Projekt (C++). Der Spielkern ist vollständig in C++ geschrieben und ohne Engine getestet. Darüber liegen ein Menü mit Maussteuerung (Slate) und ein 3D-Stadion aus den Grundformen der Engine.
 
-**Stand der Builds:** Der Spielkern und die Textoberfläche liefen bereits in Unreal Engine 5.8, ohne Fehler. Das Menü und das 3D-Stadion kamen danach und sind mit der echten Engine noch nicht gebaut. Falls beim Bauen Fehler kommen, bitte die Fehlerliste schicken.
+**Stand der Builds:** Der Spielkern und die Textoberfläche liefen bereits in Unreal Engine 5.8, ohne Fehler. Das Menü, das 3D-Stadion und die Runden A und B kamen danach und sind mit der echten Engine noch nicht gebaut. Falls beim Bauen Fehler kommen, bitte die Fehlerliste schicken.
 
 ## Bauen und starten
 
@@ -54,6 +54,16 @@ Nach jedem Spieltag speichert das Spiel automatisch (`Saved/SaveGames/autosave.j
 - **Entwicklung:** Jeder Spieler hat einen Entwicklungstyp mit eigenem Leistungshöhepunkt.
 - **Ehrungen:** 13 Erfolge, Vereinsrekorde und Legenden beim Karriereende.
 
+## Runde B
+
+- **Aufstellung von Hand:** Auf der Kader-Seite holt „Rein“ einen Spieler in die Startelf, „Raus“ nimmt ihn heraus. Fehlende Plätze füllt das Spiel auf. „Automatisch aufstellen“ setzt wieder die beste Elf.
+- **Moral und Charakter:** Jeder Spieler hat beides. Die Moral der Elf geht in die Spielstärke ein.
+- **Kabinenansprache:** Drei Ansprachen vor dem Spiel. Der Bonus hängt von der Lage ab, und dieselbe Ansprache nutzt sich ab.
+- **Spielvorbereitung und Prognose:** Du richtest die Woche auf einen Ansatz des Gegners aus. Triffst du ihn, gibt es +2,5 Stärke. Die Prognose nennt Sieg, Remis und Niederlage in Prozent.
+- **Derby-Woche:** Jeder Verein hat einen Rivalen. Ab drei Spieltagen vor dem Derby kannst du Stimmung machen, eine Prämie zahlen oder eine Kampfansage machen.
+- **Europapokal:** Platz 1 bis 4 der Bundesliga oder der DFB-Pokalsieg bringen dich hinein. Es gibt zwei Vierergruppen, Halbfinale und Finale, mit Prämien bis 25 Mio. €.
+- **Liga:** Heim- und Auswärtstabelle, eine Liga-Statistik und Auszeichnungen am Saisonende.
+
 Was aus jedem Ordner und Modul des Browserspiels schon in Unreal steckt, steht in [PORTIERUNG.md](PORTIERUNG.md).
 
 ## Grafik
@@ -100,7 +110,7 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4026 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4108 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
    - Eigener Spielstand: Rundlauf, identisches Weiterspielen, Ablehnung kaputter Stände.
@@ -129,7 +139,7 @@ Das Skript baut zwei Testprogramme mit g++:
 
 **Noch nicht portiert:**
 
-- Spiel: 3D-Livespiel mit Ballphysik, Taktik und Aufstellung von Hand, Standards, Europapokal, zweite Mannschaft, Frauenteam
+- Spiel: 3D-Livespiel mit Ballphysik, Standards, Live-Statistik, zweite Mannschaft, Frauenteam
 - Wirtschaft: Sponsorenverhandlung, Medien, Merchandising, Aktien, Wetten, Immobilien, Holding, Industrie
 - Darstellung: Büro, Privatleben, Vereinswappen und -farben
 - Rahmen: Freischaltungen, Einsteiger-Modus, Erfolge, Werkbank, Lexikon, Englisch, Admin-Menü

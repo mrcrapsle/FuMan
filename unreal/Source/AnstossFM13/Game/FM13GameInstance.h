@@ -60,6 +60,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13AchievementView> GetAchievements() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13LegendView> GetLegends() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13RecordsView GetRecords() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13EuropeView GetEurope() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FString> GetAwards() const;
+	// Mode 0 = gesamt, 1 = nur Heimspiele, 2 = nur Auswärtsspiele (aus dem Spielplan berechnet)
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13TableRowView> GetTableSplit(int32 Level, int32 Mode) const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FString> GetLeagueStats(int32 Level) const;
 	UFUNCTION(BlueprintPure, Category = "FM13") static FString FormatMoney(int64 Amount);
 
 	// ---------- Aktionen ----------
@@ -78,6 +83,12 @@ public:
 	// Index in GetIncomingOffers()
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool AcceptIncomingOffer(int32 Index, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool DeclineIncomingOffer(int32 Index, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool ToggleLineupPlayer(int32 PlayerId, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") void AutoLineup();
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool ChooseTalk(const FString& Type, FString& OutReason);
+	// Archetype: "P" (Pressing), "B" (Ballbesitz), "K" (Konter)
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetMatchPrep(const FString& Archetype, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool BookDerbyPrep(const FString& Type, FString& OutReason);
 
 	// ---------- Spielstand ----------
 	// Schreibt erst eine Zwischendatei, liest sie zurück und prüft sie, erst dann ersetzt sie den alten

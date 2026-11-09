@@ -32,6 +32,7 @@ private:
 	TSharedPtr<SBox> PageBox;
 	TSharedPtr<SBox> NavBox;
 	int32 TableLevel = -1;        // Tabelle: angezeigte Liga (-1 = eigene)
+	int32 TableMode = 0;          // Tabelle: 0 gesamt, 1 heim, 2 auswaerts
 	bool bConfirmNewGame = false; // „Neue Karriere“ braucht einen zweiten Klick
 
 	TSharedRef<SWidget> BuildNav();
@@ -73,6 +74,12 @@ private:
 	FReply OnSponsor(int32 Index);
 	FReply OnAcceptOffer(int32 Index);
 	FReply OnDeclineOffer(int32 Index);
+	FReply OnToggleLineup(int32 PlayerId);
+	FReply OnAutoLineup();
+	FReply OnTalk(int32 Index);
+	FReply OnPrep(int32 Index);
+	FReply OnDerbyPrep(int32 Index);
+	FReply OnTableMode(int32 Mode);
 
 	void Status(const FString& Text, float Seconds = 5.f);
 };

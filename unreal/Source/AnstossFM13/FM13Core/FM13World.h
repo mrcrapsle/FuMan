@@ -60,6 +60,21 @@ public:
 	TArray<FFM13Legend> Legends;
 	FFM13RelegationResult LastRelegation;
 
+	// Runde B: Aufstellung, Ansprache, Vorbereitung, Derby, Europapokal
+	TArray<int32> ManualLineup;             // bis 11 Spieler-Ids; leer = automatisch die besten
+	TArray<int32> ManualBench;              // bewusst herausgenommen: werden beim Auffüllen übergangen
+	FString PendingTalk;                    // Kabinenansprache für das nächste Spiel ("fokus", "mut", "druck")
+	TArray<FString> TalkHistory;            // letzte Ansprachen (dreimal gleich nutzt sich ab)
+	TCHAR PrepArchetype = 0;                // Spielvorbereitung: erwarteter Ansatz des nächsten Gegners
+	int32 PrepMatchday = 0;
+	FString RivalName;                      // Derby-Gegner in der eigenen Liga
+	TArray<FString> DerbyPreps;             // gebuchte Derby-Vorbereitungen ("stimmung", "praemie", "kampfansage")
+	int32 DerbyPrepMatchday = 0;
+	bool bEuropeNextSeason = false;         // qualifiziert (Bundesliga Platz 1-4 oder Pokalsieger)
+	int32 EuropePot = 2;
+	FFM13Europe Europe;
+	TArray<FString> AwardHistory;           // Auszeichnungen je Saison
+
 	FFM13Cup DfbPokal;
 	FFM13Cup Landespokal;
 	bool bDfbViaLandespokal = false;     // Landespokal gewonnen: Startplatz im DFB-Pokal der nächsten Saison
@@ -105,6 +120,23 @@ public:
 	const FFM13Club* NextLeagueOpponent(bool* OutHome = nullptr) const;
 	FString RefereeName() const;
 
+	// ---------- Aufstellung, Ansprache, Vorbereitung, Derby (Runde B) ----------
+	bool SetManualLineup(const TArray<int32>& Ids, FString& OutReason);
+	bool ToggleLineupPlayer(int32 PlayerId, FString& OutReason);
+	void ClearManualLineup() { ManualLineup.Reset(); ManualBench.Reset(); }
+	bool IsManualLineup() const { return ManualLineup.Num() > 0; }
+	bool ChooseTalk(const FString& Type, FString& OutReason);
+	float TalkBonus(const FString& Type) const;          // computePregameTalkBonus()
+	bool SetMatchPrep(TCHAR Archetype, FString& OutReason);
+	float MatchPrepBonus() const;
+	float MoraleBonus() const;
+	bool IsDerbyNext() const;
+	int32 MatchdaysToDerby() const;                      // 0 = Derby heute, -1 = keins in Sicht
+	bool BookDerbyPrep(const FString& Type, FString& OutReason);
+	int64 DerbyPrepCost(const FString& Type) const;
+	// Spielprognose des Chef-Analysten (js/match-scout.js): 500 Simulationen
+	void Forecast(int32& OutWin, int32& OutDraw, int32& OutLoss) const;
+
 	// ---------- Angebote ----------
 	bool AcceptSponsorOffer(int32 Index, FString& OutReason);
 	bool AcceptIncomingOffer(int32 Index, FString& OutReason);
@@ -147,6 +179,12 @@ private:
 	void CheckAchievements(bool bSeasonEnd, int32 Rank, EFM13SeasonOutcome Outcome, TArray<FString>* OutNew = nullptr);
 	void Unlock(const FString& Id, TArray<FString>* OutNew);
 	FFM13RelegationResult PlayRelegation(int32 Rank);
+	TArray<int32> LineupIndices(int32& OutStrength) const;
+	void ResolveMatchMood(int32 OwnGoals, int32 OppGoals, const FFM13OwnMatchReport& Report);
+	void PickRival();
+	void InitEurope();
+	void PlayEuropeMatchday();
+	void SeasonAwards(FFM13SeasonSummary& S, int32 Rank, EFM13SeasonOutcome Outcome);
 	void CheckSeasonEndSacking(int32 Rank);
 	void AdvanceLeagues(int32 OwnRank, EFM13SeasonOutcome OwnOutcome);
 	void EvolveAiClub(FFM13Club& C, int32 Rank, int32 OldLevel, EFM13SeasonOutcome Outcome);

@@ -65,6 +65,8 @@ namespace
 		W.Field(TEXT("yel"), P.YellowCards);
 		W.Field(TEXT("seasons"), P.SeasonsAtClub);
 		W.Field(TEXT("arch"), (int64)P.Archetype);
+		W.Field(TEXT("char"), (int64)P.Character);
+		W.Field(TEXT("morale"), P.Morale);
 		W.EndObject();
 	}
 
@@ -72,6 +74,20 @@ namespace
 	{
 		W.Field(TEXT("name"), S.Name); W.Field(TEXT("base"), S.Base); W.Field(TEXT("win"), S.WinBonus);
 		W.Field(TEXT("promo"), S.PromotionBonus); W.Field(TEXT("signOn"), S.SignOn); W.Field(TEXT("left"), S.MatchdaysLeft); W.Field(TEXT("tier"), S.Tier);
+	}
+
+	void WriteEuroTie(FWriter& W, const FFM13EuroTie& T)
+	{
+		W.Field(TEXT("a"), T.A); W.Field(TEXT("b"), T.B);
+		W.Field(TEXT("l1a"), T.Leg1A); W.Field(TEXT("l1b"), T.Leg1B); W.Field(TEXT("l2a"), T.Leg2A); W.Field(TEXT("l2b"), T.Leg2B);
+		W.FieldBool(TEXT("pen"), T.bPenalties); W.Field(TEXT("win"), T.Winner);
+	}
+
+	void WriteStrings(FWriter& W, const TCHAR* Key, const TArray<FString>& L)
+	{
+		W.ArrayKey(Key);
+		for (const FString& X : L) W.ElementStr(X);
+		W.EndArray();
 	}
 
 	void WriteCup(FWriter& W, const TCHAR* Key, const FFM13Cup& C)
@@ -169,6 +185,45 @@ namespace FM13Save
 			W.EndObject();
 		}
 		W.EndArray();
+		W.ArrayKey(TEXT("manualLineup"));
+		for (int32 Id : S.ManualLineup) W.ElementInt(Id);
+		W.EndArray();
+		W.ArrayKey(TEXT("manualBench"));
+		for (int32 Id : S.ManualBench) W.ElementInt(Id);
+		W.EndArray();
+		W.Field(TEXT("pendingTalk"), S.PendingTalk);
+		WriteStrings(W, TEXT("talkHistory"), S.TalkHistory);
+		W.Field(TEXT("prepArch"), (int64)S.PrepArchetype);
+		W.Field(TEXT("prepMatchday"), S.PrepMatchday);
+		W.Field(TEXT("rival"), S.RivalName);
+		WriteStrings(W, TEXT("derbyPreps"), S.DerbyPreps);
+		W.Field(TEXT("derbyPrepMatchday"), S.DerbyPrepMatchday);
+		W.FieldBool(TEXT("europeNext"), S.bEuropeNextSeason);
+		W.Field(TEXT("europePot"), S.EuropePot);
+		WriteStrings(W, TEXT("awards"), S.AwardHistory);
+		W.ObjectKey(TEXT("europe"));
+		W.FieldBool(TEXT("active"), S.Europe.bActive);
+		W.Field(TEXT("round"), S.Europe.GroupRound);
+		W.Field(TEXT("winner"), S.Europe.Winner);
+		W.Field(TEXT("stage"), S.Europe.OwnStage);
+		WriteStrings(W, TEXT("last"), S.Europe.LastResults);
+		for (int32 G = 0; G < 2; ++G)
+		{
+			W.ArrayKey(G == 0 ? TEXT("groupA") : TEXT("groupB"));
+			for (const FFM13EuroTeam& T : S.Europe.Groups[G])
+			{
+				W.ElementObject();
+				W.Field(TEXT("name"), T.Name); W.Field(TEXT("str"), T.Strength); W.Field(TEXT("p"), T.Played); W.Field(TEXT("w"), T.Won);
+				W.Field(TEXT("d"), T.Drawn); W.Field(TEXT("l"), T.Lost); W.Field(TEXT("gf"), T.GoalsFor); W.Field(TEXT("ga"), T.GoalsAgainst);
+				W.EndObject();
+			}
+			W.EndArray();
+		}
+		W.ArrayKey(TEXT("semis"));
+		for (const FFM13EuroTie& T : S.Europe.Semis) { W.ElementObject(); WriteEuroTie(W, T); W.EndObject(); }
+		W.EndArray();
+		W.ObjectKey(TEXT("final")); WriteEuroTie(W, S.Europe.Final); W.EndObject();
+		W.EndObject();
 		WriteCup(W, TEXT("dfbPokal"), S.DfbPokal);
 		WriteCup(W, TEXT("landespokal"), S.Landespokal);
 
@@ -290,6 +345,8 @@ namespace
 		P.YellowCards = (int32)R.Int(Obj, TEXT("yel"), 0);
 		P.SeasonsAtClub = (int32)R.Int(Obj, TEXT("seasons"), 0);
 		P.Archetype = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("arch"), 0), 0, 4);
+		P.Character = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("char"), 0), 0, 5);
+		P.Morale = FMath::Clamp((int32)R.Int(Obj, TEXT("morale"), 65), 5, 100);
 		return P;
 	}
 
@@ -300,6 +357,16 @@ namespace
 		S.PromotionBonus = (int32)R.Int(N, TEXT("promo"), 0); S.SignOn = (int32)R.Int(N, TEXT("signOn"), 0); S.MatchdaysLeft = (int32)R.Int(N, TEXT("left"), 0);
 		S.Tier = R.Str(N, TEXT("tier"), TEXT(""));
 		return S;
+	}
+
+	FFM13EuroTie ReadEuroTie(const FReader& R, int32 N)
+	{
+		FFM13EuroTie T;
+		T.A = R.Str(N, TEXT("a"), TEXT("")); T.B = R.Str(N, TEXT("b"), TEXT(""));
+		T.Leg1A = (int32)R.Int(N, TEXT("l1a"), -1); T.Leg1B = (int32)R.Int(N, TEXT("l1b"), -1);
+		T.Leg2A = (int32)R.Int(N, TEXT("l2a"), -1); T.Leg2B = (int32)R.Int(N, TEXT("l2b"), -1);
+		T.bPenalties = R.Bool(N, TEXT("pen"), false); T.Winner = R.Str(N, TEXT("win"), TEXT(""));
+		return T;
 	}
 
 	// Pokal: Regeln (Runden, Spieltage, Prämien) kommen aus dem Code, gespeichert ist nur der Stand
@@ -396,6 +463,36 @@ namespace FM13Save
 			L.Goals = (int32)R.Int(N, TEXT("goals"), 0); L.BestStrength = (int32)R.Int(N, TEXT("best"), 0); L.RetiredSeason = (int32)R.Int(N, TEXT("retired"), 0);
 			W.Legends.Add(L);
 		}
+		for (int32 N : R.Items(Root, TEXT("manualLineup"))) W.ManualLineup.Add((int32)P.Nodes[N].Number);
+		for (int32 N : R.Items(Root, TEXT("manualBench"))) W.ManualBench.Add((int32)P.Nodes[N].Number);
+		W.PendingTalk = R.Str(Root, TEXT("pendingTalk"), TEXT(""));
+		for (int32 N : R.Items(Root, TEXT("talkHistory"))) W.TalkHistory.Add(P.Nodes[N].Text);
+		W.PrepArchetype = (TCHAR)R.Int(Root, TEXT("prepArch"), 0);
+		W.PrepMatchday = (int32)R.Int(Root, TEXT("prepMatchday"), 0);
+		W.RivalName = R.Str(Root, TEXT("rival"), TEXT(""));
+		for (int32 N : R.Items(Root, TEXT("derbyPreps"))) W.DerbyPreps.Add(P.Nodes[N].Text);
+		W.DerbyPrepMatchday = (int32)R.Int(Root, TEXT("derbyPrepMatchday"), 0);
+		W.bEuropeNextSeason = R.Bool(Root, TEXT("europeNext"), false);
+		W.EuropePot = (int32)R.Int(Root, TEXT("europePot"), 2);
+		for (int32 N : R.Items(Root, TEXT("awards"))) W.AwardHistory.Add(P.Nodes[N].Text);
+		const int32 Eu = R.Find(Root, TEXT("europe"));
+		W.Europe.bActive = R.Bool(Eu, TEXT("active"), false);
+		W.Europe.GroupRound = (int32)R.Int(Eu, TEXT("round"), 0);
+		W.Europe.Winner = R.Str(Eu, TEXT("winner"), TEXT(""));
+		W.Europe.OwnStage = R.Str(Eu, TEXT("stage"), TEXT(""));
+		for (int32 N : R.Items(Eu, TEXT("last"))) W.Europe.LastResults.Add(P.Nodes[N].Text);
+		for (int32 G = 0; G < 2; ++G)
+			for (int32 N : R.Items(Eu, G == 0 ? TEXT("groupA") : TEXT("groupB")))
+			{
+				FFM13EuroTeam T;
+				T.Name = R.Str(N, TEXT("name"), TEXT("?")); T.Strength = (int32)R.Int(N, TEXT("str"), 80); T.Played = (int32)R.Int(N, TEXT("p"), 0);
+				T.Won = (int32)R.Int(N, TEXT("w"), 0); T.Drawn = (int32)R.Int(N, TEXT("d"), 0); T.Lost = (int32)R.Int(N, TEXT("l"), 0);
+				T.GoalsFor = (int32)R.Int(N, TEXT("gf"), 0); T.GoalsAgainst = (int32)R.Int(N, TEXT("ga"), 0);
+				W.Europe.Groups[G].Add(T);
+			}
+		for (int32 N : R.Items(Eu, TEXT("semis"))) W.Europe.Semis.Add(ReadEuroTie(R, N));
+		const int32 Fi = R.Find(Eu, TEXT("final"));
+		if (Fi >= 0) W.Europe.Final = ReadEuroTie(R, Fi);
 		W.DfbPokal = FM13CupRules::MakeDfbPokal();
 		W.Landespokal = FM13CupRules::MakeLandespokal();
 		// Ältere Stände ohne Pokal: Wettbewerbe dieser Saison gelten als beendet (ab der nächsten Saison normal)

@@ -42,6 +42,9 @@ namespace
 		P.ContractYears = bYouth ? 0 : FMath::Clamp((int32)R.Int(N, TEXT("contracts"), 2), 1, 5);
 		P.InjuredMatchdays = FMath::Clamp((int32)R.Int(N, TEXT("injured"), 0), 0, 34);
 		P.SuspendedMatchdays = FMath::Clamp((int32)R.Int(N, TEXT("suspended"), 0), 0, 10);
+		const FString Charakter = R.Str(N, TEXT("character"), TEXT(""));
+		for (uint8 c = 0; c < 6; ++c) if (Charakter.Len() >= 4 && FString(FM13CharacterName(c)).Contains(Charakter.Left(4))) P.Character = c;
+		P.Morale = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("morale"), 65.0)), 5, 100);
 		P.Archetype = FM13Dev::ArchetypeFor(NewId);
 		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
 		P.SeasonsAtClub = FMath::Max(0, R.Items(N, TEXT("strengthHistory")).Num() - 1);
