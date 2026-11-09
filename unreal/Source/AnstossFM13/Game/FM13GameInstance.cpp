@@ -1,5 +1,7 @@
 #include "FM13GameInstance.h"
 #include "FM13Core/FM13SaveCodec.h"
+#include "FM13Core/FM13BrowserImport.h"
+#include "HAL/PlatformMisc.h"
 #include "HAL/FileManager.h"
 #include "Misc/DateTime.h"
 #include "Misc/FileHelper.h"
@@ -337,6 +339,79 @@ bool UFM13GameInstance::LoadGame(const FString& Slot, FString& OutError)
 		}
 		return false;
 	}
+	Changed();
+	return true;
+}
+
+// ---------- Import aus dem Browserspiel ----------
+
+TArray<FString> UFM13GameInstance::FindBrowserExports()
+{
+	// Neueste zuerst
+	TArray<FString> Ordner;
+	const FString Profil = FPlatformMisc::GetEnvironmentVariable(TEXT("USERPROFILE"));
+	if (!Profil.IsEmpty()) Ordner.Add(FPaths::Combine(Profil, TEXT("Downloads")));
+	const FString Home = FPlatformMisc::GetEnvironmentVariable(TEXT("HOME"));
+	if (!Home.IsEmpty()) Ordner.Add(FPaths::Combine(Home, TEXT("Downloads")));
+	Ordner.Add(FPaths::Combine(FPaths::ProjectSavedDir(), TEXT("Import")));
+
+	struct FTreffer { FString Pfad; FDateTime Zeit; };
+	TArray<FTreffer> Treffer;
+	IFileManager& FM = IFileManager::Get();
+	for (const FString& O : Ordner)
+	{
+		TArray<FString> Namen;
+		FM.FindFiles(Namen, *FPaths::Combine(O, TEXT("anstoss-fm13-*.json")), true, false);
+		for (const FString& N : Namen)
+		{
+			FTreffer T;
+			T.Pfad = FPaths::Combine(O, N);
+			T.Zeit = FM.GetTimeStamp(*T.Pfad);
+			Treffer.Add(T);
+		}
+	}
+	Treffer.Sort([](const FTreffer& A, const FTreffer& B) { return A.Zeit > B.Zeit; });
+	TArray<FString> Out;
+	for (const FTreffer& T : Treffer) Out.Add(T.Pfad);
+	return Out;
+}
+
+bool UFM13GameInstance::ImportBrowserSave(FString& OutMessage)
+{
+	const TArray<FString> Dateien = FindBrowserExports();
+	if (!Dateien.Num())
+	{
+		OutMessage = TEXT("Keine exportierte Datei gefunden. Im Browserspiel unter Spielstand \"Als Datei exportieren\" waehlen; die Datei anstoss-fm13-....json muss in Downloads liegen.");
+		return false;
+	}
+	return ImportBrowserSaveFile(Dateien[0], OutMessage);
+}
+
+bool UFM13GameInstance::ImportBrowserSaveFile(const FString& Path, FString& OutMessage)
+{
+	FString Text;
+	if (!FFileHelper::LoadFileToString(Text, *Path))
+	{
+		OutMessage = TEXT("Datei konnte nicht gelesen werden: ") + Path;
+		return false;
+	}
+	FFM13World Neu;
+	FString Fehler;
+	TArray<FString> Hinweise;
+	const int32 Saat = (int32)(FDateTime::Now().GetTicks() & 0x7fffffff);
+	if (!FM13BrowserImport::Import(Text, Neu, Fehler, Hinweise, Saat))
+	{
+		OutMessage = TEXT("Import fehlgeschlagen: ") + Fehler;
+		return false;
+	}
+	// Bisherigen Stand sichern, bevor er ersetzt wird
+	FString SicherungFehler;
+	SaveGame(TEXT("vor-import"), SicherungFehler);
+	Kern = Neu;
+	OutMessage = FString::Printf(TEXT("Uebernommen: %s, Saison %d, Spieltag %d, %s."), *Kern.ClubName, Kern.Season,
+		FMath::Min(Kern.Matchday, FM13::MatchdaysPerSeason), FM13::LeagueName(Kern.LeagueLevel));
+	for (const FString& H : Hinweise) Kern.AddMessage(TEXT("Import"), H);
+	if (bAutosave) { FString F; SaveGame(TEXT("autosave"), F); }
 	Changed();
 	return true;
 }

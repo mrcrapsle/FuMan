@@ -267,5 +267,5 @@ void AFM13HUD::DrawFooter(const AFM13PlayerController& PC)
 	const double Jetzt = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0;
 	if (!PC.StatusLine.IsEmpty() && Jetzt < PC.StatusUntil) Line(PC.StatusLine, Rand, Akzent);
 	else Y += Zeile * Scale;
-	Line(TEXT("Leertaste: naechster Spieltag   F5 speichern   F9 laden   F2 neue Karriere"), Rand, Gedimmt);
+	Line(TEXT("Leertaste: naechster Spieltag   F5 speichern   F9 laden   F2 neue Karriere   F8 Browser-Spielstand uebernehmen"), Rand, Gedimmt);
 }

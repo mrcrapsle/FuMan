@@ -73,6 +73,13 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool LoadGame(const FString& Slot, FString& OutError);
 	UFUNCTION(BlueprintPure, Category = "FM13") bool HasSaveGame(const FString& Slot) const;
 
+	// ---------- Import aus dem Browserspiel ----------
+	// Sucht die neueste exportierte Datei (anstoss-fm13-*.json) in Downloads und in Saved/Import
+	// und übernimmt sie. Der bisherige Stand bleibt als Spielstand "vor-import" erhalten.
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool ImportBrowserSave(FString& OutMessage);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool ImportBrowserSaveFile(const FString& Path, FString& OutMessage);
+	UFUNCTION(BlueprintPure, Category = "FM13") static TArray<FString> FindBrowserExports();
+
 	const FFM13World& GetWorldState() const { return Kern; }
 
 private:

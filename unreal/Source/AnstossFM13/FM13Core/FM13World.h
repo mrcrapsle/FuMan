@@ -89,6 +89,9 @@ public:
 	bool UpgradeTraining(FString& OutReason);
 	int64 TrainingUpgradeCost() const;
 
+	// Pokale der laufenden Saison neu auslosen (auch für den Import aus dem Browserspiel)
+	void InitCups();
+
 	// ---------- Hilfen ----------
 	FFM13Player* FindPlayer(int32 Id);
 	const FFM13Player* FindPlayer(int32 Id) const;
@@ -109,7 +112,6 @@ private:
 	void DevelopPlayers(FFM13SeasonSummary& Summary);
 	void YouthIntake(FFM13SeasonSummary& Summary);
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
-	void InitCups();
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);
 	void RollInjuries(FFM13OwnMatchReport& Report);
 	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome);

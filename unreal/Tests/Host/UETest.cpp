@@ -27,7 +27,7 @@ int main()
 	UInputComponent Input;
 	PC.InputComponent = &Input;
 	PC.SetupInputComponent();
-	PRUEFE(Input.Bindings.size() == 20, "20 Tasten gebunden (%d)", (int)Input.Bindings.size());
+	PRUEFE(Input.Bindings.size() == 21, "21 Tasten gebunden (%d)", (int)Input.Bindings.size());
 
 	UCanvas Canvas;
 	AFM13HUD HUD;
@@ -76,6 +76,19 @@ int main()
 	FFileHelper::SaveStringToFile("{kaputt", "/tmp/fm13-uemock//SaveGames/spielstand1.json");
 	const bool bGeladen = GI.LoadGame("spielstand1", Fehler);
 	PRUEFE(!bGeladen || Fehler.Contains("Sicherung"), "Kaputter Stand: Fehler oder Sicherung (%s)", *Fehler);
+
+	// Import: ohne Datei eine Erklärung, mit Datei im (falschen) Downloads-Ordner der neueste Stand
+	setenv("USERPROFILE", "/tmp/fm13-uemock/profil", 1);
+	setenv("HOME", "/tmp/fm13-uemock/profil", 1);
+	Taste("F8");
+	PRUEFE(PC.StatusLine.Contains("Keine exportierte Datei"), "F8 ohne Datei erklaert sich (%s)", *PC.StatusLine);
+	if (std::system("mkdir -p /tmp/fm13-uemock/profil/Downloads && cp ../../../tests/fixtures/saves/v3.103.json /tmp/fm13-uemock/profil/Downloads/anstoss-fm13-Alt-S1-SpT1.json && sleep 1 && cp ../../../tests/fixtures/saves/karriere-liga4-v3.104-s3.json /tmp/fm13-uemock/profil/Downloads/anstoss-fm13-Neu-S4-SpT1.json") != 0) std::printf("Kopieren fehlgeschlagen\n");
+	Taste("F8");
+	PRUEFE(PC.StatusLine.Contains("Uebernommen") && GI.GetStatus().Season == 4 && GI.GetStatus().LeagueLevel == 2, "F8 uebernimmt den neuesten Browser-Spielstand (%s)", *PC.StatusLine);
+	PRUEFE(GI.HasSaveGame("vor-import"), "Vorheriger Stand als vor-import gesichert");
+	PRUEFE(GI.GetYouth().Num() == 10 && GI.GetSquad().Num() == 21, "Kader und Talente uebernommen");
+	Taste("Space");
+	PRUEFE(GI.GetStatus().Matchday == 2, "Importierter Stand spielt weiter");
 
 	// Neue Karriere
 	Taste("F2");

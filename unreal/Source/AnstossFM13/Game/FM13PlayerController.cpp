@@ -28,6 +28,7 @@ void AFM13PlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::F5, IE_Pressed, this, &AFM13PlayerController::OnSpeichern);
 	InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AFM13PlayerController::OnLaden);
 	InputComponent->BindKey(EKeys::F2, IE_Pressed, this, &AFM13PlayerController::OnNeu);
+	InputComponent->BindKey(EKeys::F8, IE_Pressed, this, &AFM13PlayerController::OnImport);
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AFM13PlayerController::OnSeite1);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AFM13PlayerController::OnSeite2);
 	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AFM13PlayerController::OnSeite3);
@@ -204,4 +205,14 @@ void AFM13PlayerController::OnNeu()
 	G->NewGame(TEXT("1.FC Moritz Leipzig"));
 	SetPage(EFM13Page::Uebersicht);
 	ShowStatus(TEXT("Neue Karriere in der 6. Liga gestartet."));
+}
+
+void AFM13PlayerController::OnImport()
+{
+	UFM13GameInstance* G = Game();
+	if (!G) return;
+	FString Meldung;
+	G->ImportBrowserSave(Meldung);
+	ShowStatus(Meldung, 10.f);
+	SetPage(EFM13Page::Uebersicht);
 }

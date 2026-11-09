@@ -41,7 +41,7 @@ struct FKey { const char* Name; };
 struct EKeys
 {
 	static inline const FKey SpaceBar{ "Space" }, Up{ "Up" }, Down{ "Down" }, Enter{ "Enter" }, Delete{ "Delete" }, Right{ "Right" }, Left{ "Left" },
-		F2{ "F2" }, F5{ "F5" }, F9{ "F9" }, One{ "1" }, Two{ "2" }, Three{ "3" }, Four{ "4" }, Five{ "5" }, Six{ "6" }, Seven{ "7" }, Eight{ "8" }, Nine{ "9" }, Zero{ "0" };
+		F2{ "F2" }, F8{ "F8" }, F5{ "F5" }, F9{ "F9" }, One{ "1" }, Two{ "2" }, Three{ "3" }, Four{ "4" }, Five{ "5" }, Six{ "6" }, Seven{ "7" }, Eight{ "8" }, Nine{ "9" }, Zero{ "0" };
 };
 class UInputComponent
 {
@@ -80,7 +80,8 @@ public:
 class UEngine { public: UFont* GetMediumFont() { static UFont F; return &F; } };
 inline UEngine* GEngine = nullptr;
 
-struct FDateTime { int64 Ticks = 0; static FDateTime Now() { return FDateTime{ 123456789 }; } int64 GetTicks() const { return Ticks; } };
+struct FDateTime { int64 Ticks = 0; static FDateTime Now() { return FDateTime{ 123456789 }; } int64 GetTicks() const { return Ticks; } bool operator>(const FDateTime& O) const { return Ticks > O.Ticks; } };
+struct FPlatformMisc { static FString GetEnvironmentVariable(const char* Name); };
 struct FPaths
 {
 	static FString ProjectSavedDir() { return FString("/tmp/fm13-uemock/"); }
@@ -99,6 +100,8 @@ public:
 	bool FileExists(const char* Path);
 	bool Delete(const char* Path);
 	bool Move(const char* Dest, const char* Src, bool Replace = true);
+	void FindFiles(TArray<FString>& Found, const char* Wildcard, bool Files, bool Dirs);
+	FDateTime GetTimeStamp(const char* Path);
 };
 class IModuleInterface { public: virtual ~IModuleInterface() {} virtual void StartupModule() {} virtual void ShutdownModule() {} };
 

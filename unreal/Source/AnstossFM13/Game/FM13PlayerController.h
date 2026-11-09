@@ -24,7 +24,7 @@ enum class EFM13Page : uint8
 // Tastatursteuerung für die Platzhalter-Oberfläche:
 // Leertaste = nächster Spieltag (bzw. Saison abschließen), 1-8 = Seiten, Pfeile = Auswahl,
 // 9 = Live-Ticker, 0 = Pokale, Enter = Aktion der Seite, Entf = abgeben/entlassen, Links/Rechts = Ticketpreis, F5/F9 = Speichern/Laden,
-// F2 = neue Karriere.
+// F2 = neue Karriere, F8 = Spielstand aus dem Browserspiel übernehmen.
 UCLASS()
 class ANSTOSSFM13_API AFM13PlayerController : public APlayerController
 {
@@ -59,6 +59,7 @@ private:
 	void OnSpeichern();
 	void OnLaden();
 	void OnNeu();
+	void OnImport();
 	void OnSeite1() { SetPage(EFM13Page::Uebersicht); }
 	void OnSeite2() { SetPage(EFM13Page::Tabelle); }
 	void OnSeite3() { SetPage(EFM13Page::Kader); }

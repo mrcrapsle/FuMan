@@ -1,4 +1,5 @@
 #include "FM13SaveCodec.h"
+#include "FM13Json.h"
 
 // ---------- Schreiben ----------
 namespace
@@ -218,177 +219,7 @@ namespace FM13Save
 // ---------- Lesen ----------
 namespace
 {
-	enum class ENodeType : uint8 { Null, Bool, Number, String, Array, Object };
-
-	// Flacher Knotenpool statt rekursiver Typen: Kinder sind Indizes in Nodes
-	struct FNode
-	{
-		ENodeType Type = ENodeType::Null;
-		int64 Number = 0;
-		bool bValue = false;
-		FString Text;
-		TArray<FString> Keys;
-		TArray<int32> Children;
-	};
-
-	class FParser
-	{
-	public:
-		const FString& In;
-		int32 Pos = 0;
-		TArray<FNode> Nodes;
-		FString Error;
-
-		explicit FParser(const FString& InText) : In(InText) {}
-
-		bool Fail(const TCHAR* Msg) { if (Error.IsEmpty()) Error = FString::Printf(TEXT("%s (Zeichen %d)"), Msg, Pos); return false; }
-		void SkipWs() { while (Pos < In.Len() && (In[Pos] == TEXT(' ') || In[Pos] == TEXT('\n') || In[Pos] == TEXT('\r') || In[Pos] == TEXT('\t'))) ++Pos; }
-		bool Eat(TCHAR C) { SkipWs(); if (Pos < In.Len() && In[Pos] == C) { ++Pos; return true; } return false; }
-
-		bool ParseString(FString& Out)
-		{
-			if (!Eat(TEXT('"'))) return Fail(TEXT("Anfuehrungszeichen erwartet"));
-			while (Pos < In.Len())
-			{
-				const TCHAR C = In[Pos++];
-				if (C == TEXT('"')) return true;
-				if (C != TEXT('\\')) { Out.AppendChar(C); continue; }
-				if (Pos >= In.Len()) break;
-				const TCHAR E = In[Pos++];
-				if (E == TEXT('n')) Out.AppendChar(TEXT('\n'));
-				else if (E == TEXT('r')) Out.AppendChar(TEXT('\r'));
-				else if (E == TEXT('t')) Out.AppendChar(TEXT('\t'));
-				else if (E == TEXT('b')) Out.AppendChar(TEXT('\b'));
-				else if (E == TEXT('f')) Out.AppendChar(TEXT('\f'));
-				else if (E == TEXT('u'))
-				{
-					if (Pos + 4 > In.Len()) break;
-					uint32 Code = 0;
-					for (int32 k = 0; k < 4; ++k)
-					{
-						const TCHAR H = In[Pos++];
-						Code <<= 4;
-						if (H >= TEXT('0') && H <= TEXT('9')) Code |= (uint32)(H - TEXT('0'));
-						else if (H >= TEXT('a') && H <= TEXT('f')) Code |= (uint32)(H - TEXT('a') + 10);
-						else if (H >= TEXT('A') && H <= TEXT('F')) Code |= (uint32)(H - TEXT('A') + 10);
-						else return Fail(TEXT("Ungueltige Unicode-Folge"));
-					}
-					Out.AppendChar((TCHAR)Code);
-				}
-				else Out.AppendChar(E); // \" \\ \/
-			}
-			return Fail(TEXT("Text nicht abgeschlossen"));
-		}
-
-		bool ParseValue(int32& OutIndex)
-		{
-			SkipWs();
-			if (Pos >= In.Len()) return Fail(TEXT("Unerwartetes Ende"));
-			FNode N;
-			const TCHAR C = In[Pos];
-			if (C == TEXT('{'))
-			{
-				++Pos;
-				N.Type = ENodeType::Object;
-				OutIndex = Nodes.Add(N);
-				if (Eat(TEXT('}'))) return true;
-				do
-				{
-					FString K;
-					SkipWs();
-					if (!ParseString(K)) return false;
-					if (!Eat(TEXT(':'))) return Fail(TEXT("Doppelpunkt erwartet"));
-					int32 Kind = -1;
-					if (!ParseValue(Kind)) return false;
-					Nodes[OutIndex].Keys.Add(K);
-					Nodes[OutIndex].Children.Add(Kind);
-				} while (Eat(TEXT(',')));
-				return Eat(TEXT('}')) ? true : Fail(TEXT("Schliessende Klammer } erwartet"));
-			}
-			if (C == TEXT('['))
-			{
-				++Pos;
-				N.Type = ENodeType::Array;
-				OutIndex = Nodes.Add(N);
-				if (Eat(TEXT(']'))) return true;
-				do
-				{
-					int32 Kind = -1;
-					if (!ParseValue(Kind)) return false;
-					Nodes[OutIndex].Children.Add(Kind);
-				} while (Eat(TEXT(',')));
-				return Eat(TEXT(']')) ? true : Fail(TEXT("Schliessende Klammer ] erwartet"));
-			}
-			if (C == TEXT('"'))
-			{
-				N.Type = ENodeType::String;
-				if (!ParseString(N.Text)) return false;
-				OutIndex = Nodes.Add(N);
-				return true;
-			}
-			if (C == TEXT('t') || C == TEXT('f') || C == TEXT('n'))
-			{
-				const TCHAR* Wort = C == TEXT('t') ? TEXT("true") : (C == TEXT('f') ? TEXT("false") : TEXT("null"));
-				for (int32 k = 0; Wort[k]; ++k, ++Pos)
-					if (Pos >= In.Len() || In[Pos] != Wort[k]) return Fail(TEXT("Unbekanntes Wort"));
-				N.Type = C == TEXT('n') ? ENodeType::Null : ENodeType::Bool;
-				N.bValue = C == TEXT('t');
-				OutIndex = Nodes.Add(N);
-				return true;
-			}
-			// Nur ganze Zahlen: der Spielstand enthält keine Kommazahlen
-			bool bNeg = false;
-			if (C == TEXT('-')) { bNeg = true; ++Pos; }
-			if (Pos >= In.Len() || In[Pos] < TEXT('0') || In[Pos] > TEXT('9')) return Fail(TEXT("Zahl erwartet"));
-			int64 V = 0;
-			while (Pos < In.Len() && In[Pos] >= TEXT('0') && In[Pos] <= TEXT('9'))
-			{
-				V = V * 10 + (int64)(In[Pos] - TEXT('0'));
-				++Pos;
-			}
-			N.Type = ENodeType::Number;
-			N.Number = bNeg ? -V : V;
-			OutIndex = Nodes.Add(N);
-			return true;
-		}
-	};
-
-	// Lesezugriff mit Standardwerten (fehlende Felder alter Stände bekommen den Startwert, wie ensure…State())
-	class FReader
-	{
-	public:
-		const TArray<FNode>& Nodes;
-		explicit FReader(const TArray<FNode>& In) : Nodes(In) {}
-
-		int32 Find(int32 Obj, const TCHAR* Key) const
-		{
-			if (!Nodes.IsValidIndex(Obj) || Nodes[Obj].Type != ENodeType::Object) return -1;
-			const FString K(Key);
-			for (int32 i = 0; i < Nodes[Obj].Keys.Num(); ++i) if (Nodes[Obj].Keys[i] == K) return Nodes[Obj].Children[i];
-			return -1;
-		}
-		int64 Int(int32 Obj, const TCHAR* Key, int64 Default) const
-		{
-			const int32 N = Find(Obj, Key);
-			return (N >= 0 && Nodes[N].Type == ENodeType::Number) ? Nodes[N].Number : Default;
-		}
-		bool Bool(int32 Obj, const TCHAR* Key, bool Default) const
-		{
-			const int32 N = Find(Obj, Key);
-			return (N >= 0 && Nodes[N].Type == ENodeType::Bool) ? Nodes[N].bValue : Default;
-		}
-		FString Str(int32 Obj, const TCHAR* Key, const FString& Default) const
-		{
-			const int32 N = Find(Obj, Key);
-			return (N >= 0 && Nodes[N].Type == ENodeType::String) ? Nodes[N].Text : Default;
-		}
-		TArray<int32> Items(int32 Obj, const TCHAR* Key) const
-		{
-			const int32 N = Find(Obj, Key);
-			if (N >= 0 && Nodes[N].Type == ENodeType::Array) return Nodes[N].Children;
-			return TArray<int32>();
-		}
-	};
+	using namespace FM13Json;
 
 	FFM13Player ReadPlayer(const FReader& R, int32 Obj)
 	{
@@ -435,11 +266,9 @@ namespace FM13Save
 {
 	bool Decode(const FString& Text, FFM13World& OutWorld, FString& OutError)
 	{
-		FParser P(Text);
-		int32 Root = -1;
-		if (!P.ParseValue(Root)) { OutError = TEXT("Spielstand ist kein gueltiges JSON: ") + P.Error; return false; }
-		P.SkipWs();
-		if (P.Pos != Text.Len()) { OutError = TEXT("Unerwartete Zeichen nach dem Spielstand."); return false; }
+		FDocument P;
+		if (!Parse(Text, P, OutError)) { OutError = TEXT("Spielstand ist kein gueltiges JSON: ") + OutError; return false; }
+		const int32 Root = P.Root;
 		const FReader R(P.Nodes);
 		if (R.Find(Root, TEXT("clubName")) < 0) { OutError = TEXT("Kein Spielstand von Anstoss FM13."); return false; }
 		const int64 V = R.Int(Root, TEXT("version"), 0);

@@ -5,6 +5,10 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Match.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13World.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13BrowserImport.h"
+#include <dirent.h>
+#include <fstream>
+#include <sstream>
 #include "Referenzwerte.h"
 #include <map>
 #include <set>
@@ -386,6 +390,61 @@ static void TestPokalUndVerletzungen()
 	PRUEFE(bPraemie || !D.DfbPokal.bOwnAlive, "Weiterkommen bringt Praemie");
 }
 
+static void TestBrowserImport()
+{
+	std::printf("Import echter Spielstaende des Browserspiels (tests/fixtures/saves)\n");
+	const std::string Ordner = "../../../tests/fixtures/saves/";
+	DIR* D = opendir(Ordner.c_str());
+	PRUEFE(D != nullptr, "Ordner mit Spielstaenden gefunden");
+	if (!D) return;
+	std::vector<std::string> Dateien;
+	while (dirent* E = readdir(D)) { std::string N = E->d_name; if (N.size() > 5 && N.substr(N.size() - 5) == ".json") Dateien.push_back(N); }
+	closedir(D);
+	std::sort(Dateien.begin(), Dateien.end());
+	PRUEFE(Dateien.size() >= 5, "Mindestens 5 Spielstaende (%d)", (int)Dateien.size());
+	for (const std::string& Name : Dateien)
+	{
+		std::ifstream F(Ordner + Name, std::ios::binary);
+		std::stringstream B; B << F.rdbuf();
+		FFM13World W;
+		FString Fehler;
+		TArray<FString> Hinweise;
+		const bool bOk = FM13BrowserImport::Import(FString(B.str()), W, Fehler, Hinweise, 5);
+		PRUEFE(bOk, "%s importiert (%s)", Name.c_str(), *Fehler);
+		if (!bOk) continue;
+		// Kennzahlen gegen die Datei (per Node gelesen wäre doppelt; hier Plausibilität und Konsistenz)
+		PRUEFE(W.Leagues.Num() == 6 && W.OwnLeague().FindOwn() >= 0, "%s: 6 Ligen, eigener Verein gefunden", Name.c_str());
+		int Eigene = 0;
+		for (const FFM13League& L : W.Leagues)
+		{
+			PRUEFE(L.Clubs.Num() == 18 && L.MatchdayCount() == 34 && L.Fixtures.Num() == 306, "%s: Liga %d vollstaendig", Name.c_str(), L.Level);
+			for (const FFM13Club& C : L.Clubs) if (C.bOwn) ++Eigene;
+			// Tabelle passt zu den gespielten Partien
+			int Gespielt = 0; for (const FFM13Fixture& Fx : L.Fixtures) if (Fx.bPlayed) ++Gespielt;
+			int Summe = 0; for (const FFM13Club& C : L.Clubs) Summe += C.Played;
+			PRUEFE(Summe == Gespielt * 2, "%s: Liga %d Tabelle %d = 2 x %d Spiele", Name.c_str(), L.Level, Summe, Gespielt);
+		}
+		PRUEFE(Eigene == 1, "%s: genau ein eigener Verein", Name.c_str());
+		PRUEFE(W.Squad.Num() >= 11 && W.StadiumCapacity >= 500, "%s: Kader und Stadion", Name.c_str());
+		// Gleiche Namen und Zahlen wie in der Datei
+		PRUEFE(B.str().find("\"clubName\":\"" + W.ClubName.S + "\"") != std::string::npos, "%s: Vereinsname", Name.c_str());
+		PRUEFE(B.str().find(W.Squad[0].Name.S) != std::string::npos, "%s: Spielername %s", Name.c_str(), *W.Squad[0].Name);
+		// Weiterspielen und speichern
+		FFM13World Kopie;
+		FString F2;
+		PRUEFE(FM13Save::Decode(FM13Save::Encode(W), Kopie, F2), "%s: als Unreal-Spielstand speicherbar (%s)", Name.c_str(), *F2);
+		int Tage = 0;
+		while (!W.bSacked && Tage < 40) { if (!W.PlayMatchday()) { if (W.IsSeasonFinished()) W.ConcludeSeason(); else break; } ++Tage; }
+		PRUEFE(W.bSacked || Tage == 40, "%s: 40 Spieltage weitergespielt (%d)", Name.c_str(), Tage);
+		std::printf("  %-36s %s S%d/%d %s, Konto %lld, %d Spieler, %d Talente, Stadion %d%s\n", Name.c_str(), *W.ClubName, Kopie.Season, FMath::Min(Kopie.Matchday, 34),
+			FM13::LeagueName(Kopie.LeagueLevel), (long long)Kopie.Money, Kopie.Squad.Num(), Kopie.YouthTalents.Num(), Kopie.StadiumCapacity, Kopie.bSacked ? ", entlassen" : "");
+	}
+	// Fremde Dateien werden abgelehnt
+	FFM13World X; FString Fehler; TArray<FString> H;
+	PRUEFE(!FM13BrowserImport::Import(TEXT("{\"foo\":1}"), X, Fehler, H) && Fehler.Contains(TEXT("kein exportierter")), "Fremdes JSON abgelehnt");
+	PRUEFE(!FM13BrowserImport::Import(TEXT("{kaputt"), X, Fehler, H), "Kaputtes JSON abgelehnt");
+}
+
 // Einfacher Manager wie scripts/longrun-bundesliga.js (aktiv): kauft Verstärkungen, verlängert Stammkräfte,
 // zieht gute Talente hoch und baut aus, wenn genug Geld da ist.
 static void BotZug(FFM13World& W)
@@ -459,6 +518,7 @@ int main()
 	TestEntlassung();
 	TestPokalUndVerletzungen();
 	TestSpielstand();
+	TestBrowserImport();
 	TestBotKarriere();
 	std::printf("\nERGEBNIS: %d bestanden, %d fehlgeschlagen\n", GBestanden, GFehler);
 	return GFehler == 0 ? 0 : 1;
