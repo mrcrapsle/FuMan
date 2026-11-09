@@ -51,7 +51,7 @@ void AFM13HUD::DrawHUD()
 	const UFM13GameInstance* G = GetGameInstance<UFM13GameInstance>();
 	const AFM13PlayerController* PC = Cast<AFM13PlayerController>(GetOwningPlayerController());
 	// Auf 1080 Zeilen ausgelegt, wächst und schrumpft mit dem Fenster
-	Scale = FMath::Max(0.6f, (float)Canvas->SizeY / 1080.f);
+	Scale = FMath::Max(0.8f, (float)Canvas->SizeY / 1080.f * 1.3f); // größer als die Grundschrift, wächst mit dem Fenster
 	DrawRect(Hintergrund, 0.f, 0.f, (float)Canvas->SizeX, (float)Canvas->SizeY);
 	Y = Rand * Scale;
 	if (!G || !PC) { Line(TEXT("Anstoss FM13: GameInstance fehlt (DefaultEngine.ini pruefen)."), Rand, Schlecht); return; }
