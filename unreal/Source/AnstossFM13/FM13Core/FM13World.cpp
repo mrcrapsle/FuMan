@@ -231,6 +231,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	int32 Dummy = 0;
 	for (int32 i : LineupIndices(Dummy)) Squad[i].Appearances++;
 	PickScorers(OwnGoals, LastReport.Scorers);
+	ApplyGrades(OwnGoals, OppGoals);
 
 	// Vorstand: Erwartung aus der Elf ohne Taktik (wie getOwnMatchExpectation)
 	const int32 Shift = FM13Match::BoardShift(FM13Match::Expectation(Elf, OppStr), OwnGoals, OppGoals);
@@ -365,21 +366,70 @@ void FFM13World::PickScorers(int32 Goals, TArray<FString>& OutNames)
 	int32 Dummy = 0;
 	const TArray<int32> Elf = LineupIndices(Dummy);
 	static const int32 Gewicht[4] = { 0, 1, 3, 5 }; // TW, ABW, MIT, ST
+	static const int32 VorlageGewicht[4] = { 1, 2, 4, 3 }; // Vorlagen eher aus der Mitte
+	MatchGoals.Reset();
+	MatchAssists.Reset();
+	for (int32 i = 0; i < Squad.Num(); ++i) { MatchGoals.Add(0); MatchAssists.Add(0); }
 	int32 Summe = 0;
 	for (int32 i : Elf) Summe += Gewicht[(int32)Squad[i].Pos];
 	for (int32 g = 0; g < Goals && Summe > 0; ++g)
 	{
 		int32 Wurf = Rng.RandRange(1, Summe);
+		int32 Schuetze = -1;
 		for (int32 i : Elf)
 		{
 			Wurf -= Gewicht[(int32)Squad[i].Pos];
-			if (Wurf <= 0)
+			if (Wurf <= 0) { Schuetze = i; break; }
+		}
+		if (Schuetze < 0) continue;
+		Squad[Schuetze].GoalsSeason++;
+		MatchGoals[Schuetze]++;
+		FString Zeile = Squad[Schuetze].Name;
+		// Vorlage in drei von vier Toren, von einem anderen Spieler der Elf
+		int32 Vorlagen = 0;
+		for (int32 i : Elf) if (i != Schuetze) Vorlagen += VorlageGewicht[(int32)Squad[i].Pos];
+		if (Vorlagen > 0 && Rng.RandRange(1, 4) != 1)
+		{
+			int32 V = Rng.RandRange(1, Vorlagen);
+			for (int32 i : Elf)
 			{
-				Squad[i].GoalsSeason++;
-				OutNames.Add(Squad[i].Name);
-				break;
+				if (i == Schuetze) continue;
+				V -= VorlageGewicht[(int32)Squad[i].Pos];
+				if (V <= 0)
+				{
+					Squad[i].Assists++;
+					Squad[i].AssistsCareer++;
+					MatchAssists[i]++;
+					Zeile += FString::Printf(TEXT(" (Vorlage %s)"), *Squad[i].Name);
+					break;
+				}
 			}
 		}
+		OutNames.Add(Zeile);
+	}
+}
+
+// Kicker-Note nach einem Ligaspiel (1,0 bis 6,0, in Zehnteln): Ergebnis, Tore und Vorlagen,
+// Zu-Null für Torhüter und Abwehr, dazu etwas Zufall. Nur die Startelf bekommt eine Note.
+void FFM13World::ApplyGrades(int32 OwnGoals, int32 OppGoals)
+{
+	int32 Dummy = 0;
+	const int32 Diff = FMath::Clamp((OwnGoals - OppGoals) * 3, -7, 7);
+	for (int32 i : LineupIndices(Dummy))
+	{
+		FFM13Player& P = Squad[i];
+		int32 Note = 35 - Diff;
+		if (MatchGoals.IsValidIndex(i)) Note -= MatchGoals[i] * 8;
+		if (MatchAssists.IsValidIndex(i)) Note -= MatchAssists[i] * 4;
+		if (P.Pos == EFM13Position::TW || P.Pos == EFM13Position::ABW)
+		{
+			if (OppGoals == 0) Note -= 5;
+			else if (OppGoals >= 3) Note += 4;
+		}
+		Note += Rng.RandRange(-5, 5);
+		P.LastGrade = FMath::Clamp(Note, 10, 60);
+		P.GradeSum += P.LastGrade;
+		P.GradeGames++;
 	}
 }
 
@@ -558,6 +608,11 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 		P.MarketValue = FM13Economy::MarketValue(P.Strength, &Rng);
 		P.GoalsCareer += P.GoalsSeason;
 		P.GoalsSeason = 0;
+		P.AssistsCareer += P.Assists;
+		P.Assists = 0;
+		P.GradeSum = 0;
+		P.GradeGames = 0;
+		P.LastGrade = 0;
 		P.Appearances = 0;
 		P.ContractYears--;
 		P.InjuredMatchdays = FMath::Max(0, P.InjuredMatchdays - 6); // Sommerpause

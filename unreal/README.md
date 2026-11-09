@@ -62,6 +62,7 @@ Nach jedem Spieltag speichert das Spiel automatisch (`Saved/SaveGames/autosave.j
 - **Spielvorbereitung und Prognose:** Du richtest die Woche auf einen Ansatz des Gegners aus. Triffst du ihn, gibt es +2,5 Stärke. Die Prognose nennt Sieg, Remis und Niederlage in Prozent.
 - **Derby-Woche:** Jeder Verein hat einen Rivalen. Ab drei Spieltagen vor dem Derby kannst du Stimmung machen, eine Prämie zahlen oder eine Kampfansage machen.
 - **Europapokal:** Platz 1 bis 4 der Bundesliga oder der DFB-Pokalsieg bringen dich hinein. Es gibt zwei Vierergruppen, Halbfinale und Finale, mit Prämien bis 25 Mio. €.
+- **Spielerstatistik:** Vorlagen (Saison und Karriere) und eine Note nach jedem Ligaspiel für die Startelf. Der Kader zeigt Vorlagen und den Notenschnitt.
 - **Liga:** Heim- und Auswärtstabelle, eine Liga-Statistik und Auszeichnungen am Saisonende.
 
 Was aus jedem Ordner und Modul des Browserspiels schon in Unreal steckt, steht in [PORTIERUNG.md](PORTIERUNG.md).
@@ -110,7 +111,7 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4108 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4116 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
    - Eigener Spielstand: Rundlauf, identisches Weiterspielen, Ablehnung kaputter Stände.

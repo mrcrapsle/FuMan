@@ -191,6 +191,9 @@ private:
 	void DevelopPlayers(FFM13SeasonSummary& Summary);
 	void YouthIntake(FFM13SeasonSummary& Summary);
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
+	void ApplyGrades(int32 OwnGoals, int32 OppGoals);
+	TArray<int32> MatchGoals;   // Tore und Vorlagen des letzten eigenen Spiels je Kaderindex
+	TArray<int32> MatchAssists;
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);
 	void RollInjuries(FFM13OwnMatchReport& Report);
 	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome, const TArray<FString>& Yellow, const TArray<FString>& Red);

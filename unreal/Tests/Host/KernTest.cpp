@@ -581,6 +581,37 @@ static void TestRundeA()
 	PRUEFE(L.Formation == W.Formation && L.Sponsor.Name == W.Sponsor.Name && L.Achievements.Num() == W.Achievements.Num(), "Neue Felder nach dem Laden");
 }
 
+// Runde C (Spielerstatistik): Vorlagen, Noten nach jedem Ligaspiel, Saisonwechsel
+static void TestSpielerNoten()
+{
+	std::printf("Runde C: Vorlagen, Noten, Saisonwechsel\n");
+	FFM13World W;
+	W.NewGame(TEXT("Notenverein"), 77);
+	for (int i = 0; i < 34; ++i) W.PlayMatchday();
+	int32 Vorlagen = 0, Tore = 0, Noten = 0, Einsaetze = 0;
+	bool bNotenOk = true, bNotenAnzahl = true;
+	for (const FFM13Player& P : W.Squad)
+	{
+		Vorlagen += P.Assists;
+		Tore += P.GoalsSeason;
+		if (P.GradeGames > 0) ++Noten;
+		if (P.GradeGames != P.Appearances) bNotenAnzahl = false;
+		if (P.GradeGames > 0 && (P.GradeSum < 10 * P.GradeGames || P.GradeSum > 60 * P.GradeGames)) bNotenOk = false;
+		if (P.LastGrade != 0 && (P.LastGrade < 10 || P.LastGrade > 60)) bNotenOk = false;
+		Einsaetze += P.Appearances;
+	}
+	PRUEFE(Vorlagen <= Tore, "Vorlagen (%d) hoechstens so viele wie Tore (%d)", Vorlagen, Tore);
+	PRUEFE(Vorlagen > 0, "Es gibt Vorlagen in der Saison");
+	PRUEFE(bNotenOk, "Noten liegen zwischen 1,0 und 6,0");
+	PRUEFE(bNotenAnzahl, "Jeder Einsatz in der Liga hat genau eine Note");
+	PRUEFE(Noten >= 11 && Einsaetze > 0, "Mindestens elf Spieler mit Note");
+	W.ConcludeSeason();
+	int32 Rest = 0;
+	for (const FFM13Player& P : W.Squad) { if (P.Assists != 0 || P.GradeGames != 0 || P.LastGrade != 0) ++Rest; }
+	PRUEFE(Rest == 0, "Saisonwechsel setzt Vorlagen und Noten zurueck");
+	std::printf("\n");
+}
+
 static void TestRundeB()
 {
 	std::printf("Runde B: Aufstellung, Moral, Ansprache, Vorbereitung, Prognose, Derby, Europapokal, Auszeichnungen\n");
@@ -760,6 +791,7 @@ int main()
 	TestPokalUndVerletzungen();
 	TestRundeA();
 	TestRundeB();
+	TestSpielerNoten();
 	TestSpielstand();
 	TestBrowserImport();
 	TestBotKarriere();

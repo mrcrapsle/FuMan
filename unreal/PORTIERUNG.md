@@ -96,7 +96,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 |---|---:|---|---|---|
 | `player-development.js` | 117 | portiert | Entwicklungstypen | FM13Development (Runde A) |
 | `player-retirement.js` | 112 | teilweise | Karriereende, Legenden | Ruhestand, Legenden (Runde A) |
-| `player-stats.js` | 119 | offen | Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine |  |
+| `player-stats.js` | 119 | teilweise | Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine | Vorlagen und Noten nach jedem Ligaspiel, Vorlagen auch im Pokal (Runde C); Elf des Spieltags offen |
 | `player-profile.js` | 101 | offen | Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein |  |
 | `playerdetail.js` | 309 | offen | SPIELER-DETAIL-POPUP: wiederverwendbares Modal für Kader, Transfermarkt, Scouting & |  |
 | `player-compare.js` | 93 | offen | SPIELER-VERGLEICH (Phase 26.6): zwei Spieler nebeneinander, aus dem Spielerdetail geöffnet |  |
@@ -230,7 +230,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 ## Nächste Runden (Vorschlag)
 
 1. **Runde B, Spiel (erledigt, Live-Statistik offen):** Aufstellung von Hand, Matchvorbereitung und Spielprognose, Kabinenansprache, Derby-Woche, Live-Statistik, Europapokal, Liga-Auszeichnungen und -Statistik.
-2. **Runde C, Kader:** Spielerstatistik und Noten, Kabine und Mannschaftsrat, Vertragsverhandlung und Ultimatum, Bonusklauseln, Leihen, zweite Mannschaft, Frauenteam.
+2. **Runde C, Kader** (Spielerstatistik und Noten erledigt):  Kabine und Mannschaftsrat, Vertragsverhandlung und Ultimatum, Bonusklauseln, Leihen, zweite Mannschaft, Frauenteam.
 3. **Runde D, Transfers:** Transferpoker, Medizincheck, Vorverträge, Rückkauf, Gerüchte, Scouting, Transferstrategie.
 4. **Runde E, Wirtschaft:** Finanzzentrale, Fair Play, Merchandising, Industrie, Rohstoffe, Holding, Aktien, Wetten, Immobilien.
 5. **Runde F, Verein:** Fans und Fan-Gruppen, Stadion-Blöcke und -Anlagen, Stadion-Events, Ausschreitungen, Vorstand, Mitgliederversammlung, Wintergespräch, Medienabteilung, Mitarbeiter, Wappen, Freischaltungen.

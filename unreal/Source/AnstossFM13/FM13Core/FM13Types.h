@@ -54,6 +54,11 @@ struct FFM13Player
 	uint8 Archetype = 0;        // Entwicklungstyp (FM13Dev), aus der Id abgeleitet
 	uint8 Character = 0;        // characterPool: Ruhig, Emotional, Ehrgeizig, Selbstbewusst, Bescheiden, Hitzkoepfig
 	int32 Morale = 65;          // 5 bis 100
+	int32 Assists = 0;          // Vorlagen der Saison (Liga und Pokal)
+	int32 AssistsCareer = 0;
+	int32 GradeSum = 0;         // Summe der Ligennoten in Zehnteln (1,0 bis 6,0 = 10 bis 60)
+	int32 GradeGames = 0;       // Ligaspiele mit Note in der Saison
+	int32 LastGrade = 0;        // letzte Note in Zehnteln (0 = noch keine)
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };

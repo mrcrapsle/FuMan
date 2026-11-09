@@ -56,6 +56,11 @@ namespace
 		W.Field(TEXT("age"), P.Age);
 		W.Field(TEXT("goals"), P.GoalsSeason);
 		W.Field(TEXT("goalsCareer"), P.GoalsCareer);
+		W.Field(TEXT("assists"), P.Assists);
+		W.Field(TEXT("assistsCareer"), P.AssistsCareer);
+		W.Field(TEXT("gradeSum"), P.GradeSum);
+		W.Field(TEXT("gradeGames"), P.GradeGames);
+		W.Field(TEXT("lastGrade"), P.LastGrade);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -336,6 +341,11 @@ namespace
 		P.Age = (int32)R.Int(Obj, TEXT("age"), 24);
 		P.GoalsSeason = (int32)R.Int(Obj, TEXT("goals"), 0);
 		P.GoalsCareer = (int32)R.Int(Obj, TEXT("goalsCareer"), 0);
+		P.Assists = (int32)R.Int(Obj, TEXT("assists"), 0);
+		P.AssistsCareer = (int32)R.Int(Obj, TEXT("assistsCareer"), 0);
+		P.GradeSum = (int32)R.Int(Obj, TEXT("gradeSum"), 0);
+		P.GradeGames = (int32)R.Int(Obj, TEXT("gradeGames"), 0);
+		P.LastGrade = (int32)R.Int(Obj, TEXT("lastGrade"), 0);
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);

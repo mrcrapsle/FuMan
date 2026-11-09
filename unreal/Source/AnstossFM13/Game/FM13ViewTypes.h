@@ -17,6 +17,9 @@ struct FFM13PlayerView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Potential = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Age = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 GoalsSeason = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Assists = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString GradeAverage;   // Schnitt, z. B. "2,4", leer ohne Spiel
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString LastGrade;      // letzte Note, leer ohne Spiel
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Appearances = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 MarketValue = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Wage = 0;

@@ -309,7 +309,7 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
 	if (!G) return Box;
 	const int32 Auswahl = Controller.IsValid() ? Controller->Selection : -1;
-	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 60.f, 110.f, 130.f, 100.f, 60.f };
+	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 50.f, 60.f, 60.f, 110.f, 130.f, 100.f, 60.f };
 	Box->AddSlot().AutoHeight()[BuildOffers(false)];
 	const FFM13TacticsView Taktik = G->GetTactics();
 	Box->AddSlot().AutoHeight()
@@ -320,7 +320,7 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 			: FString::Printf(TEXT("* = Startelf, automatisch (beste Elf im %s, Verletzte und Gesperrte fehlen)"), *Taktik.Formation), CGedimmt, 11)]
 		+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(10.f, 0.f))[Knopf(TEXT("Automatisch aufstellen"), FOnClicked::CreateSP(this, &SFM13Menu::OnAutoLineup), Taktik.bManualLineup ? CKnopfAktiv : CKnopf, 11)]
 	];
-	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Moral"), TEXT("Charakter"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
+	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Vorl."), TEXT("Note"), TEXT("Moral"), TEXT("Charakter"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
 	const TArray<FFM13PlayerView> Kader = G->GetSquad();
 	for (int32 i = 0; i < Kader.Num(); ++i)
 	{
@@ -334,7 +334,8 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 		if (P.SuspendedMatchdays > 0) Name += FString::Printf(TEXT(" (gesperrt %d)"), P.SuspendedMatchdays);
 		if (P.bBenched) Name += TEXT(" (draussen)");
 		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[Zeile({ P.Position + (P.bInStartingEleven ? TEXT(" *") : TEXT("")), Name, FString::FromInt(P.Strength),
-			FString::FromInt(P.Potential), FString::FromInt(P.Age), FString::FromInt(P.GoalsSeason), FString::FromInt(P.Morale), P.Character, Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
+			FString::FromInt(P.Potential), FString::FromInt(P.Age), FString::FromInt(P.GoalsSeason), FString::FromInt(P.Assists),
+			P.GradeAverage.IsEmpty() ? TEXT("-") : P.GradeAverage, FString::FromInt(P.Morale), P.Character, Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
 			B, (P.InjuredMatchdays > 0 || P.SuspendedMatchdays > 0) ? CSchlecht : (P.ContractYears <= 1 ? CAkzent : CText), i == Auswahl, Knoepfe)];
 	}
 	return Box;

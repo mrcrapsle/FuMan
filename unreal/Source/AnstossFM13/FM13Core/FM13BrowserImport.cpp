@@ -36,6 +36,15 @@ namespace
 		P.Potential = Pot > 0 ? FMath::Clamp(Pot, P.Strength, 99) : FMath::Min(99, P.Strength + (P.Age <= 21 ? 8 : (P.Age <= 24 ? 4 : 1)));
 		P.GoalsSeason = (int32)R.Int(N, TEXT("goalsSeason"), 0);
 		P.GoalsCareer = (int32)R.Int(N, TEXT("goalsCareer"), 0);
+		// Saisonwerte des Browserspiels: statsSeason mit vorlagen und notenSumme (1,0 bis 6,0)
+		const int32 St = R.Find(N, TEXT("statsSeason"));
+		if (St >= 0)
+		{
+			P.Assists = FMath::Max(0, (int32)R.Int(St, TEXT("vorlagen"), 0));
+			P.GradeGames = FMath::Max(0, (int32)R.Int(St, TEXT("spiele"), 0));
+			P.GradeSum = P.GradeGames > 0 ? FMath::Clamp((int32)FMath::RoundToInt(R.Real(St, TEXT("notenSumme"), 0.0) * 10.0), 0, P.GradeGames * 60) : 0;
+		}
+		P.AssistsCareer = (int32)R.Int(N, TEXT("assists"), P.Assists);
 		P.Appearances = (int32)R.Int(N, TEXT("appearancesSeason"), 0);
 		P.MarketValue = FMath::Max<int64>(10000, R.Int(N, TEXT("marketValue"), FM13Economy::MarketValue(P.Strength, nullptr)));
 		P.Wage = bYouth ? 0 : FMath::Max(0, (int32)R.Int(N, TEXT("wage"), FM13Economy::Wage(P.MarketValue, P.Strength)));
