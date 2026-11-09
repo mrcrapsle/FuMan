@@ -6,7 +6,7 @@
 #include "Game/FM13GameMode.h"
 
 // SetupInputComponent ist geschützt; im Test über eine Ableitung erreichbar
-struct FTestController : AFM13PlayerController { using AFM13PlayerController::SetupInputComponent; };
+struct FTestController : AFM13PlayerController { using AFM13PlayerController::SetupInputComponent; using AFM13PlayerController::BeginPlay; using AFM13PlayerController::EndPlay; };
 
 static int GOk = 0, GFail = 0;
 #define PRUEFE(Bed, ...) do { if (Bed) ++GOk; else { ++GFail; std::printf("  FEHLER %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
@@ -27,7 +27,9 @@ int main()
 	UInputComponent Input;
 	PC.InputComponent = &Input;
 	PC.SetupInputComponent();
-	PRUEFE(Input.Bindings.size() == 21, "21 Tasten gebunden (%d)", (int)Input.Bindings.size());
+	PRUEFE(Input.Bindings.size() == 22, "22 Tasten gebunden (%d)", (int)Input.Bindings.size());
+	PC.BeginPlay();
+	PRUEFE(GI.OnStateChanged.Liste.size() == 1, "Controller hoert auf Aenderungen");
 
 	UCanvas Canvas;
 	AFM13HUD HUD;
@@ -36,6 +38,11 @@ int main()
 	HUD.Canvas = &Canvas;
 	auto Taste = [&](const char* K) { Input.Bindings[K](); };
 	auto Zeichne = [&]() { HUD.TextCalls = 0; HUD.DrawHUD(); return HUD.TextCalls; };
+
+	// Menü ist Standard: das HUD zeichnet dann nichts, F1 schaltet auf die Textansicht
+	PRUEFE(Zeichne() == 0, "Im Menue-Modus zeichnet das HUD nichts");
+	Taste("F1");
+	PRUEFE(PC.bTextMode && Zeichne() > 3, "F1 zeigt die Textansicht");
 
 	// Alle Seiten zeichnen etwas
 	const char* Seiten[] = { "1", "2", "3", "4", "5", "6", "7", "8", "9", "0" };
@@ -96,6 +103,8 @@ int main()
 	PRUEFE(UFM13GameInstance::FormatMoney(1234567) == FString("1.234.567 €"), "Geldformat (%s)", *UFM13GameInstance::FormatMoney(1234567));
 	PRUEFE(UFM13GameInstance::FormatMoney(-500) == FString("-500 €"), "Negatives Geld");
 
+	PC.EndPlay(EEndPlayReason::Destroyed);
+	PRUEFE(GI.OnStateChanged.Liste.empty(), "EndPlay meldet den Controller ab");
 	std::printf("UE-Schicht gegen Nachbildung: %d bestanden, %d fehlgeschlagen\n", GOk, GFail);
 	return GFail ? 1 : 0;
 }

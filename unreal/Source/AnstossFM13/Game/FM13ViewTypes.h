@@ -151,3 +151,14 @@ struct FFM13StatusView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bSacked = false;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bTransferEmbargo = false;
 };
+
+USTRUCT(BlueprintType)
+struct FFM13SeasonRecordView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Season = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString LeagueName;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Rank = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Points = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Outcome;   // "Aufstieg", "Abstieg", "Klassenerhalt"
+};

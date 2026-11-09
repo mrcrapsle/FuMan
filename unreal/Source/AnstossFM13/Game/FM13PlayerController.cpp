@@ -3,6 +3,11 @@
 #include "Components/InputComponent.h"
 #include "Engine/World.h"
 #include "InputCoreTypes.h"
+#if !defined(FM13_NO_SLATE)
+#include "FM13Menu.h"
+#include "Engine/GameViewportClient.h"
+#include "Widgets/SWeakWidget.h"
+#endif
 
 AFM13PlayerController::AFM13PlayerController()
 {
@@ -29,6 +34,7 @@ void AFM13PlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::F9, IE_Pressed, this, &AFM13PlayerController::OnLaden);
 	InputComponent->BindKey(EKeys::F2, IE_Pressed, this, &AFM13PlayerController::OnNeu);
 	InputComponent->BindKey(EKeys::F8, IE_Pressed, this, &AFM13PlayerController::OnImport);
+	InputComponent->BindKey(EKeys::F1, IE_Pressed, this, &AFM13PlayerController::OnToggleText);
 	InputComponent->BindKey(EKeys::One, IE_Pressed, this, &AFM13PlayerController::OnSeite1);
 	InputComponent->BindKey(EKeys::Two, IE_Pressed, this, &AFM13PlayerController::OnSeite2);
 	InputComponent->BindKey(EKeys::Three, IE_Pressed, this, &AFM13PlayerController::OnSeite3);
@@ -51,6 +57,66 @@ void AFM13PlayerController::SetPage(EFM13Page NewPage)
 {
 	Page = NewPage;
 	Selection = 0;
+	RefreshMenu();
+}
+
+bool AFM13PlayerController::IsStatusVisible() const
+{
+	return !StatusLine.IsEmpty() && (GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0) < StatusUntil;
+}
+
+void AFM13PlayerController::BeginPlay()
+{
+	Super::BeginPlay();
+	if (UFM13GameInstance* G = Game()) G->OnStateChanged.AddDynamic(this, &AFM13PlayerController::HandleStateChanged);
+#if !defined(FM13_NO_SLATE)
+	if (!IsLocalController()) return;
+	UWorld* W = GetWorld();
+	UGameViewportClient* Viewport = W ? W->GetGameViewport() : nullptr;
+	if (!Viewport) return;
+	Menu = SNew(SFM13Menu).Game(Game()).Controller(this);
+	MenuHost = SNew(SWeakWidget).PossiblyNullContent(Menu);
+	Viewport->AddViewportWidgetContent(MenuHost.ToSharedRef(), 10);
+	// Maus fürs Menü, Tasten weiter fürs Spiel
+	FInputModeGameAndUI Modus;
+	Modus.SetHideCursorDuringCapture(false);
+	Modus.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(Modus);
+#endif
+}
+
+void AFM13PlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+	if (UFM13GameInstance* G = Game()) G->OnStateChanged.RemoveDynamic(this, &AFM13PlayerController::HandleStateChanged);
+#if !defined(FM13_NO_SLATE)
+	UWorld* W = GetWorld();
+	if (UGameViewportClient* Viewport = W ? W->GetGameViewport() : nullptr)
+		if (MenuHost.IsValid()) Viewport->RemoveViewportWidgetContent(MenuHost.ToSharedRef());
+#endif
+	MenuHost.Reset();
+	Menu.Reset();
+	Super::EndPlay(EndPlayReason);
+}
+
+void AFM13PlayerController::HandleStateChanged()
+{
+	RefreshMenu();
+}
+
+void AFM13PlayerController::RefreshMenu()
+{
+#if !defined(FM13_NO_SLATE)
+	if (Menu.IsValid()) Menu->Refresh();
+#endif
+}
+
+void AFM13PlayerController::OnToggleText()
+{
+	bTextMode = !bTextMode;
+#if !defined(FM13_NO_SLATE)
+	if (MenuHost.IsValid()) MenuHost->SetVisibility(bTextMode ? EVisibility::Collapsed : EVisibility::SelfHitTestInvisible);
+#endif
+	ShowStatus(bTextMode ? TEXT("Textansicht (F1 zurueck zum Menue).") : TEXT("Menue (F1 fuer die Textansicht)."));
 }
 
 int32 AFM13PlayerController::SelectionCount() const
@@ -71,15 +137,22 @@ void AFM13PlayerController::OnHoch()
 {
 	const int32 N = SelectionCount();
 	if (N > 0) Selection = (Selection - 1 + N) % N;
+	RefreshMenu();
 }
 
 void AFM13PlayerController::OnRunter()
 {
 	const int32 N = SelectionCount();
 	if (N > 0) Selection = (Selection + 1) % N;
+	RefreshMenu();
 }
 
 void AFM13PlayerController::OnWeiter()
+{
+	AdvanceGame();
+}
+
+void AFM13PlayerController::AdvanceGame()
 {
 	UFM13GameInstance* G = Game();
 	if (!G) return;

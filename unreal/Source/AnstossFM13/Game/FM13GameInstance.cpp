@@ -246,6 +246,23 @@ TArray<FFM13MessageView> UFM13GameInstance::GetMessages(int32 MaxCount) const
 	return Out;
 }
 
+TArray<FFM13SeasonRecordView> UFM13GameInstance::GetHistory() const
+{
+	TArray<FFM13SeasonRecordView> Out;
+	for (int32 i = Kern.History.Num() - 1; i >= 0; --i)
+	{
+		const FFM13SeasonRecord& R = Kern.History[i];
+		FFM13SeasonRecordView V;
+		V.Season = R.Season;
+		V.LeagueName = FM13::LeagueName(R.Level);
+		V.Rank = R.Rank;
+		V.Points = R.Points;
+		V.Outcome = R.Outcome == EFM13SeasonOutcome::Promoted ? TEXT("Aufstieg") : (R.Outcome == EFM13SeasonOutcome::Relegated ? TEXT("Abstieg") : TEXT("Klassenerhalt"));
+		Out.Add(V);
+	}
+	return Out;
+}
+
 FString UFM13GameInstance::FormatMoney(int64 Amount)
 {
 	// 1234567 -> "1.234.567 €"

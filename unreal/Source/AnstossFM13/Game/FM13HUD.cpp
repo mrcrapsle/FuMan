@@ -50,6 +50,8 @@ void AFM13HUD::DrawHUD()
 	if (!Canvas) return;
 	const UFM13GameInstance* G = GetGameInstance<UFM13GameInstance>();
 	const AFM13PlayerController* PC = Cast<AFM13PlayerController>(GetOwningPlayerController());
+	// Im Menü-Modus zeichnet SFM13Menu; die Textansicht kommt nur mit F1
+	if (PC && !PC->bTextMode) return;
 	// Auf 1080 Zeilen ausgelegt, wächst und schrumpft mit dem Fenster
 	Scale = FMath::Max(0.8f, (float)Canvas->SizeY / 1080.f * 1.3f); // größer als die Grundschrift, wächst mit dem Fenster
 	DrawRect(Hintergrund, 0.f, 0.f, (float)Canvas->SizeX, (float)Canvas->SizeY);
@@ -80,7 +82,7 @@ void AFM13HUD::DrawHeader(const UFM13GameInstance& G)
 	Line(FString::Printf(TEXT("%s  |  %s  |  Saison %d, Spieltag %d"), *S.ClubName, *S.LeagueName, S.Season, FMath::Min(S.Matchday, 34)), Rand, Akzent);
 	Line(FString::Printf(TEXT("Konto %s   Platz %d (Ziel %d)   Vorstand %d   Fans %d   Elf %d"),
 		*UFM13GameInstance::FormatMoney(S.Money), S.Rank, S.SeasonTarget, S.BoardSat, S.Fans, S.OwnStrength), Rand, S.Money < 0 ? Schlecht : Text);
-	Line(TEXT("1 Uebersicht  2 Tabelle  3 Kader  4 Markt  5 Jugend  6 Finanzen  7 Postfach  8 Verein  9 Spiel  0 Pokal"), Rand, Gedimmt);
+	Line(TEXT("1 Uebersicht  2 Tabelle  3 Kader  4 Markt  5 Jugend  6 Finanzen  7 Postfach  8 Verein  9 Spiel  0 Pokal   F1 Menue"), Rand, Gedimmt);
 	Y += 20.f * Scale;
 }
 

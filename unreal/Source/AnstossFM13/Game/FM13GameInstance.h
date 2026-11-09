@@ -52,6 +52,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13FixtureView> GetOwnFixtures() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13BookingView> GetBookings(int32 MaxCount = 30) const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13MessageView> GetMessages(int32 MaxCount = 30) const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13SeasonRecordView> GetHistory() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") static FString FormatMoney(int64 Amount);
 
 	// ---------- Aktionen ----------
