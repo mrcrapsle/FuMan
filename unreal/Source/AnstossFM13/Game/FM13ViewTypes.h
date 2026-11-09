@@ -23,6 +23,10 @@ struct FFM13PlayerView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ContractYears = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bInStartingEleven = false;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 InjuredMatchdays = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 SuspendedMatchdays = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 YellowCards = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 SeasonsAtClub = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Archetype;
 };
 
 USTRUCT(BlueprintType)
@@ -103,6 +107,11 @@ struct FFM13MatchReportView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Competition;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bPenalties = false;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bAdvanced = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Weather;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Referee;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString OppArchetype;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 TacticBonus = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Cards;
 };
 
 USTRUCT(BlueprintType)
@@ -161,4 +170,86 @@ struct FFM13SeasonRecordView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Rank = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Points = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Outcome;   // "Aufstieg", "Abstieg", "Klassenerhalt"
+};
+
+USTRUCT(BlueprintType)
+struct FFM13TacticsView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Formation;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Style;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Formations;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> StyleKeys;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> StyleLabels;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int32> StyleBonuses;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> StyleArchetypes;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ElfStrength = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 MatchStrength = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 StyleBonus = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") float FormationBonus = 0.f;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 FitnessCostPercent = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString NextOpponent;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 NextOpponentStrength = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bNextHome = true;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString OppPlan;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bOppReacted = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 MatchupBonus = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Predictable;   // leer = nicht berechenbar
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Referee;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13SponsorView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Name;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Base = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 WinBonus = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 PromotionBonus = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 SignOn = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 MatchdaysLeft = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Tier;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13IncomingOfferView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString PlayerName;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Club;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 Price = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bYouth = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 ExpiresMatchday = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13AchievementView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Label;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bUnlocked = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Season = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13LegendView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Name;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Position;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Seasons = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Goals = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 RetiredSeason = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FFM13RecordsView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString BiggestWin;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 UnbeatenStreak = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 LongestUnbeatenStreak = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 RecordAttendance = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 RecordTransferFee = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString LastRelegation;
 };

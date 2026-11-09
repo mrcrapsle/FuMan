@@ -53,6 +53,13 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13BookingView> GetBookings(int32 MaxCount = 30) const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13MessageView> GetMessages(int32 MaxCount = 30) const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13SeasonRecordView> GetHistory() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13TacticsView GetTactics() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13SponsorView GetSponsor() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13SponsorView> GetSponsorOffers() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13IncomingOfferView> GetIncomingOffers() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13AchievementView> GetAchievements() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13LegendView> GetLegends() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13RecordsView GetRecords() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") static FString FormatMoney(int64 Amount);
 
 	// ---------- Aktionen ----------
@@ -65,6 +72,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool ExpandStadium(int32 Seats, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool UpgradeYouthAcademy(FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool UpgradeTraining(FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetFormation(const FString& Formation, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetTacticStyle(const FString& Style, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool AcceptSponsorOffer(int32 Index, FString& OutReason);
+	// Index in GetIncomingOffers()
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool AcceptIncomingOffer(int32 Index, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool DeclineIncomingOffer(int32 Index, FString& OutReason);
 
 	// ---------- Spielstand ----------
 	// Schreibt erst eine Zwischendatei, liest sie zurück und prüft sie, erst dann ersetzt sie den alten

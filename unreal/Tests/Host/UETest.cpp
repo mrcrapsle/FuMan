@@ -27,7 +27,7 @@ int main()
 	UInputComponent Input;
 	PC.InputComponent = &Input;
 	PC.SetupInputComponent();
-	PRUEFE(Input.Bindings.size() == 22, "22 Tasten gebunden (%d)", (int)Input.Bindings.size());
+	PRUEFE(Input.Bindings.size() == 23, "23 Tasten gebunden (%d)", (int)Input.Bindings.size());
 	PC.BeginPlay();
 	PRUEFE(GI.OnStateChanged.Liste.size() == 1, "Controller hoert auf Aenderungen");
 
@@ -96,6 +96,20 @@ int main()
 	PRUEFE(GI.GetYouth().Num() == 10 && GI.GetSquad().Num() == 21, "Kader und Talente uebernommen");
 	Taste("Space");
 	PRUEFE(GI.GetStatus().Matchday == 2, "Importierter Stand spielt weiter");
+
+	// Taktik, Sponsor, Angebote, Erfolge über die GameInstance
+	{
+		FString Grund;
+		const FFM13TacticsView T0 = GI.GetTactics();
+		PRUEFE(T0.Formations.Num() == 8 && T0.StyleKeys.Num() == 8, "Taktik-Ansicht mit 8 Formationen und 8 Stilen");
+		PRUEFE(GI.SetFormation("5-4-1", Grund) && GI.GetTactics().Formation == FString("5-4-1"), "Formation ueber die GameInstance");
+		PRUEFE(GI.SetTacticStyle("pressing", Grund) && GI.GetTactics().StyleBonus == 2, "Spielstil ueber die GameInstance");
+		PRUEFE(!GI.SetTacticStyle("tiki", Grund) && !Grund.IsEmpty(), "Unbekannter Stil erklaert sich");
+		PRUEFE(GI.GetAchievements().Num() == 13, "13 Erfolge in der Ansicht");
+		PRUEFE(!GI.GetSponsor().Name.IsEmpty(), "Sponsor in der Ansicht");
+		Taste("T");
+		PRUEFE(PC.Page == EFM13Page::Taktik, "Taste T oeffnet die Taktik");
+	}
 
 	// Neue Karriere
 	Taste("F2");

@@ -1,6 +1,8 @@
 #include "FM13GameInstance.h"
 #include "FM13Core/FM13SaveCodec.h"
 #include "FM13Core/FM13BrowserImport.h"
+#include "FM13Core/FM13Development.h"
+#include "FM13Core/FM13Tactics.h"
 #include "HAL/PlatformMisc.h"
 #include "HAL/FileManager.h"
 #include "Misc/DateTime.h"
@@ -77,6 +79,10 @@ FFM13PlayerView UFM13GameInstance::MakePlayerView(const FFM13Player& P, bool bIn
 	V.ContractYears = P.ContractYears;
 	V.bInStartingEleven = bInEleven;
 	V.InjuredMatchdays = P.InjuredMatchdays;
+	V.SuspendedMatchdays = P.SuspendedMatchdays;
+	V.YellowCards = P.YellowCards;
+	V.SeasonsAtClub = P.SeasonsAtClub;
+	V.Archetype = FM13Dev::Archetypes()[FMath::Min((int32)P.Archetype, FM13Dev::Archetypes().Num() - 1)].Name;
 	return V;
 }
 
@@ -119,6 +125,7 @@ FFM13MatchReportView UFM13GameInstance::MakeReportView(const FFM13OwnMatchReport
 	V.Attendance = R.Attendance; V.Income = R.Income; V.Expenses = R.Expenses; V.BoardShift = R.BoardShift;
 	V.Scorers = R.Scorers; V.Ticker = R.Ticker; V.Injuries = R.Injuries; V.Competition = R.Competition;
 	V.bPenalties = R.bPenalties; V.bAdvanced = R.bAdvanced;
+	V.Weather = R.Weather; V.Referee = R.Referee; V.OppArchetype = R.OppArchetype; V.TacticBonus = R.TacticBonus; V.Cards = R.Cards;
 	return V;
 }
 
@@ -263,6 +270,116 @@ TArray<FFM13SeasonRecordView> UFM13GameInstance::GetHistory() const
 	return Out;
 }
 
+FFM13TacticsView UFM13GameInstance::GetTactics() const
+{
+	FFM13TacticsView V;
+	V.Formation = Kern.Formation;
+	V.Style = Kern.TacticStyle;
+	for (const FM13Tactics::FFormation& F : FM13Tactics::Formations()) V.Formations.Add(F.Name);
+	for (const FM13Tactics::FStyle& St : FM13Tactics::Styles())
+	{
+		V.StyleKeys.Add(St.Key);
+		V.StyleLabels.Add(St.Label);
+		V.StyleBonuses.Add(FM13Tactics::StyleBonus(St.Key));
+		V.StyleArchetypes.Add(FM13Tactics::ArchetypeLabel(St.Archetype));
+	}
+	V.ElfStrength = Kern.OwnStrength();
+	V.MatchStrength = Kern.OwnMatchStrength(Kern.OppPlanArchetype);
+	V.StyleBonus = FM13Tactics::StyleBonus(Kern.TacticStyle);
+	V.FormationBonus = FM13Tactics::FormationOffBonus(Kern.Formation) + FM13Tactics::FormationDefBonus(Kern.Formation) * 0.6f;
+	V.FitnessCostPercent = FMath::RoundToInt((FM13Tactics::StyleFitnessMultiplier(Kern.TacticStyle) - 1.f) * 100.f);
+	bool bHeim = true;
+	if (const FFM13Club* Opp = Kern.NextLeagueOpponent(&bHeim))
+	{
+		V.NextOpponent = Opp->Name;
+		V.NextOpponentStrength = Opp->Strength;
+		V.bNextHome = bHeim;
+	}
+	V.OppPlan = FM13Tactics::ArchetypeLabel(Kern.OppPlanArchetype);
+	V.bOppReacted = Kern.bOppPlanReacted;
+	V.MatchupBonus = FM13Tactics::MatchupBonus(Kern.TacticStyle, Kern.OppPlanArchetype);
+	const TCHAR Lesbar = FM13Tactics::PredictableArchetype(Kern.RecentStyles);
+	V.Predictable = Lesbar ? FString(FM13Tactics::ArchetypeLabel(Lesbar)) : FString();
+	V.Referee = Kern.RefereeName();
+	return V;
+}
+
+static FFM13SponsorView MakeSponsorView(const FFM13Sponsor& S)
+{
+	FFM13SponsorView V;
+	V.Name = S.Name; V.Base = S.Base; V.WinBonus = S.WinBonus; V.PromotionBonus = S.PromotionBonus;
+	V.SignOn = S.SignOn; V.MatchdaysLeft = S.MatchdaysLeft; V.Tier = S.Tier;
+	return V;
+}
+
+FFM13SponsorView UFM13GameInstance::GetSponsor() const { return MakeSponsorView(Kern.Sponsor); }
+
+TArray<FFM13SponsorView> UFM13GameInstance::GetSponsorOffers() const
+{
+	TArray<FFM13SponsorView> Out;
+	for (const FFM13Sponsor& S : Kern.SponsorOffers) Out.Add(MakeSponsorView(S));
+	return Out;
+}
+
+TArray<FFM13IncomingOfferView> UFM13GameInstance::GetIncomingOffers() const
+{
+	TArray<FFM13IncomingOfferView> Out;
+	for (const FFM13IncomingOffer& O : Kern.IncomingOffers)
+	{
+		FFM13IncomingOfferView V;
+		V.PlayerName = O.PlayerName; V.Club = O.Club; V.Price = O.Price; V.bYouth = O.bYouth; V.ExpiresMatchday = O.ExpiresMatchday;
+		Out.Add(V);
+	}
+	return Out;
+}
+
+TArray<FFM13AchievementView> UFM13GameInstance::GetAchievements() const
+{
+	static const TCHAR* Ids[] = { TEXT("millionaer"), TEXT("multimillionaer"), TEXT("aufstieg"), TEXT("bundesliga"), TEXT("meister"), TEXT("pokalsieger"),
+		TEXT("landespokal"), TEXT("relegation"), TEXT("unbeaten-10"), TEXT("unbeaten-20"), TEXT("talentschmiede"), TEXT("grosses-stadion"), TEXT("legende") };
+	TArray<FFM13AchievementView> Out;
+	for (const TCHAR* Id : Ids)
+	{
+		FFM13AchievementView V;
+		V.Label = FFM13World::AchievementLabel(Id);
+		if (const FFM13Achievement* A = Kern.Achievements.FindByPredicate([Id](const FFM13Achievement& X) { return X.Id == Id; }))
+		{
+			V.bUnlocked = true;
+			V.Season = A->Season;
+		}
+		Out.Add(V);
+	}
+	return Out;
+}
+
+TArray<FFM13LegendView> UFM13GameInstance::GetLegends() const
+{
+	TArray<FFM13LegendView> Out;
+	for (const FFM13Legend& L : Kern.Legends)
+	{
+		FFM13LegendView V;
+		V.Name = L.Name; V.Position = L.Position; V.Seasons = L.Seasons; V.Goals = L.Goals; V.RetiredSeason = L.RetiredSeason;
+		Out.Add(V);
+	}
+	return Out;
+}
+
+FFM13RecordsView UFM13GameInstance::GetRecords() const
+{
+	const FFM13ClubRecords& R = Kern.Records;
+	FFM13RecordsView V;
+	V.BiggestWin = R.BiggestWinFor > 0 ? FString::Printf(TEXT("%d:%d gegen %s (Saison %d)"), R.BiggestWinFor, R.BiggestWinAgainst, *R.BiggestWinOpponent, R.BiggestWinSeason) : FString(TEXT("-"));
+	V.UnbeatenStreak = R.UnbeatenStreak;
+	V.LongestUnbeatenStreak = R.LongestUnbeatenStreak;
+	V.RecordAttendance = R.RecordAttendance;
+	V.RecordTransferFee = R.RecordTransferFee;
+	const FFM13RelegationResult& Rel = Kern.LastRelegation;
+	if (Rel.bPlayed)
+		V.LastRelegation = FString::Printf(TEXT("%s gegen %s: %d:%d und %d:%d%s - %s"), Rel.bForPromotion ? TEXT("Aufstiegs-Relegation") : TEXT("Abstiegs-Relegation"),
+			*Rel.Opponent, Rel.Leg1Own, Rel.Leg1Opp, Rel.Leg2Own, Rel.Leg2Opp, Rel.bPenalties ? TEXT(" n.E.") : TEXT(""), Rel.bWon ? TEXT("gewonnen") : TEXT("verloren"));
+	return V;
+}
+
 FString UFM13GameInstance::FormatMoney(int64 Amount)
 {
 	// 1234567 -> "1.234.567 €"
@@ -287,6 +404,11 @@ bool UFM13GameInstance::SetTicketPrice(int32 Price, FString& OutReason) { const 
 bool UFM13GameInstance::ExpandStadium(int32 Seats, FString& OutReason) { const bool b = Kern.ExpandStadium(Seats, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::UpgradeYouthAcademy(FString& OutReason) { const bool b = Kern.UpgradeYouthAcademy(OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::UpgradeTraining(FString& OutReason) { const bool b = Kern.UpgradeTraining(OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::SetFormation(const FString& Formation, FString& OutReason) { const bool b = Kern.SetFormation(Formation, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::SetTacticStyle(const FString& Style, FString& OutReason) { const bool b = Kern.SetTacticStyle(Style, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::AcceptSponsorOffer(int32 Index, FString& OutReason) { const bool b = Kern.AcceptSponsorOffer(Index, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::AcceptIncomingOffer(int32 Index, FString& OutReason) { const bool b = Kern.AcceptIncomingOffer(Index, OutReason); Changed(); return b; }
+bool UFM13GameInstance::DeclineIncomingOffer(int32 Index, FString& OutReason) { const bool b = Kern.DeclineIncomingOffer(Index, OutReason); if (b) Changed(); return b; }
 
 void UFM13GameInstance::Changed()
 {

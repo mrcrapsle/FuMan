@@ -21,7 +21,8 @@ enum class EFM13Page : uint8
 	Verein,
 	Spiel,
 	Pokal,
-	Karriere
+	Karriere,
+	Taktik
 };
 
 // Tastatursteuerung für die Platzhalter-Oberfläche:
@@ -90,4 +91,5 @@ private:
 	void OnSeite8() { SetPage(EFM13Page::Verein); }
 	void OnSeite9() { SetPage(EFM13Page::Spiel); }
 	void OnSeite0() { SetPage(EFM13Page::Pokal); }
+	void OnSeiteTaktik() { SetPage(EFM13Page::Taktik); }
 };

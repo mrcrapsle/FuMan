@@ -45,6 +45,7 @@ void AFM13PlayerController::SetupInputComponent()
 	InputComponent->BindKey(EKeys::Eight, IE_Pressed, this, &AFM13PlayerController::OnSeite8);
 	InputComponent->BindKey(EKeys::Nine, IE_Pressed, this, &AFM13PlayerController::OnSeite9);
 	InputComponent->BindKey(EKeys::Zero, IE_Pressed, this, &AFM13PlayerController::OnSeite0);
+	InputComponent->BindKey(EKeys::T, IE_Pressed, this, &AFM13PlayerController::OnSeiteTaktik);
 }
 
 void AFM13PlayerController::ShowStatus(const FString& Text, float Seconds)

@@ -53,7 +53,7 @@ struct FKey { const char* Name; };
 struct EKeys
 {
 	static inline const FKey SpaceBar{ "Space" }, Up{ "Up" }, Down{ "Down" }, Enter{ "Enter" }, Delete{ "Delete" }, Right{ "Right" }, Left{ "Left" },
-		F1{ "F1" }, F2{ "F2" }, F8{ "F8" }, F5{ "F5" }, F9{ "F9" }, One{ "1" }, Two{ "2" }, Three{ "3" }, Four{ "4" }, Five{ "5" }, Six{ "6" }, Seven{ "7" }, Eight{ "8" }, Nine{ "9" }, Zero{ "0" };
+		F1{ "F1" }, F2{ "F2" }, F8{ "F8" }, F5{ "F5" }, F9{ "F9" }, One{ "1" }, Two{ "2" }, Three{ "3" }, Four{ "4" }, Five{ "5" }, Six{ "6" }, Seven{ "7" }, Eight{ "8" }, Nine{ "9" }, Zero{ "0" }, T{ "T" };
 };
 class UInputComponent
 {

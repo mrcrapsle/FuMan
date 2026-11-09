@@ -27,6 +27,7 @@ Links das Menü, oben die Kennzahlen mit dem Knopf **„Spieltag spielen“**, r
 |---|---|
 | Leertaste | nächster Spieltag, nach Spieltag 34 Saison abschließen |
 | 1 bis 9, 0 | Seiten: Übersicht, Tabelle, Kader, Transfermarkt, Jugend, Finanzen, Postfach, Verein, Spiel, Pokal |
+| T | Taktik: Formation, Spielstil, Plan des nächsten Gegners |
 | Pfeil hoch/runter, Enter, Entf | Auswahl, Aktion, abgeben (wie in der Textansicht) |
 | F5 / F9 | Spielstand 1 speichern / laden |
 | F8 | Spielstand aus dem Browserspiel übernehmen |
@@ -42,6 +43,18 @@ Nach jedem Spieltag speichert das Spiel automatisch (`Saved/SaveGames/autosave.j
 3. Der bisherige Stand bleibt als Spielstand `vor-import` erhalten.
 
 Übernommen wird alles, was die Unreal-Fassung kennt: Verein, Saison, Spieltag, Liga, Geld, Fans, Vorstand, Saisonziel, Kader, Talente, Stadion, Ticketpreis, Jugendakademie, alle sechs Ligen mit Tabellen und Spielplan, DFB- und Landespokal, Postfach und Laufbahn. Was es dort noch nicht gibt (Aktien, Immobilien, Privatleben, zweite Mannschaft und weiteres), nennt eine Meldung im Postfach.
+
+## Was das Spiel inzwischen kann (Runde A)
+
+- **Taktik:** 8 Formationen bestimmen die Startelf, 8 Spielstile geben Stärke und kosten Kraft. Gegner wählen ihren Ansatz nach Schere-Stein-Papier. Wer berechenbar spielt, wird gelesen; der Chef-Analyst verrät den Plan.
+- **Spieltag:** Wetter (Tore, Verletzungen, Karten, Zuschauer), feste Schiedsrichter mit eigener Strenge, Gelbe und Rote Karten mit Sperren.
+- **Relegation:** Platz 16 gegen den Dritten der Liga darunter, Platz 3 gegen den 16. der Liga darüber.
+- **Sponsor:** Startvertrag, danach drei Angebote mit Laufzeit, Handgeld und Aufstiegsprämie.
+- **Angebote:** KI-Vereine bieten für deine Spieler und Talente.
+- **Entwicklung:** Jeder Spieler hat einen Entwicklungstyp mit eigenem Leistungshöhepunkt.
+- **Ehrungen:** 13 Erfolge, Vereinsrekorde und Legenden beim Karriereende.
+
+Was aus jedem Ordner und Modul des Browserspiels schon in Unreal steckt, steht in [PORTIERUNG.md](PORTIERUNG.md).
 
 ## Grafik
 
@@ -83,15 +96,17 @@ Tests/Host/   Tests ohne Engine
 unreal/Tests/Host/run.sh
 ```
 
+Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/workflows/build-test.yml`).
+
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 3937 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4026 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
    - Eigener Spielstand: Rundlauf, identisches Weiterspielen, Ablehnung kaputter Stände.
    - **Import:** Alle 11 echten Spielstände aus `tests/fixtures/saves` werden übernommen, die Tabellen passen zu den Spielplänen, und jeder Stand spielt 40 Spieltage weiter.
    - Bot-Karrieren über 15 Saisons.
-2. **UE-Schicht** gegen eine dünne Engine-Nachbildung (37 Prüfungen): Tasten, Seiten, Saisonabschluss, Speichern, Laden, Autosave, Import über F8, Umschalten zur Textansicht. Menü und 3D-Stadion brauchen die echte Engine und sind hier ausgenommen.
+2. **UE-Schicht** gegen eine dünne Engine-Nachbildung (44 Prüfungen): Tasten, Seiten, Saisonabschluss, Speichern, Laden, Autosave, Import über F8, Umschalten zur Textansicht. Menü und 3D-Stadion brauchen die echte Engine und sind hier ausgenommen.
 
 ## Stand der Portierung
 

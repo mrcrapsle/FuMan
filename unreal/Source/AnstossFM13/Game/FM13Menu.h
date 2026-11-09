@@ -48,6 +48,8 @@ private:
 	TSharedRef<SWidget> BuildMatch();
 	TSharedRef<SWidget> BuildCups();
 	TSharedRef<SWidget> BuildCareer();
+	TSharedRef<SWidget> BuildTactics();
+	TSharedRef<SWidget> BuildOffers(bool bYouth);
 
 	// Aktionen (Payload über CreateSP)
 	FReply OnPage(int32 PageIndex);
@@ -66,6 +68,11 @@ private:
 	FReply OnLoad();
 	FReply OnImport();
 	FReply OnNewGame();
+	FReply OnFormation(int32 Index);
+	FReply OnStyle(int32 Index);
+	FReply OnSponsor(int32 Index);
+	FReply OnAcceptOffer(int32 Index);
+	FReply OnDeclineOffer(int32 Index);
 
 	void Status(const FString& Text, float Seconds = 5.f);
 };
