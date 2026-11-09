@@ -134,12 +134,12 @@ namespace FM13Match
 	const TArray<FWeather>& Weathers()
 	{
 		static const TArray<FWeather> Liste = {
-			{ TEXT("Sonnig"), 35, 1.0f, 1.0f, 1.0f, 1.0f },
-			{ TEXT("Bewoelkt"), 30, 1.0f, 1.0f, 1.0f, 1.0f },
-			{ TEXT("Regen"), 18, 1.15f, 1.15f, 0.95f, 0.93f },
-			{ TEXT("Schnee"), 7, 1.2f, 1.2f, 0.85f, 0.88f },
-			{ TEXT("Hitze"), 10, 1.05f, 1.0f, 1.0f, 0.96f },
-			{ TEXT("Sturm"), 3, 1.35f, 1.1f, 0.8f, 0.7f }
+			{ TEXT("Sonnig"), 35, 1.0f, 1.0f, 1.0f, 1.0f, 1.0 },
+			{ TEXT("Bewoelkt"), 30, 1.0f, 1.0f, 1.0f, 1.0f, 1.0 },
+			{ TEXT("Regen"), 18, 1.15f, 1.15f, 0.95f, 0.93f, 1.05 },
+			{ TEXT("Schnee"), 7, 1.2f, 1.2f, 0.85f, 0.88f, 1.1 },
+			{ TEXT("Hitze"), 10, 1.05f, 1.0f, 1.0f, 0.96f, 1.25 },
+			{ TEXT("Sturm"), 3, 1.35f, 1.1f, 0.8f, 0.7f, 1.3 }
 		};
 		return Liste;
 	}

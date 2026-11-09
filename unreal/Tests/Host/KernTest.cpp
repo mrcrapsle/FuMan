@@ -4,6 +4,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Economy.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Match.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13World.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Fitness.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13BrowserImport.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
@@ -581,6 +582,72 @@ static void TestRundeA()
 	PRUEFE(L.Formation == W.Formation && L.Sponsor.Name == W.Sponsor.Name && L.Achievements.Num() == W.Achievements.Num(), "Neue Felder nach dem Laden");
 }
 
+// Kondition und Tagesform (js/match-live.js): Werte von Hand nach den JS-Regeln gerechnet
+static void TestKondition()
+{
+	std::printf("Kondition: Kraftverlust, Erholung, Tagesform\n");
+	using namespace FM13Fitness;
+	FKraftEingabe E;
+	PRUEFE(Verlust(E) == 9, "Grundverlust 9 zu Hause");
+	FKraftEingabe Gut = E; Gut.bFitnessGuru = true;
+	PRUEFE(Verlust(Gut) == 6, "Fitnessguru: 6");
+	FKraftEingabe Hart = E; Hart.Intensitaet = TEXT("hart");
+	PRUEFE(Verlust(Hart) == 11, "Intensitaet hart: round(9 x 1,25) = 11");
+	FKraftEingabe Locker = E; Locker.Intensitaet = TEXT("locker");
+	PRUEFE(Verlust(Locker) == 7, "Intensitaet locker: round(6,75) = 7");
+	FKraftEingabe Erh = E; Erh.Teamtraining = TEXT("erholung");
+	PRUEFE(Verlust(Erh) == 7, "Erholungsschwerpunkt: 9 - 2 = 7");
+	FKraftEingabe Press = E; Press.Tempo = 68; Press.Pressing = 88;
+	PRUEFE(Verlust(Press) == 10, "Pressing 68/88: round(9 x 1,14) = 10");
+	FKraftEingabe Hitze = E; Hitze.WetterFaktor = 1.25;
+	PRUEFE(Verlust(Hitze) == 11, "Hitze: round(9 x 1,25) = 11");
+	FKraftEingabe Auswaerts = E; Auswaerts.bAuswaerts = true;
+	PRUEFE(Verlust(Auswaerts) == 12, "Auswaerts oberste Liga: 9 + 3");
+	Auswaerts.LigaStufe = 2;
+	PRUEFE(Verlust(Auswaerts) == 9, "Auswaerts tiefere Liga: keine Reisemuedigkeit");
+	FKraftEingabe Bus = E; Bus.bAuswaerts = true; Bus.bBus = true;
+	PRUEFE(Verlust(Bus) == 15, "Bus ohne Sponsor: 9 + round(3 x 2) = 15");
+	Bus.bBusSponsor = true;
+	PRUEFE(Verlust(Bus) == 14, "Bus mit Hauptsponsor: 9 + round(4,5) = 14");
+	Bus.bBusBanden = true;
+	PRUEFE(Verlust(Bus) == 14, "Bus mit Bandensponsor: 9 + round(5,25) = 14");
+	FKraftEingabe Alles = E; Alles.Intensitaet = TEXT("hart"); Alles.Tempo = 68; Alles.Pressing = 88; Alles.WetterFaktor = 1.25; Alles.bAuswaerts = true;
+	PRUEFE(Verlust(Alles) == 19, "Hart, Pressing, Hitze, auswaerts: 11, 13, 16, +3 = 19");
+
+	PRUEFE(Erholung(TEXT("kondition")) == 31 && Erholung(TEXT("ausgeglichen")) == 26, "Erholung der Bank 31 oder 26");
+	PRUEFE(NachSpiel(100, true, 9, TEXT("ausgeglichen")) == 98, "Startelf 100 - 9 + round(6,5) = 98");
+	PRUEFE(NachSpiel(100, true, 9, TEXT("kondition")) == 99, "Kondition: 100 - 9 + round(7,75) = 99");
+	PRUEFE(NachSpiel(12, true, 20, TEXT("ausgeglichen")) == 10, "Startelf sinkt nicht unter 10");
+	PRUEFE(NachSpiel(80, false, 9, TEXT("ausgeglichen")) == 100, "Bank erholt sich bis 100");
+	PRUEFE(NachSpiel(50, false, 9, TEXT("ausgeglichen")) == 76, "Bank 50 + 26 = 76");
+
+	PRUEFE(Tagesform(65, 100, 0.0) == 54, "Tagesform Moral 65, Kondition 100: 50 + 4,25 = 54");
+	PRUEFE(Tagesform(65, 100, -20.0) == 34, "Tagesform mit Zufall -20: 34");
+	PRUEFE(Tagesform(65, 100, 20.0) == 74, "Tagesform mit Zufall +20: 74");
+	PRUEFE(Tagesform(5, 10, -20.0) == 16, "Tagesform schwach: 16");
+	std::printf("\n");
+}
+
+// Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
+static void TestKonditionSaison()
+{
+	FFM13World W;
+	W.NewGame(TEXT("Konditionsverein"), 91);
+	for (int i = 0; i < 34; ++i) W.PlayMatchday();
+	bool bGrenzen = true;
+	int32 Kondition10 = 0;
+	for (const FFM13Player& P : W.Squad)
+	{
+		if (P.Fitness < 10 || P.Fitness > 100 || P.DailyForm < 5 || P.DailyForm > 95) bGrenzen = false;
+		if (P.Fitness < 40) ++Kondition10;
+	}
+	PRUEFE(bGrenzen, "Kondition 10-100 und Tagesform 5-95 nach einer Saison");
+	W.ConcludeSeason();
+	bool bSommer = true;
+	for (const FFM13Player& P : W.Squad) if (P.Fitness != 100) bSommer = false;
+	PRUEFE(bSommer, "Sommerpause: Kondition 100");
+}
+
 // Runde C (Spielerstatistik): Vorlagen, Noten nach jedem Ligaspiel, Saisonwechsel
 static void TestSpielerNoten()
 {
@@ -791,6 +858,8 @@ int main()
 	TestPokalUndVerletzungen();
 	TestRundeA();
 	TestRundeB();
+	TestKondition();
+	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();
 	TestBrowserImport();

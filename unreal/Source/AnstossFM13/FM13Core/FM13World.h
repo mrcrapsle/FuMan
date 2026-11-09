@@ -46,6 +46,11 @@ public:
 	// Taktik (js/squad.js, js/match.js, js/opponent-tactics.js)
 	FString Formation = TEXT("4-4-2");
 	FString TacticStyle = TEXT("ausgeglichen");
+	FString TeamTraining = TEXT("ausgeglichen");   // Teamtraining des Spieltags (js/training.js)
+	FString TrainingIntensity = TEXT("normal");     // Trainingsintensität: hart, normal, locker
+	bool bBusTravel = false;                        // Reisemodus Bus statt Flugzeug
+	bool bBusSponsor = false;                       // gesponserter Bus
+	bool bBusBanden = false;                        // Bandensponsor-Variante
 	TArray<FString> RecentStyles;           // Spielstile der letzten Ligaspiele (für die Gegner-Analyse)
 	TCHAR OppPlanArchetype = 0;             // geplanter Ansatz des nächsten Liga-Gegners
 	bool bOppPlanReacted = false;           // der Gegner hat sich auf dich eingestellt
@@ -192,6 +197,7 @@ private:
 	void YouthIntake(FFM13SeasonSummary& Summary);
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
 	void ApplyGrades(int32 OwnGoals, int32 OppGoals);
+	void ApplyFitnessAfterMatchday(bool bHome);
 	TArray<int32> MatchGoals;   // Tore und Vorlagen des letzten eigenen Spiels je Kaderindex
 	TArray<int32> MatchAssists;
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);

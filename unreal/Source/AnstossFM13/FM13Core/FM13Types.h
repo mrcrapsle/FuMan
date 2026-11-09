@@ -59,6 +59,8 @@ struct FFM13Player
 	int32 GradeSum = 0;         // Summe der Ligennoten in Zehnteln (1,0 bis 6,0 = 10 bis 60)
 	int32 GradeGames = 0;       // Ligaspiele mit Note in der Saison
 	int32 LastGrade = 0;        // letzte Note in Zehnteln (0 = noch keine)
+	int32 Fitness = 100;        // Kondition 10 bis 100
+	int32 DailyForm = 50;       // Tagesform 5 bis 95, jeder Spieltag neu
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };

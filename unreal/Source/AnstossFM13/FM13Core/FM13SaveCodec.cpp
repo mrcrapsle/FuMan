@@ -61,6 +61,8 @@ namespace
 		W.Field(TEXT("gradeSum"), P.GradeSum);
 		W.Field(TEXT("gradeGames"), P.GradeGames);
 		W.Field(TEXT("lastGrade"), P.LastGrade);
+		W.Field(TEXT("fitness"), P.Fitness);
+		W.Field(TEXT("dailyForm"), P.DailyForm);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -153,6 +155,11 @@ namespace FM13Save
 		W.FieldBool(TEXT("dfbViaLandespokal"), S.bDfbViaLandespokal);
 		W.Field(TEXT("formation"), S.Formation);
 		W.Field(TEXT("tacticStyle"), S.TacticStyle);
+		W.Field(TEXT("teamTraining"), S.TeamTraining);
+		W.Field(TEXT("trainingIntensity"), S.TrainingIntensity);
+		W.FieldBool(TEXT("busTravel"), S.bBusTravel);
+		W.FieldBool(TEXT("busSponsor"), S.bBusSponsor);
+		W.FieldBool(TEXT("busBanden"), S.bBusBanden);
 		W.ArrayKey(TEXT("recentStyles"));
 		for (const FString& St : S.RecentStyles) W.ElementStr(St);
 		W.EndArray();
@@ -346,6 +353,8 @@ namespace
 		P.GradeSum = (int32)R.Int(Obj, TEXT("gradeSum"), 0);
 		P.GradeGames = (int32)R.Int(Obj, TEXT("gradeGames"), 0);
 		P.LastGrade = (int32)R.Int(Obj, TEXT("lastGrade"), 0);
+		P.Fitness = FMath::Clamp((int32)R.Int(Obj, TEXT("fitness"), 100), 10, 100);
+		P.DailyForm = FMath::Clamp((int32)R.Int(Obj, TEXT("dailyForm"), 50), 5, 95);
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
@@ -440,6 +449,11 @@ namespace FM13Save
 		W.bDfbViaLandespokal = R.Bool(Root, TEXT("dfbViaLandespokal"), false);
 		W.Formation = R.Str(Root, TEXT("formation"), TEXT("4-4-2"));
 		W.TacticStyle = R.Str(Root, TEXT("tacticStyle"), TEXT("ausgeglichen"));
+		W.TeamTraining = R.Str(Root, TEXT("teamTraining"), TEXT("ausgeglichen"));
+		W.TrainingIntensity = R.Str(Root, TEXT("trainingIntensity"), TEXT("normal"));
+		W.bBusTravel = R.Bool(Root, TEXT("busTravel"), false);
+		W.bBusSponsor = R.Bool(Root, TEXT("busSponsor"), false);
+		W.bBusBanden = R.Bool(Root, TEXT("busBanden"), false);
 		for (int32 N : R.Items(Root, TEXT("recentStyles"))) W.RecentStyles.Add(P.Nodes[N].Text);
 		W.OppPlanArchetype = (TCHAR)R.Int(Root, TEXT("oppPlan"), 0);
 		W.bOppPlanReacted = R.Bool(Root, TEXT("oppPlanReacted"), false);

@@ -74,6 +74,8 @@ FFM13PlayerView UFM13GameInstance::MakePlayerView(const FFM13Player& P, bool bIn
 	V.Age = P.Age;
 	V.GoalsSeason = P.GoalsSeason;
 	V.Assists = P.Assists;
+	V.Fitness = P.Fitness;
+	V.DailyForm = P.DailyForm;
 	auto Note = [](int32 Zehntel) { return FString::Printf(TEXT("%d,%d"), Zehntel / 10, Zehntel % 10); };
 	if (P.GradeGames > 0) V.GradeAverage = Note((P.GradeSum + P.GradeGames / 2) / P.GradeGames);
 	if (P.LastGrade > 0) V.LastGrade = Note(P.LastGrade);

@@ -54,6 +54,8 @@ namespace
 		const FString Charakter = R.Str(N, TEXT("character"), TEXT(""));
 		for (uint8 c = 0; c < 6; ++c) if (Charakter.Len() >= 4 && FString(FM13CharacterName(c)).Contains(Charakter.Left(4))) P.Character = c;
 		P.Morale = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("morale"), 65.0)), 5, 100);
+		P.Fitness = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("fitness"), 100.0)), 10, 100);
+		P.DailyForm = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("dailyForm"), 50.0)), 5, 95);
 		P.Archetype = FM13Dev::ArchetypeFor(NewId);
 		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
 		P.SeasonsAtClub = FMath::Max(0, R.Items(N, TEXT("strengthHistory")).Num() - 1);
@@ -274,6 +276,11 @@ namespace FM13BrowserImport
 		FString Egal;
 		W.SetFormation(R.Str(G, TEXT("formation"), TEXT("4-4-2")), Egal);
 		W.SetTacticStyle(R.Str(G, TEXT("tacticStyle"), TEXT("ausgeglichen")), Egal);
+		W.TeamTraining = R.Str(G, TEXT("teamTraining"), TEXT("ausgeglichen"));
+		W.TrainingIntensity = R.Str(G, TEXT("trainingIntensity"), TEXT("normal"));
+		W.bBusTravel = R.Str(G, TEXT("travelMode"), TEXT("flugzeug")) == TEXT("bus");
+		W.bBusSponsor = R.Bool(G, TEXT("busSponsorActive"), false);
+		W.bBusBanden = R.Bool(G, TEXT("busSponsorViaBanden"), false);
 		for (int32 N : R.Items(G, TEXT("recentTacticStyles"))) W.RecentStyles.Add(Doc.Nodes[N].Text);
 		const int32 Sp = R.Find(G, TEXT("sponsor"));
 		W.Sponsor.Name = R.Str(Sp, TEXT("name"), TEXT("Kein Hauptsponsor"));

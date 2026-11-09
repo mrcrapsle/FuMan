@@ -96,7 +96,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 |---|---:|---|---|---|
 | `player-development.js` | 117 | portiert | Entwicklungstypen | FM13Development (Runde A) |
 | `player-retirement.js` | 112 | teilweise | Karriereende, Legenden | Ruhestand, Legenden (Runde A) |
-| `player-stats.js` | 119 | teilweise | Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine | Vorlagen und Noten nach jedem Ligaspiel, Vorlagen auch im Pokal (Runde C); Elf des Spieltags offen |
+| `player-stats.js` | 119 | teilweise | Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine | Vorlagen und Noten nach jedem Ligaspiel mit Tagesform und Kondition (noch vereinfacht: Tore/Vorlagen-Gewichte, Elf des Spieltags offen) |
 | `player-profile.js` | 101 | offen | Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein |  |
 | `playerdetail.js` | 309 | offen | SPIELER-DETAIL-POPUP: wiederverwendbares Modal für Kader, Transfermarkt, Scouting & |  |
 | `player-compare.js` | 93 | offen | SPIELER-VERGLEICH (Phase 26.6): zwei Spieler nebeneinander, aus dem Spielerdetail geöffnet |  |
@@ -136,7 +136,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `youth-pathway.js` | 293 | offen | Jugend-Laufbahn: macht den Weg eines Talents sichtbar. |  |
 | `youth-academy-extended.js` | 248 | offen | Jugendakademie ERWEITERTE FUNKTIONEN |  |
 | `academy-ranking.js` | 138 | offen | Akademie-Rangliste |  |
-| `training.js` | 874 | teilweise | Training | Trainingsplatz-Stufen, Entwicklung pro Spieltag (Wochenplan offen) |
+| `training.js` | 874 | teilweise | Training | Intensität und Teamtraining als Zustand, Kondition nach dem Spiel, Tagesform (Wochen-Auswertung, Trainerstab, Perks offen) |
 | `training-games.js` | 299 | offen | TRAINING-MINISPIELE (Elfmeterschießen & Flankentraining) |  |
 | `medical-department.js` | 126 | teilweise | Verletzungen | Verletzungswurf nach dem Spiel (Abteilung offen) |
 

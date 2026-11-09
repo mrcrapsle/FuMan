@@ -4,6 +4,7 @@
 #include "FM13Names.h"
 #include "FM13Tactics.h"
 #include "FM13Development.h"
+#include "FM13Fitness.h"
 
 namespace
 {
@@ -113,6 +114,7 @@ FFM13Player FFM13World::CreatePlayer(EFM13Position Pos, int32 MinStr, int32 MaxS
 	P.Archetype = FM13Dev::ArchetypeFor(P.Id);
 	P.Character = (uint8)Rng.RandRange(0, 5);
 	P.Morale = Rng.RandRange(60, 75);
+	P.DailyForm = 50 + Rng.RandRange(-10, 9); // Startwert wie js/entities.js
 	return P;
 }
 
@@ -232,6 +234,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	for (int32 i : LineupIndices(Dummy)) Squad[i].Appearances++;
 	PickScorers(OwnGoals, LastReport.Scorers);
 	ApplyGrades(OwnGoals, OppGoals);
+	ApplyFitnessAfterMatchday(bHome);
 
 	// Vorstand: Erwartung aus der Elf ohne Taktik (wie getOwnMatchExpectation)
 	const int32 Shift = FM13Match::BoardShift(FM13Match::Expectation(Elf, OppStr), OwnGoals, OppGoals);
@@ -407,6 +410,36 @@ void FFM13World::PickScorers(int32 Goals, TArray<FString>& OutNames)
 		}
 		OutNames.Add(Zeile);
 	}
+}
+
+// Tagesform und Kondition nach jedem verarbeiteten Spieltag (js/match-live.js, processPostMatchRoutine()).
+// Erst die Tagesform aus Moral und alter Kondition, dann der Kraftverlust der Startelf und die Erholung der Bank.
+void FFM13World::ApplyFitnessAfterMatchday(bool bHome)
+{
+	int32 Dummy = 0;
+	const TArray<int32> Elf = LineupIndices(Dummy);
+	for (FFM13Player& P : Squad)
+	{
+		const double Zufall = Rng.RandRange(0, 999999) / 1000000.0 * 40.0 - 20.0;
+		P.DailyForm = FM13Fitness::Tagesform(P.Morale, P.Fitness, Zufall);
+	}
+
+	FM13Fitness::FKraftEingabe E;
+	E.bFitnessGuru = false;
+	E.Intensitaet = TrainingIntensity;
+	E.Teamtraining = TeamTraining;
+	E.Tempo = FM13Tactics::Style(TacticStyle).Tempo;
+	E.Pressing = FM13Tactics::Style(TacticStyle).Press;
+	E.WetterFaktor = FM13Match::Weathers()[WeatherIndex].FitLossMult;
+	E.bAuswaerts = !bHome;
+	E.LigaStufe = LeagueLevel;
+	E.bBus = bBusTravel;
+	E.bBusSponsor = bBusSponsor;
+	E.bBusBanden = bBusBanden;
+	const int32 Kraftverlust = FM13Fitness::Verlust(E);
+
+	for (int32 i = 0; i < Squad.Num(); ++i)
+		Squad[i].Fitness = FM13Fitness::NachSpiel(Squad[i].Fitness, Elf.Contains(i), Kraftverlust, TeamTraining);
 }
 
 // Kicker-Note nach einem Ligaspiel (1,0 bis 6,0, in Zehnteln): Ergebnis, Tore und Vorlagen,
@@ -608,6 +641,7 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 		P.MarketValue = FM13Economy::MarketValue(P.Strength, &Rng);
 		P.GoalsCareer += P.GoalsSeason;
 		P.GoalsSeason = 0;
+		P.Fitness = 100; // Sommerpause, js/season-end.js
 		P.AssistsCareer += P.Assists;
 		P.Assists = 0;
 		P.GradeSum = 0;
