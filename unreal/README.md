@@ -8,7 +8,7 @@ Portierung des Browserspiels in ein Unreal-Engine-5-Projekt (C++). Der Spielkern
 
 Voraussetzungen (Windows):
 
-- Unreal Engine 5.4 über den Epic Games Launcher (kostenlos)
+- Unreal Engine 5.8 über den Epic Games Launcher (kostenlos)
 - Visual Studio 2022 mit „Spieleentwicklung mit C++“
 
 Schritte:
@@ -18,7 +18,7 @@ Schritte:
 3. `AnstossFM13.uproject` doppelklicken. Der Editor öffnet die leere Karte `/Engine/Maps/Entry`.
 4. „Play“ drücken. Das Spiel startet sofort, denn GameMode und GameInstance stehen in `Config/DefaultEngine.ini`.
 
-Eine andere Engine-Version trägst du in `AnstossFM13.uproject` unter `EngineAssociation` ein. Gebaut für 5.4, neuere 5.x sollten passen.
+Eine andere Engine-Version trägst du in `AnstossFM13.uproject` unter `EngineAssociation` ein (eingestellt: 5.8) oder per Rechtsklick → „Switch Unreal Engine version…“.
 
 ## Steuerung (Platzhalter-Oberfläche)
 
