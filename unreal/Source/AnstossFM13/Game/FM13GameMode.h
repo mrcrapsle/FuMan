@@ -4,7 +4,7 @@
 #include "GameFramework/GameModeBase.h"
 #include "FM13GameMode.generated.h"
 
-// Startet ohne Spielfigur: das Spiel ist reine Oberfläche (HUD-Platzhalter oder eigene UMG-Widgets).
+// Startet ohne Spielfigur: Menü (Slate) plus 3D-Stadion (AFM13StadiumActor), das der GameMode beim Start setzt.
 UCLASS()
 class ANSTOSSFM13_API AFM13GameMode : public AGameModeBase
 {
@@ -12,4 +12,5 @@ class ANSTOSSFM13_API AFM13GameMode : public AGameModeBase
 
 public:
 	AFM13GameMode();
+	virtual void BeginPlay() override;
 };
