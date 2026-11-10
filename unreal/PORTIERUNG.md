@@ -118,13 +118,13 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A) |
+| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A), Transferbudget, Wechselfenster, Rückkauf-Ausübung, Gerüchte-Angebote. Offen: Leihen, Tauschgeschäft, Deadline-Day, Beraterprovision, KI-Transfers, Freie Spieler |
 | `transfer-poker.js` | 288 | teilweise | Transferpoker: Spieler vom Transfermarkt werden einem echten KI-Verein abgekauft. Der |  |
-| `transfer-strategy.js` | 131 | offen | Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte |  |
-| `medical-check.js` | 96 | offen | Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen |  |
-| `pre-contracts.js` | 202 | offen | Vorverträge (Phase 22.6): ablösefreie Wechsel zur neuen Saison - in beide Richtungen. |  |
-| `buyback.js` | 107 | offen | Rückkaufoption beim Verkauf (Phase 22.7): ein Angebot für einen Spieler bis 25 Jahre kann |  |
-| `rumors.js` | 142 | offen | Gerüchteküche (Phase 22.8): nach Spieltagen tauchen Transfergerüchte auf (game.rumors, |  |
+| `transfer-strategy.js` | 131 | portiert | Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte |  |
+| `medical-check.js` | 96 | portiert | Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen |  |
+| `pre-contracts.js` | 202 | portiert | Vorverträge (Phase 22.6): ablösefreie Wechsel zur neuen Saison - in beide Richtungen. |  |
+| `buyback.js` | 107 | portiert | Rückkaufoption beim Verkauf (Phase 22.7): ein Angebot für einen Spieler bis 25 Jahre kann |  |
+| `rumors.js` | 142 | portiert (Medienimage und Verhandlungsperk folgen) | Gerüchteküche (Phase 22.8): nach Spieltagen tauchen Transfergerüchte auf (game.rumors, |  |
 | `scouting.js` | 366 | offen | WELTWEITES Scouting-Netzwerk 2.0 (komplett neu aufgebaut) |  |
 | `youth-sales.js` | 135 | portiert | Talente verkaufen | KI-Angebote für Talente (Runde A) |
 
