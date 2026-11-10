@@ -1,6 +1,7 @@
 #include "FM13GameInstance.h"
 #include "FM13Core/FM13Strength.h"
 #include "FM13Core/FM13Fitness.h"
+#include "FM13Core/FM13Staff.h"
 #include "FM13Core/FM13SaveCodec.h"
 #include "FM13Core/FM13BrowserImport.h"
 #include "FM13Core/FM13Development.h"
@@ -544,6 +545,57 @@ void UFM13GameInstance::AutoLineup() { Kern.ClearManualLineup(); Changed(); }
 bool UFM13GameInstance::SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason) { const bool b = Kern.SetWeeklyTrainingDay(Day, Unit, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason) { const bool b = Kern.ApplyWeeklyTrainingPreset(Name, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::SetTrainingIntensity(const FString& Level, FString& OutReason) { const bool b = Kern.SetTrainingIntensity(Level, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffHire(int32 Slot, int32 Candidate, FString& OutReason) { const bool b = Kern.StaffHire(Slot, Candidate, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffFire(int32 Slot, FString& OutReason) { const bool b = Kern.StaffFire(Slot, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffUpgrade(int32 Slot, FString& OutReason) { const bool b = Kern.StaffUpgrade(Slot, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffRenew(int32 Slot, FString& OutReason) { const bool b = Kern.StaffRenew(Slot, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffRaise(int32 Slot, FString& OutReason) { const bool b = Kern.StaffRaise(Slot, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffInterim(int32 Slot, FString& OutReason) { const bool b = Kern.StaffInterim(Slot, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffMeeting(FString& OutReason) { const bool b = Kern.StaffMeeting(OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffSetWageCap(int64 Cap, FString& OutReason) { const bool b = Kern.StaffSetWageCap(Cap, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::StaffResolvePoach(bool bPay, FString& OutReason) { const bool b = Kern.StaffResolvePoach(bPay, OutReason); if (b) Changed(); return b; }
+
+FFM13StaffView UFM13GameInstance::GetStaff() const
+{
+	FFM13StaffView V;
+	static const TCHAR* Wirkung[6] = { TEXT("+2 Teamstaerke, Hinweise im Livespiel"), TEXT("-30 Prozent Kraftverlust nach Spielen"), TEXT("Halbiert die Ausfallzeit"),
+		TEXT("Perfekter Rasen: Heimvorteil in der Staerke"), TEXT("Gegnerplan vor jedem Spiel, Tiefenanalyse als Staerke"), TEXT("Kraftverlust sinkt, Leistungskueche gibt Staerke") };
+	for (int32 Slot = 0; Slot < FM13Staff::AnzahlRollen(); ++Slot)
+	{
+		const FFM13Staff* S = const_cast<FFM13World&>(Kern).StaffSlot(Slot);
+		const FM13Staff::FRolle& R = FM13Staff::Rollen()[Slot];
+		FFM13StaffRoleView Rv;
+		Rv.Slot = Slot;
+		Rv.Name = R.Name;
+		Rv.Effect = Wirkung[Slot];
+		Rv.bHired = S->bHired;
+		Rv.Level = S->Level;
+		Rv.Morale = FMath::RoundToInt((float)S->Morale);
+		Rv.Wage = S->bHired ? S->Wage : R.Gehalt;
+		Rv.Contract = S->Contract;
+		Rv.UpgradeDays = S->UpgradeDays;
+		Rv.OnLeave = S->OnLeave;
+		Rv.bInterim = S->bInterim;
+		Rv.Severance = FM13Staff::Abfindung(S->Wage, S->Level);
+		Rv.UpgradeCost = S->Level < 3 ? FM13Staff::WeiterbildungKosten(Slot, S->Level) : 0;
+		Rv.RenewCost = FM13Staff::VerlaengerungKosten(Slot);
+		Rv.RaiseCost = FM13Staff::GehaltserhoehungKosten(S->Wage);
+		Rv.InterimCost = S->Wage * 3;
+		for (int32 k = 0; k < FM13Staff::Bewerber().Num(); ++k)
+		{
+			const FM13Staff::FBewerber& B = FM13Staff::Bewerber()[k];
+			Rv.Candidates.Add(FString::Printf(TEXT("%s, Stufe %d, Moral %d"), B.Name, B.Stufe, B.Moral));
+			Rv.CandidateCosts.Add(FM13Staff::PreisFuerBewerber(Slot, k));
+		}
+		Rv.bCapBlocks = !S->bHired && Kern.StaffHireBreaksCap(Slot);
+		V.Roles.Add(Rv);
+	}
+	V.WagesTotal = Kern.StaffWagesTotal();
+	V.WageCap = Kern.WageBudgetCap;
+	if (Kern.PoachSlot >= 0) { V.PoachName = FM13Staff::Rollen()[Kern.PoachSlot].Name; V.PoachRetention = Kern.PoachRetention; }
+	V.bMeetingAvailable = Kern.LastMeetingSeason != Kern.Season;
+	return V;
+}
 
 FFM13TrainingView UFM13GameInstance::GetTraining() const
 {

@@ -1,5 +1,6 @@
 #include "FM13SaveCodec.h"
 #include "FM13Fitness.h"
+#include "FM13Staff.h"
 #include "FM13Json.h"
 
 // ---------- Schreiben ----------
@@ -38,6 +39,7 @@ namespace
 
 		void Field(const TCHAR* K, int64 V) { Key(K); Int(V); bFirst = false; }
 		void Field(const TCHAR* K, const FString& V) { Key(K); Str(V); bFirst = false; }
+		void FieldReal(const TCHAR* K, double V) { Key(K); Out += FString::Printf(TEXT("%.6f"), V); bFirst = false; }
 		void FieldBool(const TCHAR* K, bool V) { Key(K); Out += V ? TEXT("true") : TEXT("false"); bFirst = false; }
 		void ArrayKey(const TCHAR* K) { Key(K); BeginArray(); }
 		void ObjectKey(const TCHAR* K) { Key(K); BeginObject(); }
@@ -176,6 +178,10 @@ namespace FM13Save
 		W.Field(TEXT("promotionBoostLevel"), S.PromotionBoostLevel);
 		W.Field(TEXT("promotionBoostSeason"), S.PromotionBoostSeason);
 		W.Field(TEXT("campusReha"), S.CampusReha);
+		W.Field(TEXT("wageBudgetCap"), S.WageBudgetCap);
+		W.Field(TEXT("lastMeetingSeason"), S.LastMeetingSeason);
+		W.Field(TEXT("poachSlot"), S.PoachSlot);
+		W.Field(TEXT("poachRetention"), S.PoachRetention);
 		W.ArrayKey(TEXT("weeklyPlan"));
 		for (const FString& Tag : S.WeeklyPlan) W.ElementStr(Tag);
 		W.EndArray();
@@ -186,7 +192,13 @@ namespace FM13Save
 		const TCHAR* PersonalKeys[6] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
 		for (int32 i = 0; i < 6; ++i)
 		{
-			W.Field(*(FString(PersonalKeys[i]) + TEXT("Morale")), Personal[i]->Morale);
+			W.FieldReal(*(FString(PersonalKeys[i]) + TEXT("Morale")), Personal[i]->Morale);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("Wage")), Personal[i]->Wage);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("Contract")), Personal[i]->Contract);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("HiredSeason")), Personal[i]->HiredSeason);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("OnLeave")), Personal[i]->OnLeave);
+			W.FieldBool(*(FString(PersonalKeys[i]) + TEXT("Interim")), Personal[i]->bInterim);
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("UpgradeDays")), Personal[i]->UpgradeDays);
 			W.FieldBool(*(FString(PersonalKeys[i]) + TEXT("Hired")), Personal[i]->bHired);
 			W.Field(*(FString(PersonalKeys[i]) + TEXT("Level")), Personal[i]->Level);
 			W.Field(*(FString(PersonalKeys[i]) + TEXT("Task")), Personal[i]->Task);
@@ -500,6 +512,10 @@ namespace FM13Save
 		W.PromotionBoostLevel = (int32)R.Int(Root, TEXT("promotionBoostLevel"), -1);
 		W.PromotionBoostSeason = (int32)R.Int(Root, TEXT("promotionBoostSeason"), 0);
 		W.CampusReha = FMath::Clamp((int32)R.Int(Root, TEXT("campusReha"), 0), 0, 5);
+		W.WageBudgetCap = R.Int(Root, TEXT("wageBudgetCap"), 0);
+		W.LastMeetingSeason = (int32)R.Int(Root, TEXT("lastMeetingSeason"), 0);
+		W.PoachSlot = (int32)R.Int(Root, TEXT("poachSlot"), -1);
+		W.PoachRetention = R.Int(Root, TEXT("poachRetention"), 0);
 		for (int32 N : R.Items(Root, TEXT("weeklyPlan"))) W.WeeklyPlan.Add(P.Nodes[N].Text);
 		if (W.WeeklyPlan.Num() != 7) W.WeeklyPlan = FM13Fitness::Startplan();
 		{
@@ -513,9 +529,16 @@ namespace FM13Save
 		}
 		FFM13Staff* Personal[6] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper, &W.CoTrainer, &W.Analyst };
 		const TCHAR* PersonalKeys[6] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
+		const TCHAR* StaffSchluessel[6] = { TEXT("fitCoach"), TEXT("nutritionist"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
 		for (int32 i = 0; i < 6; ++i)
 		{
-			Personal[i]->Morale = FMath::Clamp((int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Morale")), 80), 0, 100);
+			Personal[i]->Morale = FMath::Clamp(R.Real(Root, *(FString(PersonalKeys[i]) + TEXT("Morale")), 80.0), 0.0, 100.0);
+			Personal[i]->Wage = R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Wage")), FM13Staff::GehaltFuer(StaffSchluessel[i]));
+			Personal[i]->Contract = (int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Contract")), 34);
+			Personal[i]->HiredSeason = (int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("HiredSeason")), 0);
+			Personal[i]->OnLeave = (int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("OnLeave")), 0);
+			Personal[i]->bInterim = R.Bool(Root, *(FString(PersonalKeys[i]) + TEXT("Interim")), false);
+			Personal[i]->UpgradeDays = (int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("UpgradeDays")), 0);
 			Personal[i]->bHired = R.Bool(Root, *(FString(PersonalKeys[i]) + TEXT("Hired")), false);
 			Personal[i]->Level = FMath::Clamp((int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Level")), 1), 1, 3);
 			Personal[i]->Task = R.Str(Root, *(FString(PersonalKeys[i]) + TEXT("Task")), TEXT(""));

@@ -62,6 +62,16 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13RecordsView GetRecords() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13EuropeView GetEurope() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13TrainingView GetTraining() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13StaffView GetStaff() const;
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffHire(int32 Slot, int32 Candidate, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffFire(int32 Slot, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffUpgrade(int32 Slot, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffRenew(int32 Slot, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffRaise(int32 Slot, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffInterim(int32 Slot, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffMeeting(FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffSetWageCap(int64 Cap, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffResolvePoach(bool bPay, FString& OutReason);
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FString> GetAwards() const;
 	// Mode 0 = gesamt, 1 = nur Heimspiele, 2 = nur Auswärtsspiele (aus dem Spielplan berechnet)
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13TableRowView> GetTableSplit(int32 Level, int32 Mode) const;

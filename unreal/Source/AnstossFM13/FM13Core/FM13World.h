@@ -67,6 +67,24 @@ public:
 	// Training (js/training.js): Wochenplan mit sieben Tagen, daraus folgt das Teamtraining
 	TArray<FString> WeeklyPlan;
 	int32 CampusReha = 0;                           // Campus: Reha-Klinik, verkürzt Ausfallzeiten
+	// Personal: Einstellen, Entlassen, Weiterbilden, Vertraege, Abwerbung (js/campus-staff.js)
+	int64 WageBudgetCap = 0;                        // Personalbudget-Obergrenze je Spieltag, 0 = keine
+	int32 LastMeetingSeason = 0;                    // Jahres-Meeting (0 = noch keins)
+	int32 PoachSlot = -1;                           // Abwerbeversuch offen: Stelle, -1 = keiner
+	int64 PoachRetention = 0;                       // Bindungspraemie
+	FFM13Staff* StaffSlot(int32 Slot);
+	bool StaffHire(int32 Slot, int32 Bewerber, FString& OutReason);
+	bool StaffFire(int32 Slot, FString& OutReason);
+	bool StaffUpgrade(int32 Slot, FString& OutReason);
+	bool StaffRenew(int32 Slot, FString& OutReason);
+	bool StaffRaise(int32 Slot, FString& OutReason);
+	bool StaffInterim(int32 Slot, FString& OutReason);
+	bool StaffMeeting(FString& OutReason);
+	bool StaffSetWageCap(int64 Cap, FString& OutReason);
+	bool StaffResolvePoach(bool bPay, FString& OutReason);
+	bool StaffHireBreaksCap(int32 Slot) const;
+	int64 StaffWagesTotal() const;
+	void TickStaff();                               // einmal je Spieltag
 	bool SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason);
 	bool ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason);
 	bool SetTrainingIntensity(const FString& Level, FString& OutReason);

@@ -1,5 +1,6 @@
 #include "FM13BrowserImport.h"
 #include "FM13Fitness.h"
+#include "FM13Staff.h"
 #include "FM13Economy.h"
 #include "FM13Json.h"
 #include "FM13Development.h"
@@ -356,6 +357,23 @@ namespace FM13BrowserImport
 			Stab[i]->bHired = R.Bool(S, TEXT("hired"), false);
 			Stab[i]->Task = R.Str(S, TEXT("task"), TEXT(""));
 			Stab[i]->Level = FMath::Clamp((int32)R.Int(R.Find(Meta, Schluessel[i]), TEXT("level"), 1), 1, 3);
+			// Gehalt, Vertragslaufzeit, Einstellungssaison, Ausfall, Interims-Ersatz, Weiterbildung
+			const int32 Meta1 = R.Find(Meta, Schluessel[i]);
+			Stab[i]->Wage = R.Int(R.Find(Personal, Schluessel[i]), TEXT("wage"), FM13Staff::GehaltFuer(Schluessel[i]));
+			Stab[i]->Contract = (int32)R.Int(Meta1, TEXT("contractMatchdays"), 34);
+			Stab[i]->HiredSeason = (int32)R.Int(Meta1, TEXT("hiredSeason"), 0);
+			Stab[i]->OnLeave = (int32)R.Int(Meta1, TEXT("onLeave"), 0);
+			Stab[i]->bInterim = R.Bool(Meta1, TEXT("interimActive"), false);
+		}
+		W.WageBudgetCap = R.Int(R.Find(Root, TEXT("staffCentralState")), TEXT("wageBudgetCap"), 0);
+		W.LastMeetingSeason = (int32)R.Int(R.Find(Root, TEXT("staffCentralState")), TEXT("lastMeetingSeason"), 0);
+		// Abwerbeversuch: Stelle ueber den Schluessel finden, Bindungspraemie aus dem Browser-Stand
+		const int32 Abwerbung = R.Find(R.Find(Root, TEXT("staffCentralState")), TEXT("pendingPoach"));
+		if (R.IsObject(Abwerbung))
+		{
+			const FString Schl = R.Str(Abwerbung, TEXT("key"), TEXT(""));
+			for (int32 i = 0; i < 6; ++i) if (Schl == Schluessel[i]) { W.PoachSlot = i; break; }
+			W.PoachRetention = R.Int(Abwerbung, TEXT("retentionCost"), 0);
 		}
 		W.bBusBanden = R.Bool(G, TEXT("busSponsorViaBanden"), false);
 		for (int32 N : R.Items(G, TEXT("recentTacticStyles"))) W.RecentStyles.Add(Doc.Nodes[N].Text);

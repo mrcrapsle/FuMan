@@ -5,6 +5,8 @@
 #include "FM13Tactics.h"
 #include "FM13Development.h"
 #include "FM13Fitness.h"
+#include "FM13Staff.h"
+#include <cmath>
 #include "FM13Strength.h"
 
 namespace
@@ -241,6 +243,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	ApplyGrades(OwnGoals, OppGoals);
 	ApplyFitnessAfterMatchday(bHome);
 	TickPairChemistry();
+	TickStaff();
 
 	// Vorstand: Erwartung aus der Elf ohne Taktik (wie getOwnMatchExpectation)
 	const int32 Shift = FM13Match::BoardShift(FM13Match::Expectation(Elf, Opp.Strength), OwnGoals, OppGoals);
@@ -2098,4 +2101,210 @@ void FFM13World::AddMessage(const FString& Title, const FString& Body)
 	M.Title = Title; M.Body = Body; M.Season = Season; M.Matchday = Matchday;
 	Messages.Add(M);
 	if (Messages.Num() > FM13::MaxMessages) Messages.RemoveAt(0);
+}
+
+// ---------- Personal (js/campus-staff.js) ----------
+
+FFM13Staff* FFM13World::StaffSlot(int32 Slot)
+{
+	switch (Slot)
+	{
+	case 0: return &CoTrainer;
+	case 1: return &AthletikTrainer;
+	case 2: return &Physio;
+	case 3: return &Greenkeeper;
+	case 4: return &Analyst;
+	case 5: return &Ernaehrungsberater;
+	default: return nullptr;
+	}
+}
+
+int64 FFM13World::StaffWagesTotal() const
+{
+	const FFM13Staff* Stellen[6] = { &CoTrainer, &AthletikTrainer, &Physio, &Greenkeeper, &Analyst, &Ernaehrungsberater };
+	int64 Summe = 0;
+	for (const FFM13Staff* S : Stellen) if (S->bHired) Summe += S->Wage;
+	return Summe;
+}
+
+// staffHireBreaksCap(): eine Neueinstellung darf die Obergrenze nicht sprengen
+bool FFM13World::StaffHireBreaksCap(int32 Slot) const
+{
+	const FFM13Staff* S = const_cast<FFM13World*>(this)->StaffSlot(Slot);
+	if (!S || WageBudgetCap <= 0 || S->bHired) return false;
+	return StaffWagesTotal() + FM13Staff::Rollen()[Slot].Gehalt > WageBudgetCap;
+}
+
+bool FFM13World::StaffHire(int32 Slot, int32 Kandidat, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || !FM13Staff::Bewerber().IsValidIndex(Kandidat)) { OutReason = TEXT("Unbekannte Stelle oder Bewerber."); return false; }
+	if (S->bHired) { OutReason = TEXT("Diese Position ist bereits besetzt."); return false; }
+	const int64 Preis = FM13Staff::PreisFuerBewerber(Slot, Kandidat);
+	if (Money < Preis) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Preis); return false; }
+	if (StaffHireBreaksCap(Slot)) { OutReason = TEXT("Die Personalbudget-Obergrenze wuerde gesprengt."); return false; }
+	const FM13Staff::FBewerber& B = FM13Staff::Bewerber()[Kandidat];
+	Book(FString::Printf(TEXT("Einstellung: %s"), FM13Staff::Rollen()[Slot].Name), -Preis);
+	S->bHired = true;
+	S->Wage = FM13Staff::Rollen()[Slot].Gehalt;
+	S->Contract = FM13Staff::VertragsLaufzeit;
+	S->Morale = B.Moral;
+	S->HiredSeason = Season;
+	S->Level = B.Stufe;
+	S->OnLeave = 0; S->bInterim = false; S->UpgradeDays = 0;
+	return true;
+}
+
+// toggleStaffMember(): Entlassen kostet die Abfindung (Gehalt x Stufe), wenn das Konto sie deckt
+bool FFM13World::StaffFire(int32 Slot, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || !S->bHired) { OutReason = TEXT("Niemand auf dieser Stelle."); return false; }
+	const int64 Abf = FM13Staff::Abfindung(S->Wage, S->Level);
+	if (Abf > 0 && Money >= Abf) Book(FString::Printf(TEXT("Abfindung: %s"), FM13Staff::Rollen()[Slot].Name), -Abf);
+	*S = FFM13Staff();
+	return true;
+}
+
+// upgradeStaffMember(): Weiterbildung laeuft als Baustelle; bezahlt wird beim Auftrag
+bool FFM13World::StaffUpgrade(int32 Slot, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || !S->bHired) { OutReason = TEXT("Erst einstellen, dann weiterbilden."); return false; }
+	if (S->Level >= 3) { OutReason = TEXT("Maximale Ausbaustufe bereits erreicht."); return false; }
+	if (S->UpgradeDays > 0) { OutReason = TEXT("Weiterbildung laeuft bereits."); return false; }
+	const int64 Kosten = FM13Staff::WeiterbildungKosten(Slot, S->Level);
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Kosten); return false; }
+	Book(FString::Printf(TEXT("Weiterbildung: %s"), FM13Staff::Rollen()[Slot].Name), -Kosten);
+	S->UpgradeDays = FM13Staff::WeiterbildungTage(Kosten);
+	return true;
+}
+
+bool FFM13World::StaffRenew(int32 Slot, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || !S->bHired) { OutReason = TEXT("Niemand auf dieser Stelle."); return false; }
+	const int64 Kosten = FM13Staff::VerlaengerungKosten(Slot);
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Kosten); return false; }
+	Book(FString::Printf(TEXT("Vertragsverlaengerung: %s"), FM13Staff::Rollen()[Slot].Name), -Kosten);
+	S->Contract = FM13Staff::VertragsLaufzeit;
+	S->Morale = FMath::Min(100.0, S->Morale + 10.0);
+	return true;
+}
+
+bool FFM13World::StaffRaise(int32 Slot, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || !S->bHired) { OutReason = TEXT("Niemand auf dieser Stelle."); return false; }
+	const int64 Kosten = FM13Staff::GehaltserhoehungKosten(S->Wage);
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Kosten); return false; }
+	Book(FString::Printf(TEXT("Gehaltserhoehung: %s"), FM13Staff::Rollen()[Slot].Name), -Kosten);
+	S->Wage = FM13Staff::NeuesGehalt(S->Wage);
+	S->Morale = FMath::Min(100.0, S->Morale + 20.0);
+	return true;
+}
+
+// Interims-Ersatz fuer drei Spieltage, wenn die Stelle kurzfristig ausfaellt
+bool FFM13World::StaffInterim(int32 Slot, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(Slot);
+	if (!S || S->OnLeave <= 0) { OutReason = TEXT("Kein Ausfall auf dieser Stelle."); return false; }
+	const int64 Kosten = S->Wage * 3;
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Kosten); return false; }
+	Book(FString::Printf(TEXT("Interims-Ersatz: %s"), FM13Staff::Rollen()[Slot].Name), -Kosten);
+	S->bInterim = true;
+	return true;
+}
+
+// Jahres-Meeting: einmal je Saison, +8 Moral fuer das Personal und +2 fuer die Mannschaft
+bool FFM13World::StaffMeeting(FString& OutReason)
+{
+	if (LastMeetingSeason == Season) { OutReason = TEXT("Das Meeting fuer diese Saison wurde bereits abgehalten."); return false; }
+	LastMeetingSeason = Season;
+	FFM13Staff* Stellen[6] = { &CoTrainer, &AthletikTrainer, &Physio, &Greenkeeper, &Analyst, &Ernaehrungsberater };
+	for (FFM13Staff* S : Stellen) if (S->bHired) S->Morale = FMath::Min(100.0, S->Morale + 8.0);
+	for (FFM13Player& P : Squad) P.Morale = FMath::Min(100, P.Morale + 2);
+	return true;
+}
+
+bool FFM13World::StaffSetWageCap(int64 Cap, FString& OutReason)
+{
+	if (Cap < 0) { OutReason = TEXT("Die Obergrenze kann nicht negativ sein."); return false; }
+	WageBudgetCap = Cap;
+	return true;
+}
+
+// Abwerbeversuch: Bindungspraemie (Gehalt x 15) oder die Stelle ist frei
+bool FFM13World::StaffResolvePoach(bool bPay, FString& OutReason)
+{
+	FFM13Staff* S = StaffSlot(PoachSlot);
+	if (PoachSlot < 0 || !S) { OutReason = TEXT("Kein Abwerbeversuch offen."); return false; }
+	if (bPay)
+	{
+		if (Money < PoachRetention) { OutReason = TEXT("Nicht genug Geld fuer die Bindungspraemie."); return false; }
+		Book(TEXT("Bindungspraemie"), -PoachRetention);
+		S->Morale = 100;
+	}
+	else
+	{
+		AddMessage(TEXT("Abgewandert"), FString::Printf(TEXT("%s hat den Verein verlassen."), FM13Staff::Rollen()[PoachSlot].Name));
+		*S = FFM13Staff();
+	}
+	PoachSlot = -1;
+	PoachRetention = 0;
+	return true;
+}
+
+// Taeglicher Ablauf (processPostMatchRoutine): Vertraege, Moral, Abwerbung, Ausfaelle, Weiterbildung
+void FFM13World::TickStaff()
+{
+	FFM13Staff* Stellen[6] = { &CoTrainer, &AthletikTrainer, &Physio, &Greenkeeper, &Analyst, &Ernaehrungsberater };
+	for (int32 Slot = 0; Slot < 6; ++Slot)
+	{
+		FFM13Staff& S = *Stellen[Slot];
+		if (!S.bHired) continue;
+		if (--S.Contract == 5)
+			AddMessage(TEXT("Vertrag laeuft aus"), FString::Printf(TEXT("Der Vertrag von %s endet in 5 Spieltagen. Jetzt verlaengern, sonst verlaesst er den Verein."), FM13Staff::Rollen()[Slot].Name));
+		if (S.Contract <= 0)
+		{
+			AddMessage(TEXT("Vertrag ausgelaufen"), FString::Printf(TEXT("%s hat den Verein verlassen."), FM13Staff::Rollen()[Slot].Name));
+			S = FFM13Staff();
+			continue;
+		}
+		S.Morale = FM13Staff::MoralAbnahme(S.Morale);
+	}
+	// Abwerbung: 2 von 100 Spieltagen, sofern nichts offen ist
+	if (PoachSlot < 0 && Rng.FRand() < 0.02f)
+	{
+		TArray<int32> Besetzt;
+		for (int32 Slot = 0; Slot < 6; ++Slot) if (Stellen[Slot]->bHired) Besetzt.Add(Slot);
+		if (Besetzt.Num())
+		{
+			PoachSlot = Besetzt[Rng.RandRange(0, Besetzt.Num() - 1)];
+			PoachRetention = Stellen[PoachSlot]->Wage * 15;
+			AddMessage(TEXT("Abwerbeversuch"), FString::Printf(TEXT("Ein Konkurrenzverein wirbt %s ab. Bindungspraemie: %lld."), FM13Staff::Rollen()[PoachSlot].Name, (long long)PoachRetention));
+		}
+	}
+	// Kurzfristiger Ausfall: 1 von 100 Spieltagen, Ausfall fuer drei Spieltage
+	if (Rng.FRand() < 0.01f)
+	{
+		TArray<int32> Frei;
+		for (int32 Slot = 0; Slot < 6; ++Slot) if (Stellen[Slot]->bHired && Stellen[Slot]->OnLeave == 0) Frei.Add(Slot);
+		if (Frei.Num())
+		{
+			const int32 Slot = Frei[Rng.RandRange(0, Frei.Num() - 1)];
+			Stellen[Slot]->OnLeave = 3;
+			AddMessage(TEXT("Ausfall"), FString::Printf(TEXT("%s faellt kurzfristig aus (3 Spieltage)."), FM13Staff::Rollen()[Slot].Name));
+		}
+	}
+	for (int32 Slot = 0; Slot < 6; ++Slot)
+	{
+		FFM13Staff& S = *Stellen[Slot];
+		if (S.OnLeave > 0) { if (--S.OnLeave == 0) S.bInterim = false; }
+		if (S.UpgradeDays > 0 && --S.UpgradeDays == 0 && S.Level < 3)
+		{
+			S.Level++;
+			AddMessage(TEXT("Weiterbildung abgeschlossen"), FString::Printf(TEXT("%s ist jetzt auf Stufe %d."), FM13Staff::Rollen()[Slot].Name, S.Level));
+		}
+	}
 }

@@ -244,6 +244,45 @@ struct FFM13TrainingView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 BenchRecovery = 0;      // Erholung der Bank
 };
 
+// Personal im Campus: je Stelle Stand, Kosten der Aktionen und Ausfall
+USTRUCT(BlueprintType)
+struct FFM13StaffRoleView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Slot = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Name;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Effect;          // was die Stelle tut
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bHired = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Level = 1;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Morale = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 Wage = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Contract = 0;      // Spieltage bis Vertragsende
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 UpgradeDays = 0;   // Weiterbildung laeuft
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 OnLeave = 0;       // Ausfall in Spieltagen
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bInterim = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 Severance = 0;     // Abfindung bei Entlassung
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 UpgradeCost = 0;   // naechste Stufe
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 RenewCost = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 RaiseCost = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 InterimCost = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Candidates; // Bewerber mit Preis, Stufe und Moral
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int64> CandidateCosts;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bCapBlocks = false;   // Obergrenze verhindert Einstellung
+};
+
+// Personal insgesamt: Abwerbeversuch, Budget, Meeting
+USTRUCT(BlueprintType)
+struct FFM13StaffView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FFM13StaffRoleView> Roles;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 WagesTotal = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 WageCap = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString PoachName;        // offener Abwerbeversuch, leer = keiner
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 PoachRetention = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bMeetingAvailable = false;
+};
+
 USTRUCT(BlueprintType)
 struct FFM13EuropeView
 {

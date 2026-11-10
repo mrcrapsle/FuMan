@@ -77,7 +77,13 @@ struct FFM13Staff
 	bool bHired = false;
 	int32 Level = 1;
 	FString Task;
-	int32 Morale = 80;        // staffMeta.morale: unter 70 wirkt er nur zu 85 %, unter 40 zu 65 %
+	double Morale = 80.0;     // staffMeta.morale (Kommazahl, sinkt um 0,3 je Spieltag): unter 70 wirkt er nur zu 85 %, unter 40 zu 65 %
+	int64 Wage = 0;           // Gehalt je Spieltag (staffMembers.wage), steigt mit Gehaltserhoehungen
+	int32 Contract = 34;      // Spieltage bis zum Vertragsende (staffMeta.contractMatchdays)
+	int32 HiredSeason = 0;    // Saison der Einstellung, 0 = nie eingestellt
+	int32 OnLeave = 0;        // Spieltage Ausfall (kurzfristig, staffMeta.onLeave)
+	bool bInterim = false;    // Interims-Ersatz gebucht
+	int32 UpgradeDays = 0;    // Weiterbildung laeuft: Spieltage bis zur naechsten Stufe, 0 = keine
 };
 
 // Hauptsponsor (js/sponsors.js, vereinfacht: keine Verhandlung, keine Themenboni)

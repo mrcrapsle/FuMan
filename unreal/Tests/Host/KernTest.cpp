@@ -6,6 +6,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13World.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Fitness.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Strength.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Staff.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
 #include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
@@ -687,6 +688,7 @@ static void TestTeamstaerke()
 	K.Squad[5].Trait = FM13Strength::Leader;
 	K.PlayMatchday();
 	PRUEFE(K.CaptainId == K.Squad[5].Id, "Der Leader wird Kapitaen");
+	for (FFM13Player& P : K.Squad) P.InjuredMatchdays = 0;
 	K.Squad[5].InjuredMatchdays = 3; K.Squad[2].Age = 34;
 	K.PlayMatchday();
 	PRUEFE(K.CaptainId == K.Squad[2].Id, "Verletzter Kapitaen: der Erfahrenste uebernimmt");
@@ -822,6 +824,131 @@ static void TestTrainingReferenz()
 	FFM13World L;
 	FString Fehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.WeeklyPlan[0] == FString(TEXT("taktik")) && L.TrainingIntensity == FString(TEXT("locker")), "Wochenplan bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
+// Personal (js/campus-staff.js). Die Werte sind von Hand nach den JS-Formeln gerechnet, nicht gegen die Originalfunktion ausgefuehrt.
+static void TestPersonal()
+{
+	std::printf("Personal: Einstellen, Entlassen, Weiterbilden, Vertraege, Abwerbung, Ausfall\n");
+	FString G;
+	FFM13World W;
+	W.NewGame(TEXT("Personalverein"), 71);
+	W.Money = 500000;
+	PRUEFE(W.StaffHire(0, 0, G) && W.Money == 458000 && W.CoTrainer.bHired && W.CoTrainer.Wage == 8000 && W.CoTrainer.Level == 1,
+		"Guenstige Nachwuchskraft: 60000 x 0,7 = 42000 gezahlt");
+	PRUEFE(std::fabs(W.CoTrainer.Morale - 60.0) < 1e-9 && W.CoTrainer.Contract == 34 && W.CoTrainer.HiredSeason == W.Season, "Startmoral 60, Vertrag 34, Saison notiert");
+	PRUEFE(!W.StaffHire(0, 1, G) && G.Len() > 0, "Besetzte Stelle nicht noch einmal besetzen");
+
+	FFM13World E;
+	E.NewGame(TEXT("Elitenverein"), 72);
+	E.Money = 500000;
+	PRUEFE(E.StaffHire(0, 2, G) && E.Money == 404000 && E.CoTrainer.Level == 2 && std::fabs(E.CoTrainer.Morale - 95.0) < 1e-9,
+		"Renommierte Fachkraft: 60000 x 1,6 = 96000, Stufe 2, Moral 95");
+
+	FFM13World Arm;
+	Arm.NewGame(TEXT("Armverein"), 73);
+	Arm.Money = 1000;
+	PRUEFE(!Arm.StaffHire(0, 1, G) && !Arm.CoTrainer.bHired && G.Contains(TEXT("Geld")), "Ohne Geld keine Einstellung");
+
+	FFM13World Cap;
+	Cap.NewGame(TEXT("Obergrenze"), 74);
+	Cap.Money = 500000;
+	Cap.WageBudgetCap = 10000;
+	PRUEFE(Cap.StaffHire(0, 0, G), "Co-Trainer (8000) passt unter die Obergrenze 10000");
+	PRUEFE(Cap.StaffHireBreaksCap(1) && !Cap.StaffHire(1, 0, G), "Athletik (6000) sprengt 10000 zusammen mit dem Co-Trainer (8000)");
+	Cap.WageBudgetCap = 20000;
+	PRUEFE(!Cap.StaffHireBreaksCap(1) && Cap.StaffHire(1, 0, G), "Obergrenze 20000: Athletik passt");
+
+	// Entlassen: Abfindung Gehalt x Stufe
+	FFM13World F;
+	F.NewGame(TEXT("Entlassung"), 75);
+	F.Money = 500000;
+	F.StaffHire(0, 2, G);
+	const int64 VorEntlassung = F.Money;
+	PRUEFE(F.StaffFire(0, G) && F.Money == VorEntlassung - 16000 && !F.CoTrainer.bHired, "Entlassen zahlt Abfindung 8000 x Stufe 2 = 16000");
+
+	// Weiterbildung: 60000 x 0,6 = 36000, Dauer round(36000/8000) = 5 Spieltage
+	FFM13World U;
+	U.NewGame(TEXT("Weiterbildung"), 76);
+	U.Money = 500000;
+	U.StaffHire(0, 1, G);
+	PRUEFE(U.StaffUpgrade(0, G) && U.Money == 500000 - 60000 - 36000 && U.CoTrainer.UpgradeDays == 5, "Weiterbildung kostet 36000, dauert 5 Spieltage");
+	PRUEFE(!U.StaffUpgrade(0, G), "Zweite Weiterbildung waehrend der laufenden nicht erlaubt");
+	for (int32 k = 0; k < 5; ++k) U.TickStaff();
+	PRUEFE(U.CoTrainer.Level == 2 && U.CoTrainer.UpgradeDays == 0, "Nach 5 Spieltagen Stufe 2");
+
+	// Verlaengern: 60000 x 0,4 = 24000, Vertrag 34, Moral +10
+	FFM13World V;
+	V.NewGame(TEXT("Vertrag"), 77);
+	V.Money = 500000;
+	V.StaffHire(0, 1, G);
+	V.CoTrainer.Contract = 3;
+	const int64 VorVerl = V.Money;
+	PRUEFE(V.StaffRenew(0, G) && V.Money == VorVerl - 24000 && V.CoTrainer.Contract == 34 && std::fabs(V.CoTrainer.Morale - 90.0) < 1e-9, "Verlaengern: 24000, Vertrag 34, Moral 80 + 10");
+
+	// Gehaltserhoehung: 8000 x 5 = 40000, neues Gehalt round(8800), Moral +20
+	FFM13World R;
+	R.NewGame(TEXT("Gehalt"), 78);
+	R.Money = 500000;
+	R.StaffHire(0, 1, G);
+	PRUEFE(R.StaffRaise(0, G) && R.CoTrainer.Wage == 8800 && R.Money == 500000 - 60000 - 40000 && std::fabs(R.CoTrainer.Morale - 100.0) < 1e-9,
+		"Gehaltserhoehung: 40000, Gehalt 8800, Moral 80 + 20 (Hoechstwert 100)");
+
+	// Moral sinkt um 0,3 je Spieltag, nicht unter 20; Vertrag laeuft aus
+	FFM13World M;
+	M.NewGame(TEXT("Moral"), 79);
+	M.Money = 500000;
+	M.StaffHire(0, 1, G);
+	M.TickStaff();
+	PRUEFE(std::fabs(M.CoTrainer.Morale - 79.7) < 1e-9, "Moral 80 nach einem Spieltag 79,7");
+	M.CoTrainer.Contract = 1;
+	M.TickStaff();
+	PRUEFE(!M.CoTrainer.bHired, "Vertrag ausgelaufen: die Stelle ist frei");
+
+	// Jahres-Meeting einmal je Saison
+	FFM13World T;
+	T.NewGame(TEXT("Meeting"), 80);
+	T.Money = 500000;
+	T.StaffHire(0, 1, G);
+	PRUEFE(T.StaffMeeting(G) && std::fabs(T.CoTrainer.Morale - 88.0) < 1e-9 && !T.StaffMeeting(G), "Meeting: +8 Moral, nur einmal je Saison");
+
+	// Abwerbung: Bindungspraemie Gehalt x 15 = 120000
+	FFM13World A;
+	A.NewGame(TEXT("Abwerbung"), 81);
+	A.Money = 500000;
+	A.StaffHire(0, 1, G);
+	A.PoachSlot = 0; A.PoachRetention = A.CoTrainer.Wage * 15;
+	PRUEFE(A.StaffResolvePoach(true, G) && A.CoTrainer.bHired && std::fabs(A.CoTrainer.Morale - 100.0) < 1e-9 && A.PoachSlot < 0, "Bindungspraemie: Moral 100, bleibt");
+	A.PoachSlot = 0; A.PoachRetention = 120000;
+	PRUEFE(A.StaffResolvePoach(false, G) && !A.CoTrainer.bHired, "Abwerbung ohne Zahlung: die Stelle ist frei");
+
+	// Kurzfristiger Ausfall: Interims-Ersatz wie wage x 3
+	FFM13World X;
+	X.NewGame(TEXT("Ausfall"), 82);
+	X.Money = 500000;
+	X.StaffHire(0, 1, G);
+	X.CoTrainer.OnLeave = 3;
+	const int64 VorInterim = X.Money;
+	PRUEFE(X.StaffInterim(0, G) && X.Money == VorInterim - 24000 && X.CoTrainer.bInterim, "Interims-Ersatz kostet Gehalt x 3 = 24000");
+	for (int32 k = 0; k < 3; ++k) X.TickStaff();
+	PRUEFE(X.CoTrainer.OnLeave == 0 && !X.CoTrainer.bInterim, "Nach drei Spieltagen ist der Ausfall vorbei");
+
+	// Spielstand: Moral, Gehalt, Vertrag, Weiterbildung und Obergrenze bleiben erhalten
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Spielstand"), 83);
+	Sp.Money = 500000;
+	Sp.StaffHire(1, 1, G);
+	Sp.StaffRaise(1, G);
+	Sp.StaffUpgrade(1, G);
+	Sp.WageBudgetCap = 30000;
+	Sp.LastMeetingSeason = 1;
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.AthletikTrainer.bHired && Ld.AthletikTrainer.Wage == 6600 && Ld.AthletikTrainer.UpgradeDays == Sp.AthletikTrainer.UpgradeDays
+		&& std::fabs(Ld.AthletikTrainer.Morale - Sp.AthletikTrainer.Morale) < 1e-6 && Ld.WageBudgetCap == 30000 && Ld.LastMeetingSeason == 1,
+		"Personal und Obergrenze bleiben im Spielstand (%s)", *Fehler);
 	std::printf("\n");
 }
 
@@ -1068,6 +1195,7 @@ int main()
 	TestTeamstaerke();
 	TestKondition();
 	TestTrainingReferenz();
+	TestPersonal();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

@@ -491,6 +491,52 @@ TSharedRef<SWidget> SFM13Menu::BuildClub()
 		]
 	];
 	return Box;
+	// Personal im Campus: die sechs Stellen mit Wirkung in Unreal
+	const FFM13StaffView St = G->GetStaff();
+	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Personal"))];
+	Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Gehaelter je Spieltag: %s%s"), *Geld(St.WagesTotal),
+		St.WageCap > 0 ? *FString::Printf(TEXT(" von %s Obergrenze"), *Geld(St.WageCap)) : TEXT("")), CGedimmt, 11)];
+	if (!St.PoachName.IsEmpty())
+	{
+		TSharedRef<SHorizontalBox> Abwerbung = SNew(SHorizontalBox)
+			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(0.f, 0.f, 8.f, 0.f))[Txt(FString::Printf(TEXT("Abwerbeversuch: %s. Bindungspraemie %s."), *St.PoachName, *Geld(St.PoachRetention)), CSchlecht, 12, true)]
+			+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(TEXT("Zahlen"), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffPoach, true), CGut, 11)]
+			+ SHorizontalBox::Slot().AutoWidth()[Knopf(TEXT("Ziehen lassen"), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffPoach, false), CSchlecht, 11)];
+		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 2.f))[Abwerbung];
+	}
+	if (St.bMeetingAvailable)
+		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 2.f))[Knopf(TEXT("Jahres-Meeting abhalten (+8 Moral Personal, +2 Mannschaft)"), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffMeeting), CKnopf, 11)];
+	for (const FFM13StaffRoleView& R : St.Roles)
+	{
+		TSharedRef<SVerticalBox> Karte = SNew(SVerticalBox);
+		if (!R.bHired)
+		{
+			Karte->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("%s: frei. %s."), *R.Name, *R.Effect), CGedimmt, 12)];
+			for (int32 k = 0; k < R.Candidates.Num(); ++k)
+				Karte->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[SNew(SHorizontalBox)
+					+ SHorizontalBox::Slot().AutoWidth()[Knopf(FString::Printf(TEXT("Einstellen: %s (%s)"), *R.Candidates[k], *Geld(R.CandidateCosts[k])),
+						FOnClicked::CreateSP(this, &SFM13Menu::OnStaffHire, R.Slot, k), CKnopf, 11)]];
+			if (R.bCapBlocks) Karte->AddSlot().AutoHeight()[Txt(TEXT("Die Personalbudget-Obergrenze verhindert eine Einstellung."), CSchlecht, 11)];
+		}
+		else
+		{
+			Karte->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("%s, Stufe %d/3, Moral %d, Gehalt %s, Vertrag %d Spieltage. %s"),
+				*R.Name, R.Level, R.Morale, *Geld(R.Wage), R.Contract, *R.Effect), R.OnLeave > 0 ? CSchlecht : CText, 12)];
+			if (R.OnLeave > 0) Karte->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Faellt noch %d Spieltage aus.%s"), R.OnLeave, R.bInterim ? TEXT(" Interims-Ersatz aktiv.") : TEXT("")), CSchlecht, 11)];
+			if (R.UpgradeDays > 0) Karte->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Weiterbildung: noch %d Spieltage."), R.UpgradeDays), CAkzent, 11)];
+			TSharedRef<SHorizontalBox> Knoepfe = SNew(SHorizontalBox);
+			if (R.Level < 3 && R.UpgradeDays == 0)
+				Knoepfe->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Weiterbilden (%s)"), *Geld(R.UpgradeCost)), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffUpgrade, R.Slot), CKnopf, 11)];
+			Knoepfe->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Verlaengern (%s)"), *Geld(R.RenewCost)), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffRenew, R.Slot), CKnopf, 11)];
+			Knoepfe->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Gehalt erhoehen (%s)"), *Geld(R.RaiseCost)), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffRaise, R.Slot), CKnopf, 11)];
+			if (R.OnLeave > 0 && !R.bInterim)
+				Knoepfe->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Interims-Ersatz (%s)"), *Geld(R.InterimCost)), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffInterim, R.Slot), CKnopf, 11)];
+			Knoepfe->AddSlot().AutoWidth()[Knopf(FString::Printf(TEXT("Entlassen (Abfindung %s)"), *Geld(R.Severance)), FOnClicked::CreateSP(this, &SFM13Menu::OnStaffFire, R.Slot), CSchlecht, 11)];
+			Karte->AddSlot().AutoHeight().Padding(FMargin(0.f, 2.f))[Knoepfe];
+		}
+		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 3.f))[Karte];
+	}
+
 }
 
 TSharedRef<SWidget> SFM13Menu::BuildMatch()
@@ -997,6 +1043,63 @@ FReply SFM13Menu::OnTrainingIntensity(int32 Index)
 		if (Index < 0 || Index > 2) Status(TEXT("Unbekannte Intensitaet."));
 		else Status(G->SetTrainingIntensity(IntensKeys[Index], Grund) ? FString::Printf(TEXT("Trainingsintensitaet: %s."), IntensLabels[Index]) : Grund);
 	}
+	Refresh();
+	return FReply::Handled();
+}
+
+// ---------- Personal ----------
+FReply SFM13Menu::OnStaffHire(int32 Slot, int32 Candidate)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffHire(Slot, Candidate, Grund) ? TEXT("Eingestellt.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffFire(int32 Slot)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffFire(Slot, Grund) ? TEXT("Entlassen, die Abfindung ist gezahlt, wenn das Konto sie deckte.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffUpgrade(int32 Slot)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffUpgrade(Slot, Grund) ? TEXT("Weiterbildung hat begonnen.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffRenew(int32 Slot)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffRenew(Slot, Grund) ? TEXT("Vertrag verlaengert.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffRaise(int32 Slot)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffRaise(Slot, Grund) ? TEXT("Gehalt erhoeht.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffInterim(int32 Slot)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffInterim(Slot, Grund) ? TEXT("Interims-Ersatz gebucht.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffMeeting()
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffMeeting(Grund) ? TEXT("Jahres-Meeting abgehalten.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnStaffPoach(bool bPay)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffResolvePoach(bPay, Grund) ? (bPay ? TEXT("Die Bindungspraemie ist gezahlt.") : TEXT("Die Stelle ist frei.")) : Grund); }
 	Refresh();
 	return FReply::Handled();
 }

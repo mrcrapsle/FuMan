@@ -83,6 +83,14 @@ private:
 	FReply OnTrainingDay(int32 Day);
 	FReply OnTrainingPreset(int32 Index);
 	FReply OnTrainingIntensity(int32 Index);
+	FReply OnStaffHire(int32 Slot, int32 Candidate);
+	FReply OnStaffFire(int32 Slot);
+	FReply OnStaffUpgrade(int32 Slot);
+	FReply OnStaffRenew(int32 Slot);
+	FReply OnStaffRaise(int32 Slot);
+	FReply OnStaffInterim(int32 Slot);
+	FReply OnStaffMeeting();
+	FReply OnStaffPoach(bool bPay);
 
 	void Status(const FString& Text, float Seconds = 5.f);
 };

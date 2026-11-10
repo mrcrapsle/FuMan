@@ -75,6 +75,7 @@ Die Stärke der eigenen Elf rechnet jetzt dieselbe Formel wie `calcTeamStrength(
 - **Personal, Lizenz, Perks und Stress** aus dem Browser-Spielstand wirken mit.
 - **Noten:** Die Note nach jedem Ligaspiel rechnet wie im Browserspiel (halbe Noten, Tagesform, Tore, Vorlagen, Zu-Null). Wer 1,5 oder besser bekommt, steht in der Elf des Spieltags und gewinnt 3 Moral.
 - **Training der Woche:** Auf der Taktik-Seite planst du sieben Tage (ein Klick wechselt die Einheit) oder nimmst einen Standardplan. Der Schwerpunkt wirkt als Teamtraining, die Belastung auf das Verletzungsrisiko. Dazu die Intensität Locker, Normal oder Hart.
+- **Personal im Verein:** Auf der Verein-Seite stellst du Co-Trainer, Athletiktrainer, Physio, Greenkeeper, Analyst und Ernährungsberater ein, wählst aus drei Bewerbern, bildest weiter, verlängerst Verträge und erhöhst Gehälter. Abwerbeversuche kommen vor, eine Bindungsprämie hält den Trainer.
 - **Verletzungen** entstehen wie im Browserspiel einmal je Spieltag in der Startelf. Wer schon oft verletzt war oder älter ist, fällt eher aus.
 - **Aufstiegseuphorie:** +3 Stärke bis Spieltag 10 nach einem Aufstieg, +1,5 bis Spieltag 17.
 
@@ -124,7 +125,7 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4605 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4627 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Teamstärke, Aufstellung, Noten, Wochenplan, Kraftverlust und Verletzungswurf gegen die Original-JS-Rechnung (`node unreal/Tests/Host/referenz-staerke.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
