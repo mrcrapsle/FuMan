@@ -8,6 +8,7 @@
 #include "FM13Staff.h"
 #include "FM13Locker.h"
 #include "FM13Youth.h"
+#include "FM13Poker.h"
 #include <cmath>
 #include "FM13Strength.h"
 
@@ -72,6 +73,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	Rng.Initialize(Seed);
 	RngKabine.Initialize(Seed * 7919 + 13);
 	RngJugend.Initialize(Seed * 104729 + 29);
+	RngTransfer.Initialize(Seed * 31337 + 7);
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
@@ -1043,7 +1045,8 @@ void FFM13World::RefreshMarket()
 		FFM13MarketOffer O;
 		O.Player = CreatePlayer((EFM13Position)Rng.RandRange(0, 3), Basis - 4, Basis + 8, 19, 31);
 		O.Player.ContractYears = 3;
-		O.Price = RoundTo((int64)((double)O.Player.MarketValue * (1.0 + Rng.FRand() * 0.25)), 5000);
+		Rng.FRand(); // Reihenfolge des alten Preiswurfs beibehalten
+		SetMarketTerms(O);
 		Market.Add(O);
 	}
 }
@@ -2944,4 +2947,202 @@ void FFM13World::CheckYouthMilestones(const TArray<int32>& Starter)
 			AddYouthMoment(FString::Printf(TEXT("%s zum ersten Mal in der Elf des Spieltags"), *P.Name));
 		}
 	}
+}
+
+// ---------- Transferpoker (js/transfer-poker.js) ----------
+
+// ensureTransferTerms(): Verkaeufer aus dem eigenen und dem Liga-Niveau darunter, der Spielerstaerke am naechsten
+void FFM13World::SetMarketTerms(FFM13MarketOffer& O)
+{
+	struct FKlub { FString Name; int32 Staerke; };
+	TArray<FKlub> Pool;
+	for (int32 L : { LeagueLevel, LeagueLevel - 1 })
+		if (Leagues.IsValidIndex(L))
+			for (const FFM13Club& C : Leagues[L].Clubs) if (!C.bOwn) Pool.Add(FKlub{ C.Name, C.Strength });
+	// stabil nach Abstand zur Staerke sortieren (wie Array.sort in JS)
+	for (int32 i = 1; i < Pool.Num(); ++i)
+		for (int32 j = i; j > 0 && FMath::Abs(Pool[j].Staerke - O.Player.Strength) < FMath::Abs(Pool[j - 1].Staerke - O.Player.Strength); --j)
+			Swap(Pool[j], Pool[j - 1]);
+	O.SellerClub = Pool.Num() ? Pool[RngTransfer.RandRange(0, FMath::Min(6, Pool.Num()) - 1)].Name : FString(TEXT("ein Ligakonkurrent"));
+	const int32 Vertrag = FMath::Clamp(O.Player.ContractYears, 1, 4);
+	O.SellerMinimum = FM13Poker::Schmerzgrenze(O.Player.MarketValue, Vertrag);
+	O.AskingPrice = FM13Poker::Forderung(O.Player.MarketValue, Vertrag, O.SellerMinimum, RngTransfer.RandRange(0, 999999) / 1000000.0);
+	O.Price = O.AskingPrice;
+}
+
+int32 FFM13World::MarketIndexOf(int32 PlayerId) const
+{
+	for (int32 i = 0; i < Market.Num(); ++i) if (Market[i].Player.Id == PlayerId) return i;
+	return -1;
+}
+
+// openTransferPoker(): Spieler begehrt, wenn er zu den drei besten des Marktes gehoert
+bool FFM13World::OpenPoker(int32 PlayerId, FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(PlayerId);
+	if (Idx < 0) { OutReason = TEXT("Dieser Spieler ist nicht mehr auf dem Markt."); return false; }
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
+	FFM13MarketOffer& O = Market[Idx];
+	if (O.bPokerBroken) { OutReason = FString::Printf(TEXT("%s verhandelt nicht mehr - nur noch der Sofortkauf zur Forderung."), *O.SellerClub); return false; }
+	if (!(Poker.bActive && Poker.PlayerId == PlayerId))
+	{
+		int32 Beste = 0;
+		for (const FFM13MarketOffer& M : Market) Beste = FMath::Max(Beste, M.Player.Strength);
+		Poker = FFM13PokerState();
+		Poker.bActive = true;
+		Poker.PlayerId = PlayerId;
+		Poker.Patience = 3 + RngTransfer.RandRange(0, 2);
+		Poker.Offer = FM13Poker::Runden(O.AskingPrice * 0.85);
+		Poker.RivalChance = O.Player.Strength >= Beste - 3 ? 0.45 : 0.15;
+		Poker.Log.Add(FString::Printf(TEXT("%s verlangt %lld fuer %s (Marktwert %lld)."), *O.SellerClub, (long long)O.AskingPrice, *O.Player.Name, (long long)O.Player.MarketValue));
+	}
+	return true;
+}
+
+void FFM13World::ClosePoker()
+{
+	Poker = FFM13PokerState();
+}
+
+bool FFM13World::AdjustPokerOffer(int32 Prozent, FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0) { OutReason = TEXT("Keine Verhandlung offen."); return false; }
+	if (Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist schon vereinbart."); return false; }
+	const int64 Schritt = FMath::Max<int64>(100, FM13Poker::Runden((double)Market[Idx].Player.MarketValue * FMath::Abs(Prozent) / 100.0));
+	Poker.Offer = FMath::Max<int64>(100, Poker.Offer + (Prozent < 0 ? -1 : 1) * Schritt);
+	return true;
+}
+
+// tickPokerRival(): steigt ein Rivale ein, treibt er die Schmerzgrenze hoch und schnappt sich den Spieler, wenn das Gebot zu niedrig bleibt
+bool FFM13World::TickPokerRival(int32 Idx)
+{
+	FFM13MarketOffer& O = Market[Idx];
+	if (!Poker.bRival && Poker.Rounds >= 1 && RngTransfer.RandRange(0, 999999) / 1000000.0 < Poker.RivalChance)
+	{
+		TArray<FString> Namen;
+		TArray<int32> Staerken;
+		if (Leagues.IsValidIndex(LeagueLevel))
+			for (const FFM13Club& C : Leagues[LeagueLevel].Clubs) if (!C.bOwn && C.Name != O.SellerClub) { Namen.Add(C.Name); Staerken.Add(C.Strength); }
+		FString Rivale = TEXT("Ein Konkurrent");
+		if (Namen.Num())
+		{
+			TArray<int32> Idxs;
+			for (int32 k = 0; k < Namen.Num(); ++k) Idxs.Add(k);
+			Idxs.Sort([&Staerken](int32 A, int32 B) { return Staerken[A] > Staerken[B]; });
+			Rivale = Namen[Idxs[RngTransfer.RandRange(0, FMath::Min(5, Idxs.Num()) - 1)]];
+		}
+		const int64 Gebot = FM13Poker::RivalenGebot(O.SellerMinimum, RngTransfer.RandRange(0, 999999) / 1000000.0);
+		Poker.bRival = true;
+		Poker.RivalClub = Rivale;
+		Poker.RivalBid = Gebot;
+		O.SellerMinimum = Gebot + 1000;
+		O.AskingPrice = FMath::Max(O.AskingPrice, O.SellerMinimum);
+		O.Price = O.AskingPrice;
+		Poker.Log.Add(FString::Printf(TEXT("%s bietet %lld - der Preis zieht an!"), *Rivale, (long long)Gebot));
+		return false;
+	}
+	if (Poker.bRival && Poker.Offer < Poker.RivalBid && RngTransfer.RandRange(0, 999999) / 1000000.0 < 0.35)
+	{
+		AddMessage(FString::Printf(TEXT("%s geht zu %s"), *O.Player.Name, *Poker.RivalClub), FString::Printf(TEXT("Waehrend der Verhandlungen hat %s %lld an %s gezahlt."), *Poker.RivalClub, (long long)Poker.RivalBid, *O.SellerClub));
+		Market.RemoveAt(Idx);
+		ClosePoker();
+		return true;
+	}
+	return false;
+}
+
+// Einigung auf die Abloese: der Spieler will ein Gehalt, das wir einmal nachverhandeln koennen
+static void EinigungAufAblose(FFM13World::FFM13PokerState& Pk, const FFM13MarketOffer& O, int64 Fee, double Zufall)
+{
+	Pk.AgreedFee = Fee;
+	Pk.WageDemand = FM13Poker::Gehaltsforderung(O.Player.Wage, FM13Poker::Zaehigkeit(O.Player.Character), Zufall, false);
+	Pk.Log.Add(FString::Printf(TEXT("Abloese vereinbart: %lld. %s fordert %lld Gehalt pro Spieltag."), (long long)Fee, *O.Player.Name, (long long)Pk.WageDemand));
+}
+
+// submitPokerOffer(): ein Angebot annehmen, ein Gegenangebot machen oder die Gespraeche beenden
+bool FFM13World::SubmitPokerOffer(FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0) { OutReason = TEXT("Keine Verhandlung offen."); return false; }
+	if (Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist schon vereinbart."); return false; }
+	FFM13MarketOffer& O = Market[Idx];
+	const int64 Angebot = Poker.Offer;
+	Poker.Rounds++;
+	Poker.Log.Add(FString::Printf(TEXT("Dein Angebot: %lld"), (long long)Angebot));
+	if (Angebot >= O.AskingPrice)
+	{
+		EinigungAufAblose(Poker, O, Angebot, RngTransfer.RandRange(0, 999999) / 1000000.0);
+		return true;
+	}
+	const double Spanne = (double)FMath::Max<int64>(1, O.AskingPrice - O.SellerMinimum);
+	if (Angebot >= O.SellerMinimum && RngTransfer.RandRange(0, 999999) / 1000000.0 < 0.4 + 0.6 * (double)(Angebot - O.SellerMinimum) / Spanne)
+	{
+		Poker.Log.Add(FString::Printf(TEXT("%s: Einverstanden."), *O.SellerClub));
+		EinigungAufAblose(Poker, O, Angebot, RngTransfer.RandRange(0, 999999) / 1000000.0);
+		return true;
+	}
+	const bool bFrech = Angebot < (double)O.SellerMinimum * 0.75;
+	Poker.Patience -= bFrech ? 2 : 1;
+	if (Poker.Patience <= 0)
+	{
+		O.bPokerBroken = true;
+		O.AskingPrice = FM13Poker::Runden((double)O.AskingPrice * 1.1);
+		O.Price = O.AskingPrice;
+		Poker.Log.Add(FString::Printf(TEXT("%s bricht die Gespraeche ab. Nur noch Sofortkauf fuer %lld."), *O.SellerClub, (long long)O.AskingPrice));
+		ClosePoker();
+		return true;
+	}
+	// Gegenangebot: der Verkaeufer kommt ein Stueck entgegen, nie unter die Schmerzgrenze
+	const int64 Neu = FM13Poker::Runden((double)O.AskingPrice - (double)(O.AskingPrice - Angebot) * (bFrech ? 0.05 : 0.35));
+	O.AskingPrice = FMath::Max(O.SellerMinimum, Neu);
+	O.Price = O.AskingPrice;
+	Poker.Log.Add(bFrech ? FString::Printf(TEXT("%s: Das ist eine Frechheit. Forderung bleibt bei %lld."), *O.SellerClub, (long long)O.AskingPrice)
+		: FString::Printf(TEXT("%s kontert: %lld."), *O.SellerClub, (long long)O.AskingPrice));
+	TickPokerRival(Idx);
+	return true;
+}
+
+bool FFM13World::AcceptPokerAsking(FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0) { OutReason = TEXT("Keine Verhandlung offen."); return false; }
+	if (Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist schon vereinbart."); return false; }
+	Poker.Rounds++;
+	EinigungAufAblose(Poker, Market[Idx], Market[Idx].AskingPrice, RngTransfer.RandRange(0, 999999) / 1000000.0);
+	return true;
+}
+
+// Gehaltsgespraech: einmal nachverhandeln
+bool FFM13World::HagglePokerWage(FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0 || !Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist noch nicht vereinbart."); return false; }
+	if (Poker.bWageTalked) { OutReason = TEXT("Das Gehalt ist schon besprochen."); return false; }
+	Poker.bWageTalked = true;
+	const double Z = FM13Poker::Zaehigkeit(Market[Idx].Player.Character);
+	const bool bErfolg = RngTransfer.RandRange(0, 999999) / 1000000.0 < FM13Poker::NachverhandlungChance(Z);
+	Poker.WageDemand = FM13Poker::Nachverhandlung(Poker.WageDemand, bErfolg);
+	Poker.Log.Add(bErfolg ? FString::Printf(TEXT("%s akzeptiert %lld pro Spieltag."), *Market[Idx].Player.Name, (long long)Poker.WageDemand)
+		: FString::Printf(TEXT("%s fuehlt sich unterschaetzt: jetzt %lld pro Spieltag."), *Market[Idx].Player.Name, (long long)Poker.WageDemand));
+	return true;
+}
+
+// signPokerDeal(): Abloese, Gehalt und Platz im Kader pruefen, dann der Wechsel
+bool FFM13World::SignPokerDeal(FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0 || !Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist noch nicht vereinbart."); return false; }
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
+	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
+	if (Money < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Poker.AgreedFee); return false; }
+	if (!FitsWageBudget(Poker.WageDemand)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	FFM13Player P = Market[Idx].Player;
+	P.Wage = (int32)Poker.WageDemand;
+	Book(FString(TEXT("Spielerkauf: ")) + P.Name, -Poker.AgreedFee);
+	Squad.Add(P);
+	Market.RemoveAt(Idx);
+	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt fuer %lld (Gehalt %lld pro Spieltag)."), *P.Name, (long long)Poker.AgreedFee, (long long)Poker.WageDemand));
+	ClosePoker();
+	return true;
 }

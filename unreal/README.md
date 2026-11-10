@@ -129,10 +129,11 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4680 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4700 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Teamstärke, Aufstellung, Noten, Wochenplan, Kraftverlust und Verletzungswurf gegen die Original-JS-Rechnung (`node unreal/Tests/Host/referenz-staerke.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
+   - Transferpoker (`FM13Poker`): Forderung, Schmerzgrenze, Geduld und Abbruch, Rivalen-Gebot, Gehaltsverhandlung, Verpflichtung; im Spielstand gespeichert.
    - Eigener Spielstand: Rundlauf, identisches Weiterspielen, Ablehnung kaputter Stände.
    - **Import:** Alle 11 echten Spielstände aus `tests/fixtures/saves` werden übernommen, die Tabellen passen zu den Spielplänen, und jeder Stand spielt 40 Spieltage weiter.
    - Bot-Karrieren über 15 Saisons.
@@ -153,7 +154,7 @@ Das Skript baut zwei Testprogramme mit g++:
 
 - Zuschauer, Sponsor, Gehaltsbudget, Saisonziel
 - Training, Alterung, Jugend-Jahrgänge
-- Transfermarkt: Kauf zum Angebotspreis, ohne Verhandlung
+- Transfermarkt: Kauf zum Angebotspreis mit Verkäufer und Mindestpreis; Transferpoker mit Verhandlung (Angebot, Gegenangebot, Gehalt)
 - Verträge, Stadion- und Akademieausbau, Verletzungen
 - Live-Ticker als Text, 3D-Stadion aus Grundformen
 

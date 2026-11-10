@@ -236,7 +236,11 @@ struct FFM13Message
 struct FFM13MarketOffer
 {
 	FFM13Player Player;
-	int64 Price = 0;
+	int64 Price = 0;             // Sofortkauf zur Forderung
+	FString SellerClub;          // verkaufender Verein (js/transfer-poker.js: sellerClub)
+	int64 SellerMinimum = 0;     // verdeckte Schmerzgrenze
+	int64 AskingPrice = 0;       // Forderung, sinkt nicht unter die Schmerzgrenze
+	bool bPokerBroken = false;   // Verein verhandelt nicht mehr, nur noch Sofortkauf
 };
 
 struct FFM13SeasonRecord

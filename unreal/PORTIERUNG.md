@@ -119,7 +119,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
 | `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A) |
-| `transfer-poker.js` | 288 | offen | Transferpoker: Spieler vom Transfermarkt werden einem echten KI-Verein abgekauft. Der |  |
+| `transfer-poker.js` | 288 | teilweise | Transferpoker: Spieler vom Transfermarkt werden einem echten KI-Verein abgekauft. Der |  |
 | `transfer-strategy.js` | 131 | offen | Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte |  |
 | `medical-check.js` | 96 | offen | Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen |  |
 | `pre-contracts.js` | 202 | offen | Vorverträge (Phase 22.6): ablösefreie Wechsel zur neuen Saison - in beide Richtungen. |  |

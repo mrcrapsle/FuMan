@@ -221,6 +221,36 @@ public:
 	bool FitsWageBudget(int64 ExtraWage) const { return WagesPerMatchday() + ExtraWage <= WageBudget; }
 
 	void RefreshMarket();
+	void SetMarketTerms(FFM13MarketOffer& O);          // ensureTransferTerms(): Verkaeufer, Schmerzgrenze, Forderung
+	FRandomStream RngTransfer;                         // eigener Zufall fuer Transfers, damit der Rest gleich bleibt
+
+	// Transferpoker (js/transfer-poker.js)
+	struct FFM13PokerState
+	{
+		bool bActive = false;
+		int32 PlayerId = 0;          // Spieler auf dem Markt
+		int64 Offer = 0;             // dein Angebot
+		int32 Rounds = 0;
+		int32 Patience = 0;
+		double RivalChance = 0.15;
+		bool bRival = false;
+		FString RivalClub;
+		int64 RivalBid = 0;
+		int64 AgreedFee = 0;         // 0 = noch keine Einigung
+		int64 WageDemand = 0;        // Gehalt je Spieltag, das der Spieler will
+		bool bWageTalked = false;
+		TArray<FString> Log;
+	};
+	FFM13PokerState Poker;
+	bool OpenPoker(int32 PlayerId, FString& OutReason);
+	void ClosePoker();
+	bool AdjustPokerOffer(int32 Prozent, FString& OutReason);
+	bool SubmitPokerOffer(FString& OutReason);
+	bool AcceptPokerAsking(FString& OutReason);
+	bool HagglePokerWage(FString& OutReason);
+	bool SignPokerDeal(FString& OutReason);
+	int32 MarketIndexOf(int32 PlayerId) const;
+	bool TickPokerRival(int32 MarktIndex);            // true, wenn der Spieler zum Rivalen gegangen ist
 	bool BuyPlayer(int32 MarketIndex, FString& OutReason);
 	bool SellPlayer(int32 PlayerId, FString& OutReason);
 	bool RenewContract(int32 PlayerId, int32 Years, FString& OutReason);

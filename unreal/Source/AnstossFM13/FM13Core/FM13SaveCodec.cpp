@@ -174,6 +174,20 @@ namespace FM13Save
 		W.Field(TEXT("nextPlayerId"), S.NextPlayerId);
 		W.Field(TEXT("rngSeed"), (int64)S.Rng.GetCurrentSeed());
 		W.Field(TEXT("rngKabineSeed"), (int64)S.RngKabine.GetCurrentSeed());
+		W.Field(TEXT("rngTransferSeed"), (int64)S.RngTransfer.GetCurrentSeed());
+		W.Field(TEXT("pokerActive"), S.Poker.bActive ? 1 : 0);
+		W.Field(TEXT("pokerPlayer"), S.Poker.PlayerId);
+		W.Field(TEXT("pokerOffer"), S.Poker.Offer);
+		W.Field(TEXT("pokerRounds"), S.Poker.Rounds);
+		W.Field(TEXT("pokerPatience"), S.Poker.Patience);
+		W.FieldReal(TEXT("pokerRivalChance"), S.Poker.RivalChance);
+		W.FieldBool(TEXT("pokerRival"), S.Poker.bRival);
+		W.Field(TEXT("pokerRivalClub"), S.Poker.RivalClub);
+		W.Field(TEXT("pokerRivalBid"), S.Poker.RivalBid);
+		W.Field(TEXT("pokerAgreed"), S.Poker.AgreedFee);
+		W.Field(TEXT("pokerWage"), S.Poker.WageDemand);
+		W.FieldBool(TEXT("pokerWageTalked"), S.Poker.bWageTalked);
+		WriteStrings(W, TEXT("pokerLog"), S.Poker.Log);
 		W.FieldBool(TEXT("dfbViaLandespokal"), S.bDfbViaLandespokal);
 		W.Field(TEXT("formation"), S.Formation);
 		W.Field(TEXT("tacticStyle"), S.TacticStyle);
@@ -354,6 +368,10 @@ namespace FM13Save
 		{
 			W.ElementObject();
 			W.Field(TEXT("price"), O.Price);
+			W.Field(TEXT("sellerClub"), O.SellerClub);
+			W.Field(TEXT("sellerMinimum"), O.SellerMinimum);
+			W.Field(TEXT("askingPrice"), O.AskingPrice);
+			W.FieldBool(TEXT("pokerBroken"), O.bPokerBroken);
 			W.Key(TEXT("player")); W.bFirst = true; // WritePlayer setzt selbst das Komma
 			{
 				FWriter Inner;
@@ -586,6 +604,20 @@ namespace FM13Save
 		W.YouthCoachId = (int32)R.Int(Root, TEXT("youthCoachId"), 0);
 		W.YouthCoachCount = (int32)R.Int(Root, TEXT("youthCoachCount"), 0);
 		W.RngJugend.Initialize((int32)R.Int(Root, TEXT("rngJugendSeed"), 1));
+		W.RngTransfer.Initialize((int32)R.Int(Root, TEXT("rngTransferSeed"), 1));
+		W.Poker.bActive = R.Int(Root, TEXT("pokerActive"), 0) != 0;
+		W.Poker.PlayerId = (int32)R.Int(Root, TEXT("pokerPlayer"), 0);
+		W.Poker.Offer = R.Int(Root, TEXT("pokerOffer"), 0);
+		W.Poker.Rounds = (int32)R.Int(Root, TEXT("pokerRounds"), 0);
+		W.Poker.Patience = (int32)R.Int(Root, TEXT("pokerPatience"), 0);
+		W.Poker.RivalChance = R.Real(Root, TEXT("pokerRivalChance"), 0.15);
+		W.Poker.bRival = R.Bool(Root, TEXT("pokerRival"), false);
+		W.Poker.RivalClub = R.Str(Root, TEXT("pokerRivalClub"), TEXT(""));
+		W.Poker.RivalBid = R.Int(Root, TEXT("pokerRivalBid"), 0);
+		W.Poker.AgreedFee = R.Int(Root, TEXT("pokerAgreed"), 0);
+		W.Poker.WageDemand = R.Int(Root, TEXT("pokerWage"), 0);
+		W.Poker.bWageTalked = R.Bool(Root, TEXT("pokerWageTalked"), false);
+		for (int32 N : R.Items(Root, TEXT("pokerLog"))) W.Poker.Log.Add(P.Nodes[N].Text);
 		W.Anliegen.bAktiv = R.Bool(Root, TEXT("ratAktiv"), false);
 		W.Anliegen.Typ = R.Str(Root, TEXT("ratTyp"), TEXT(""));
 		W.Anliegen.Titel = R.Str(Root, TEXT("ratTitel"), TEXT(""));
@@ -725,6 +757,10 @@ namespace FM13Save
 		{
 			FFM13MarketOffer O;
 			O.Price = R.Int(N, TEXT("price"), 0);
+			O.SellerClub = R.Str(N, TEXT("sellerClub"), TEXT(""));
+			O.SellerMinimum = R.Int(N, TEXT("sellerMinimum"), 0);
+			O.AskingPrice = R.Int(N, TEXT("askingPrice"), 0);
+			O.bPokerBroken = R.Bool(N, TEXT("pokerBroken"), false);
 			O.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
 			W.Market.Add(O);
 		}

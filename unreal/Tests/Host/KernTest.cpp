@@ -9,6 +9,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Staff.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Locker.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Youth.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Poker.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
 #include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
@@ -19,8 +20,8 @@
 #include <fstream>
 #include <sstream>
 #include "Referenzwerte.h"
-#include <map>
 #include <set>
+#include <map>
 
 static int GBestanden = 0, GFehler = 0;
 #define PRUEFE(Bed, ...) do { if (Bed) { ++GBestanden; } else { ++GFehler; std::printf("  FEHLER %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
@@ -1260,6 +1261,65 @@ static void TestJugendLaufbahn()
 	std::printf("\n");
 }
 
+// Transferpoker (js/transfer-poker.js): Forderung, Schmerzgrenze, Gehalt. Werte von Hand nach den JS-Formeln gerechnet.
+static void TestTransferpoker()
+{
+	std::printf("Transferpoker: Runden, Forderung, Gehalt, Verhandlung\n");
+	PRUEFE(FM13Poker::Runden(12345) == 12300 && FM13Poker::Runden(123456) == 123000 && FM13Poker::Runden(99950) == 100000, "Runden: unter 100.000 auf 100, darueber auf 1.000");
+	PRUEFE(FM13Poker::Schmerzgrenze(1000000, 2) == 920000, "Schmerzgrenze: 1 Mio x (0,82 + 2 x 0,05) = 920.000");
+	PRUEFE(FM13Poker::Forderung(1000000, 2, 920000, 0.0) == 1080000, "Forderung: 1 Mio x (1 + 2 x 0,04) = 1.080.000");
+	PRUEFE(FM13Poker::Gehaltsforderung(8000, 1.0, 0.5, false) == 8480, "Gehalt: 8000 x 1,06 = 8480");
+	PRUEFE(FM13Poker::Nachverhandlung(8480, true) == 7630 && FM13Poker::Nachverhandlung(8480, false) == 8900, "Nachverhandlung: x 0,9 oder x 1,05");
+	PRUEFE(std::fabs(FM13Poker::NachverhandlungChance(1.0) - 0.525) < 1e-9 && std::fabs(FM13Poker::NachverhandlungChance(1.35) - 0.21) < 1e-9, "Chance: 0,525 bei Zaehigkeit 1, 0,21 bei 1,35");
+	PRUEFE(FM13Poker::RivalenGebot(1000000, 0.0) == 1050000, "Rivale: 1,05 x Schmerzgrenze");
+
+	FFM13World W;
+	W.NewGame(TEXT("Transfer"), 131, 0);
+	W.Money = 50000000;
+	PRUEFE(W.Market.Num() > 0, "Markt ist gefuellt");
+	for (const FFM13MarketOffer& O : W.Market)
+		if (O.SellerMinimum <= 0 || O.AskingPrice < O.SellerMinimum || O.Price != O.AskingPrice || O.SellerClub.IsEmpty())
+		{ PRUEFE(false, "Markt: Verkaeufer und Preise gesetzt"); break; }
+	FString G;
+	const int32 Id = W.Market[0].Player.Id;
+	PRUEFE(W.OpenPoker(Id, G) && W.Poker.bActive && W.Poker.Offer == FM13Poker::Runden(W.Market[0].AskingPrice * 0.85), "Verhandlung: Angebot 85 %% der Forderung");
+	// Volles Angebot: sofort Einigung, danach Gehalt und Verpflichtung
+	W.Poker.Offer = W.Market[0].AskingPrice;
+	PRUEFE(W.SubmitPokerOffer(G) && W.Poker.AgreedFee == W.Market[0].AskingPrice && W.Poker.WageDemand > 0, "Angebot in Hoehe der Forderung: Einigung");
+	const int64 VorKauf = W.Money;
+	const int64 Fee = W.Poker.AgreedFee;
+	PRUEFE(W.HagglePokerWage(G) && !W.HagglePokerWage(G), "Gehalt nur einmal nachverhandeln");
+	const int64 Gehalt = W.Poker.WageDemand;
+	const int32 Kader = W.Squad.Num();
+	PRUEFE(W.SignPokerDeal(G) && W.Squad.Num() == Kader + 1 && W.Money == VorKauf - Fee && !W.Poker.bActive && W.MarketIndexOf(Id) < 0, "Vertrag: Kader +1, Konto -Ablöse, Verhandlung beendet");
+	bool bGehalt = false;
+	for (const FFM13Player& P : W.Squad) if (P.Id == Id && P.Wage >= Gehalt - 1 && P.Wage <= Gehalt + 1) bGehalt = true;
+	PRUEFE(bGehalt, "Der neue Spieler bekommt das verhandelte Gehalt");
+
+	// Zu wenig geboten: die Verkaeufer gehen auf, bis die Geduld aufgebraucht ist
+	FFM13World A;
+	A.NewGame(TEXT("Frech"), 132, 0);
+	A.Money = 5000000;
+	const int32 IdA = A.Market[0].Player.Id;
+	A.OpenPoker(IdA, G);
+	A.Poker.Patience = 1;
+	A.Poker.Offer = 100;
+	A.SubmitPokerOffer(G);
+	PRUEFE(!A.Poker.bActive && A.MarketIndexOf(IdA) >= 0 && A.Market[A.MarketIndexOf(IdA)].bPokerBroken, "Frech geboten: Verein bricht ab, nur noch Sofortkauf");
+	PRUEFE(!A.OpenPoker(IdA, G), "Nach dem Abbruch keine neue Verhandlung");
+
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Pokerspeicher"), 133, 0);
+	Sp.Money = 5000000;
+	Sp.OpenPoker(Sp.Market[0].Player.Id, G);
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.Poker.bActive && Ld.Poker.PlayerId == Sp.Poker.PlayerId && Ld.Poker.Offer == Sp.Poker.Offer && Ld.Market[0].SellerClub == Sp.Market[0].SellerClub
+		&& Ld.Market[0].AskingPrice == Sp.Market[0].AskingPrice, "Transfer bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
 // Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
 static void TestKonditionSaison()
 {
@@ -1441,7 +1501,7 @@ static void BotZug(FFM13World& W)
 	for (int32 i = 0; i < W.Market.Num(); ++i)
 	{
 		const FFM13MarketOffer& O = W.Market[i];
-		const bool bBezahlbar = O.Price <= W.Money * 4 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12;
+		const bool bBezahlbar = O.Price <= W.Money * 3 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12;
 		if (bBezahlbar && O.Player.Strength > Elf + 1 && (Bester < 0 || O.Player.Strength > W.Market[Bester].Player.Strength)) Bester = i;
 	}
 	if (Bester >= 0 && W.Squad.Num() >= FM13::MaxSquadSize)
@@ -1512,6 +1572,7 @@ int main()
 	TestMannschaftsrat();
 	TestJugend();
 	TestJugendLaufbahn();
+	TestTransferpoker();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();
