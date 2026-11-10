@@ -1,4 +1,5 @@
 #include "FM13BrowserImport.h"
+#include "FM13Fitness.h"
 #include "FM13Economy.h"
 #include "FM13Json.h"
 #include "FM13Development.h"
@@ -75,6 +76,8 @@ namespace
 		P.DailyForm = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("dailyForm"), 50.0)), 5, 95);
 		P.Trait = TraitFrom(R.Str(N, TEXT("trait"), TEXT("")));
 		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(N, TEXT("appearances"), 0));
+		P.TimesInjured = FMath::Max(0, (int32)R.Int(N, TEXT("timesInjured"), 0));
+		P.bChronic = R.Bool(N, TEXT("chronicIssue"), false);
 		P.Archetype = FM13Dev::ArchetypeFor(NewId);
 		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
 		P.SeasonsAtClub = FMath::Max(0, R.Items(N, TEXT("strengthHistory")).Num() - 1);
@@ -311,6 +314,12 @@ namespace FM13BrowserImport
 		W.Stress = FMath::Clamp(FMath::RoundToInt((float)R.Real(Privat, TEXT("stress"), 15.0)), 0, 100);
 		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("trainingground")), TEXT("lvl"), 0), 0, 5);
 		W.TackleHardness = R.Str(G, TEXT("tackleHardness"), TEXT("normal"));
+		W.CampusReha = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("reha")), TEXT("lvl"), 0), 0, 5);
+		// Wochenplan: Objekt mit den Tagen mo bis so
+		const int32 Plan = R.Find(G, TEXT("weeklyTrainingPlan"));
+		static const TCHAR* Tage[7] = { TEXT("mo"), TEXT("di"), TEXT("mi"), TEXT("do"), TEXT("fr"), TEXT("sa"), TEXT("so") };
+		W.WeeklyPlan = FM13Fitness::Startplan();
+		if (R.IsObject(Plan)) for (int32 T = 0; T < 7; ++T) W.WeeklyPlan[T] = R.Str(Plan, Tage[T], W.WeeklyPlan[T]);
 		const int32 Schub = R.Find(G, TEXT("promotionBoost"));
 		W.PromotionBoostLevel = (int32)R.Int(Schub, TEXT("level"), -1);
 		W.PromotionBoostSeason = (int32)R.Int(Schub, TEXT("season"), 0);

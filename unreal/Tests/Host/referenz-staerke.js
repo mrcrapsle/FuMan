@@ -7,6 +7,9 @@ const klammer = (src, i, auf, zu) => { let d = 0; for (let k = src.indexOf(auf, 
 const fn = (src, name) => { const i = src.indexOf('function ' + name + '('); if (i < 0) throw new Error(name); const kopf = src.indexOf(')', i); return src.slice(i, klammer(src, kopf, '{', '}') + 1); };
 const konst = (src, name, auf, zu) => { const i = src.indexOf('const ' + name + ' = '); if (i < 0) throw new Error(name); return src.slice(i, klammer(src, i, auf, zu) + 1) + ';'; };
 const stats = lese('js/player-stats.js');
+const live = lese('js/match-live.js'), training = lese('js/training.js'), medizin = lese('js/medical-department.js'), check = lese('js/medical-check.js');
+// Ausschnitt aus processPostMatchRoutine() zwischen zwei Textstellen (die Rechnung steht dort nicht in einer eigenen Funktion)
+const stueck = (von, bis) => { const i = live.indexOf(von); const j = live.indexOf(bis, i); if (i < 0 || j < 0) throw new Error(von); return live.slice(i, j); };
 const match = lese('js/match.js'), squadJs = lese('js/squad.js'), staff = lese('js/campus-staff.js'), state = lese('js/state.js'), weather = lese('js/weather.js');
 
 const code = `
@@ -20,6 +23,18 @@ let squad = [], lineup = [], game = {}, privateLife = {}, staffMembers = {}, sta
 function autoLineup() { lineup = pickBestLineupIds(); }
 ${['calcTeamStrength', 'getTacticStyleBonus', 'getFormationOffBonus', 'getTackleHardnessBonus', 'getLineupChemistryStats'].map(n => fn(match, n)).join('\n')}
 ${fn(squadJs, 'pickBestLineupIds')}
+${konst(training, 'WEEKLY_TRAINING_UNITS', '{', '}')}
+${konst(medizin, 'TRAINING_INTENSITY_INJURY_FACTOR', '{', '}')}
+const CHRONIC_INJURY_FACTOR = 1.5; let stadium = { pitchCondition: 85 }; let campusBuildingsReha = 0;
+${['computeWeeklyTrainingStats', 'getTrainingIntensityFitnessMultiplier'].map(n => fn(training, n)).join('\n')}
+${['getTrainingIntensityInjuryFactor', 'getAgeInjuryFactor'].map(n => fn(medizin, n)).join('\n')}
+${fn(check, 'getChronicInjuryFactor')}
+${fn(match, 'getTacticStyleFitnessMultiplier')}
+${fn(staff, 'getPhysioEffekt')}
+function kraftverlust(isHomeMatchParam) { const isLiveContext = false, currentMatch = null; ${stueck('let fitLoss = ', 'let benchRecovery')} return fitLoss; }
+function verletzungTeam() { ${stueck('let benchRecovery', 'let playedThisMatch')} return injuryChance; }
+function verletzungSpieler(p, injuryChance) { ${stueck('let individualInjuryChance = ', 'if (Math.random() < individualInjuryChance)')} return individualInjuryChance; }
+function verletzungDauer(p) { ${stueck('let baseDuration = ', 'p.timesInjured = ')} return p.injured; }
 ${fn(stats, 'computePlayerGrade')}
 ${['getGreenkeeperEffekt', 'getAnalystEffekt', 'getNutritionistEffekt', 'getStaffLevelMultiplier', 'getStaffEffectivenessMultiplier', 'getActiveStaffSynergies'].map(n => fn(staff, n)).join('\n')}
 
@@ -78,6 +93,43 @@ for (let n = 0; n < 40; n++) {
     const ids = pickBestLineupIds().slice().sort((a, b) => a - b);
     elf.push({ f, spieler: squad.map(p => [p.strength, p.fitness, POS.indexOf(p.pos), p.injured, p.suspended]), ids });
 }
+const EINHEITEN = Object.keys(WEEKLY_TRAINING_UNITS);
+const TAGE = ['mo', 'di', 'mi', 'do', 'fr', 'sa', 'so'];
+const INTENS = ['normal', 'hart', 'locker'];
+const wochen = [];
+for (let n = 0; n < 60; n++) {
+    const plan = TAGE.map(() => zufall(EINHEITEN.length));
+    game = { weeklyTrainingPlan: {} };
+    TAGE.forEach((t, i) => { game.weeklyTrainingPlan[t] = EINHEITEN[plan[i]]; });
+    const w = computeWeeklyTrainingStats();
+    wochen.push([...plan, w.totalLoad, w.freeCount, w.sessionCount, w.risk, EINHEITEN.indexOf(w.dominant), EINHEITEN.indexOf(w.mappedTeamTraining)]);
+}
+const kraft = [];
+for (let n = 0; n < 80; n++) {
+    const x = [zufall(2), zufall(2), zufall(2), 1 + zufall(3), zufall(2), zufall(2), zufall(2), zufall(2), zufall(2), zufall(2), zufall(3), zufall(TRAINING.length), zufall(STILE.length), zufall(WEATHER_TYPES.length), zufall(6), zufall(2), zufall(2), zufall(2)];
+    managerRPG = { perks: { fitnessGuru: !!x[0] } };
+    staffMembers = { fitCoach: { hired: !!x[1] }, nutritionist: { hired: !!x[2], task: x[4] ? 'leistung' : 'fitness' }, physio: { hired: !!x[5], task: x[6] ? 'belastung' : 'heilung' }, greenkeeper: { hired: !!x[7], task: x[8] ? 'tempo' : 'pflege' } };
+    staffMeta = { nutritionist: { level: x[3] } };
+    game = { trainingIntensity: INTENS[x[10]], teamTraining: TRAINING[x[11]], tacticStyle: STILE[x[12]], leagueLevel: x[14], travelMode: x[15] ? 'bus' : 'flugzeug', busSponsorActive: !!x[16], busSponsorViaBanden: !!x[17] };
+    currentWeather = WEATHER_TYPES[x[13]];
+    kraft.push([...x, kraftverlust(!!x[9])]);
+}
+const verletzung = [];
+for (let n = 0; n < 80; n++) {
+    const plan = TAGE.map(() => zufall(EINHEITEN.length));
+    const x = [zufall(TRAINING.length), zufall(WEATHER_TYPES.length), zufall(HAERTE.length), zufall(3), zufall(8), 16 + zufall(24), zufall(4) === 0 ? 1 : 0, zufall(5) === 0 ? 1 : 0, 1 + zufall(4), zufall(6), zufall(2)];
+    game = { teamTraining: TRAINING[x[0]], tackleHardness: HAERTE[x[2]], trainingIntensity: INTENS[x[3]], weeklyTrainingPlan: {} };
+    TAGE.forEach((t, i) => { game.weeklyTrainingPlan[t] = EINHEITEN[plan[i]]; });
+    currentWeather = WEATHER_TYPES[x[1]];
+    const team = verletzungTeam();
+    const p = { timesInjured: x[4], age: x[5], trait: x[6] ? 'Wetterfest' : 'Kein', chronicIssue: !!x[7] };
+    const spieler = verletzungSpieler(p, team);
+    campusBuildings = { reha: { lvl: x[9] } }; staffMembers = { physio: { hired: !!x[10] } };
+    Math.random = () => (x[8] - 1) / 4 + 0.01;
+    const dauer = verletzungDauer({});
+    Math.random = Math.random;
+    verletzung.push({ plan, x, team, spieler, dauer });
+}
 let matchEvents = { tore: {}, vorlagen: {} };
 const noten = [];
 const echterZufall = Math.random;
@@ -89,7 +141,7 @@ for (let n = 0; n < 120; n++) {
     noten.push([eigene, gegner, p.dailyForm, tore, vorlagen, POS.indexOf(p.pos), tausendstel, Math.round(computePlayerGrade(p, eigene, gegner) * 10)]);
 }
 Math.random = echterZufall;
-JSON.stringify({ staerke, elf, noten, stile: STILE, formationen: FORMATIONEN, training: TRAINING, haerte: HAERTE });`;
+JSON.stringify({ staerke, elf, noten, wochen, kraft, verletzung, einheiten: EINHEITEN, stile: STILE, formationen: FORMATIONEN, training: TRAINING, haerte: HAERTE });`;
 const r = JSON.parse(eval(code));
 const zeile = a => '{ ' + a.join(', ') + ' }';
 let h = "#pragma once\n// Erzeugt aus calcTeamStrength() (js/match.js) und pickBestLineupIds() (js/squad.js) des Browserspiels.\n// Neu erzeugen aus dem Repo-Stamm: node unreal/Tests/Host/referenz-staerke.js\n";
@@ -102,5 +154,10 @@ h += "struct FRefElf { int32 Formation; int32 Anzahl; int32 Spieler[24][5]; int3
     + r.elf.map(e => `\t{ ${e.f}, ${e.spieler.length}, { ${e.spieler.map(zeile).join(', ')} }, ${e.ids.length}, ${zeile(e.ids)} },`).join('\n') + "\n};\n";
 h += "// Noten aus computePlayerGrade(): eigene Tore, Gegentore, Tagesform, Tore, Vorlagen, Position, Zufall in Tausendsteln, Note in Zehnteln\nstatic const int32 RefNoten[][8] = {\n"
     + r.noten.map(n => '\t' + zeile(n) + ',').join('\n') + "\n};\n";
+h += `static const char* RefEinheiten[] = ${zeile(r.einheiten.map(s => '"' + s + '"'))};\n`;
+h += "// Wochenplan: sieben Tage, dann Belastung, freie Tage, Einheiten, Risiko, Schwerpunkt, Teamtraining\nstatic const int32 RefWochen[][13] = {\n" + r.wochen.map(n => '\t' + zeile(n) + ',').join('\n') + "\n};\n";
+h += "// Kraftverlust: Guru, Athletik, Ernaehrung, Stufe, Leistungskueche, Physio, Belastung, Greenkeeper, Tempo, Heim, Intensitaet (normal, hart, locker),\n// Training, Stil, Wetter, Liga, Bus, Bus-Sponsor, Banden, erwarteter Verlust\nstatic const int32 RefKraft[][19] = {\n" + r.kraft.map(n => '\t' + zeile(n) + ',').join('\n') + "\n};\n";
+h += "// Verletzung: Plan (7), X = Training, Wetter, Haerte, Intensitaet, fruehere Verletzungen, Alter, Wetterfest, chronisch, Basisdauer, Reha, Physio\nstruct FRefVerletzung { int32 Plan[7]; int32 X[11]; double Team; double Spieler; int32 Dauer; };\nstatic const FRefVerletzung RefVerletzung[] = {\n"
+    + r.verletzung.map(v => `\t{ ${zeile(v.plan)}, ${zeile(v.x)}, ${v.team.toPrecision(17)}, ${v.spieler.toPrecision(17)}, ${v.dauer} },`).join('\n') + "\n};\n";
 fs.writeFileSync('unreal/Tests/Host/ReferenzStaerke.h', h);
 console.log('ReferenzStaerke.h geschrieben: ' + r.staerke.length + ' Staerken, ' + r.elf.length + ' Aufstellungen');

@@ -64,6 +64,14 @@ public:
 	TArray<int32> PairA, PairB, PairValue;          // Eingespieltheit je Spielerpaar (PairA < PairB), höchstens 30
 	int32 PromotionBoostLevel = -1;                 // Aufstiegseuphorie: Liga und Saison nach dem Aufstieg
 	int32 PromotionBoostSeason = 0;
+	// Training (js/training.js): Wochenplan mit sieben Tagen, daraus folgt das Teamtraining
+	TArray<FString> WeeklyPlan;
+	int32 CampusReha = 0;                           // Campus: Reha-Klinik, verkürzt Ausfallzeiten
+	bool SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason);
+	bool ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason);
+	bool SetTrainingIntensity(const FString& Level, FString& OutReason);
+	double InjuryChance() const;                    // Grundrisiko je Spieler der Startelf an diesem Spieltag
+	int32 NextFitnessLoss(bool bHome) const;        // Kraftverlust der Startelf im Spiel
 	int32 TeamStrength(bool bHome) const;           // calcTeamStrength()
 	double OwnMatchStrengthExact(TCHAR OppArchetype, bool bHome) const; // Ligaspiel: getOwnLeagueMatchStrength() plus Ansprache
 	double OwnCupStrength(bool bHome) const;        // Pokal, Europapokal, Relegation

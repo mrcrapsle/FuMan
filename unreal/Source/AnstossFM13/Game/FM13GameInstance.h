@@ -61,6 +61,7 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13LegendView> GetLegends() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13RecordsView GetRecords() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13EuropeView GetEurope() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13TrainingView GetTraining() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FString> GetAwards() const;
 	// Mode 0 = gesamt, 1 = nur Heimspiele, 2 = nur Auswärtsspiele (aus dem Spielplan berechnet)
 	UFUNCTION(BlueprintPure, Category = "FM13") TArray<FFM13TableRowView> GetTableSplit(int32 Level, int32 Mode) const;
@@ -85,6 +86,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool DeclineIncomingOffer(int32 Index, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool ToggleLineupPlayer(int32 PlayerId, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") void AutoLineup();
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason);
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetTrainingIntensity(const FString& Level, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool ChooseTalk(const FString& Type, FString& OutReason);
 	// Archetype: "P" (Pressing), "B" (Ballbesitz), "K" (Konter)
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool SetMatchPrep(const FString& Archetype, FString& OutReason);

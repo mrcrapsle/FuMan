@@ -23,7 +23,7 @@ namespace FM13Match
 	int32 BoardShift(EFM13Expectation Erwartung, int32 OwnGoals, int32 OppGoals);
 
 	// Wetter (js/weather.js): wird je Spieltag gewürfelt und wirkt auf das eigene Spiel
-	struct FWeather { const TCHAR* Name; int32 Weight; float InjuryMult; float CardMult; float GoalMult; float AttendanceMult; double FitLossMult; };
+	struct FWeather { const TCHAR* Name; int32 Weight; double InjuryMult; double CardMult; double GoalMult; double AttendanceMult; double FitLossMult; };
 	const TArray<FWeather>& Weathers();
 	int32 RollWeather(FRandomStream& Rng);
 

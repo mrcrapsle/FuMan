@@ -37,4 +37,33 @@ namespace FM13Fitness
 	int32 Erholung(const FString& Teamtraining); // Erholung der Bankspieler pro Spieltag (31 Kondition, sonst 26)
 	int32 NachSpiel(int32 Kondition, bool bInStartelf, int32 Kraftverlust, const FString& Teamtraining);
 	int32 Tagesform(int32 Moral, int32 Kondition, double Zufall); // Zufall in [-20, 20)
+
+	// Wochenplan (js/training.js): sieben Tage mit je einer Einheit. Aus der Verteilung folgen Belastung,
+	// Verletzungsrisiko und der Schwerpunkt, der als Teamtraining wirkt.
+	struct FEinheit { const TCHAR* Key; const TCHAR* Label; int32 Load; };
+	const TArray<FEinheit>& Einheiten();
+	const TCHAR* TagName(int32 Tag);                       // Mo bis So
+	struct FWoche { int32 Load = 0; int32 Frei = 0; int32 Einheiten = 0; int32 Risk = 0; FString Dominant; FString TeamTraining; };
+	FWoche Woche(const TArray<FString>& Plan);             // computeWeeklyTrainingStats()
+	TArray<FString> Standardplan(const FString& Name);     // ausgeglichen, kondition, technik, taktik, regeneration
+	TArray<FString> Startplan();                           // Plan eines neuen Spiels
+
+	// Verletzungswurf nach dem Spieltag (js/match-live.js, processPostMatchRoutine())
+	struct FVerletzung
+	{
+		FString Teamtraining;              // erholung: Grundrisiko 2,4 % statt 3 %
+		bool bSchutz = false;              // Premium: Verletzungsschutz
+		bool bGluecksbringer = false;      // Premium: x 0,4
+		bool bPraevention = false;         // Präventionsprogramm: x 0,82
+		double StadionSenkung = 0.0;       // Medizinzentrum, Rasenpflege
+		int32 Rasen = 85;                  // Rasenzustand, 85 ist neutral
+		double Wetter = 1.0;               // InjuryMult des Wetters
+		FString Haerte;                    // hart x 1,3, vorsichtig x 0,75
+		double LagerSenkung = 0.0;         // Trainingslager
+		int32 WochenRisiko = 10;           // Risiko des Wochenplans, 10 ist neutral
+		FString Intensitaet;               // hart 1,25 / normal 1 / locker 0,8
+	};
+	double VerletzungTeam(const FVerletzung& E);
+	double VerletzungSpieler(double Team, int32 FruehereVerletzungen, int32 Alter, bool bWetterfest, double Wetter, bool bChronisch);
+	int32 VerletzungDauer(int32 Basis, int32 RehaStufe, bool bPhysio); // Basis 1 bis 4 Spiele
 }

@@ -72,6 +72,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	StadiumCapacity = StartCapacity[LeagueLevel];
 	TicketPrice = FM13Economy::BaseTicketPrice(LeagueLevel);
 	UsedClubNames.Add(ClubName);
+	WeeklyPlan = FM13Fitness::Startplan();
 	InitLeagues(LeagueLevel);
 
 	// Startkader: 2 TW, 6 ABW, 6 MIT, 4 ST auf dem Niveau der Liga
@@ -225,8 +226,8 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	FM13Match::FExpectedGoals Xg = bHome
 		? FM13Match::ExpectedGoals(OwnExact, OppStr, EigenStil, Opp.Playstyle)
 		: FM13Match::ExpectedGoals(OppStr, OwnExact, Opp.Playstyle, EigenStil);
-	Xg.Home *= Wetter.GoalMult;
-	Xg.Away *= Wetter.GoalMult;
+	Xg.Home *= (float)Wetter.GoalMult;
+	Xg.Away *= (float)Wetter.GoalMult;
 	const int32 HG = FM13Match::Poisson(Rng, Xg.Home);
 	const int32 AG = FM13Match::Poisson(Rng, Xg.Away);
 	L.ApplyResult(F, HG, AG);
@@ -247,7 +248,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	if (OwnGoals > OppGoals) Fans = FMath::Min(100, Fans + 1);
 	else if (OwnGoals < OppGoals) Fans = FMath::Max(0, Fans - 1);
 
-	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * Wetter.AttendanceMult)) : 0;
+	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	TickSponsor();
 
@@ -297,22 +298,68 @@ void FFM13World::FinishOwnReport(FFM13OwnMatchReport& Report, const FString& Opp
 		Report.Ticker.Add(Report.bAdvanced ? TEXT("Elfmeterschiessen gewonnen!") : TEXT("Im Elfmeterschiessen ausgeschieden."));
 }
 
+// Grundrisiko des Verletzungswurfs: Teamtraining, Wetter, Zweikampfhärte, Wochenplan und Intensität.
+// Stadion-Anlagen, Rasenzustand, Premium-Booster und Trainingslager gibt es in Unreal noch nicht (neutral).
+double FFM13World::InjuryChance() const
+{
+	FM13Fitness::FVerletzung E;
+	E.Teamtraining = TeamTraining;
+	E.Wetter = FM13Match::Weathers()[WeatherIndex].InjuryMult;
+	E.Haerte = TackleHardness;
+	E.WochenRisiko = FM13Fitness::Woche(WeeklyPlan.Num() == 7 ? WeeklyPlan : FM13Fitness::Startplan()).Risk;
+	E.Intensitaet = TrainingIntensity;
+	return FM13Fitness::VerletzungTeam(E);
+}
+
+// Verletzungswurf wie in processPostMatchRoutine(): einmal je Spieltag für die Startelf.
+// Wer schon oft verletzt war oder älter ist, fällt eher aus; Reha-Klinik und Physio verkürzen die Pause.
 void FFM13World::RollInjuries(FFM13OwnMatchReport& Report)
 {
-	// Rolle nach dem Spiel wie in processPostMatchRoutine(): Startelf, ältere Spieler etwas anfälliger
+	const double Team = InjuryChance();
+	const double Wetter = FM13Match::Weathers()[WeatherIndex].InjuryMult;
 	for (int32 Id : StartingEleven())
 	{
 		FFM13Player* P = FindPlayer(Id);
 		if (!P) continue;
-		const float Chance = (0.02f + (float)FMath::Max(0, P->Age - 30) * 0.004f)
-			* FM13Match::Weathers()[WeatherIndex].InjuryMult * FM13Tactics::StyleFitnessMultiplier(TacticStyle);
-		if (Rng.FRand() >= Chance) continue;
-		const float Schwere = Rng.FRand();
-		const int32 Dauer = Schwere < 0.6f ? Rng.RandRange(1, 2) : (Schwere < 0.9f ? Rng.RandRange(3, 5) : Rng.RandRange(6, 10));
+		const double Chance = FM13Fitness::VerletzungSpieler(Team, P->TimesInjured, P->Age, P->Trait == FM13Strength::Wetterfest, Wetter, P->bChronic);
+		if (Rng.RandRange(0, 999999) / 1000000.0 >= Chance) continue;
+		const int32 Dauer = FM13Fitness::VerletzungDauer(Rng.RandRange(1, 4), CampusReha, Physio.bHired);
 		P->InjuredMatchdays = Dauer + 1; // +1: der Abbau am Ende dieses Spieltags zählt nicht als Ausfall
-		Report.Injuries.Add(FString::Printf(TEXT("%s (%d Spieltage)"), *P->Name, Dauer));
-		AddMessage(TEXT("Verletzung"), FString::Printf(TEXT("%s faellt %d Spieltage aus."), *P->Name, Dauer));
+		P->TimesInjured++;
+		Report.Injuries.Add(FString::Printf(TEXT("%s (%d Spiele)"), *P->Name, Dauer));
+		AddMessage(FString::Printf(TEXT("%s verletzt"), *P->Name), FString::Printf(TEXT("Faellt fuer %d Spiel(e) aus. (%d. Verletzung in dieser Karriere)%s"), Dauer, P->TimesInjured,
+			P->TimesInjured >= 3 ? TEXT(" Wird zunehmend verletzungsanfaellig!") : TEXT("")));
 	}
+}
+
+bool FFM13World::SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason)
+{
+	if (Day < 0 || Day > 6) { OutReason = TEXT("Unbekannter Tag."); return false; }
+	bool bBekannt = false;
+	for (const FM13Fitness::FEinheit& E : FM13Fitness::Einheiten()) if (Unit == E.Key) bBekannt = true;
+	if (!bBekannt) { OutReason = TEXT("Unbekannte Trainingseinheit."); return false; }
+	while (WeeklyPlan.Num() < 7) WeeklyPlan.Add(TEXT("ausgeglichen"));
+	WeeklyPlan[Day] = Unit;
+	TeamTraining = FM13Fitness::Woche(WeeklyPlan).TeamTraining;
+	return true;
+}
+
+bool FFM13World::ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason)
+{
+	static const TCHAR* Namen[5] = { TEXT("ausgeglichen"), TEXT("kondition"), TEXT("technik"), TEXT("taktik"), TEXT("regeneration") };
+	bool bBekannt = false;
+	for (const TCHAR* N : Namen) if (Name == N) bBekannt = true;
+	if (!bBekannt) { OutReason = TEXT("Unbekannter Standardplan."); return false; }
+	WeeklyPlan = FM13Fitness::Standardplan(Name);
+	TeamTraining = FM13Fitness::Woche(WeeklyPlan).TeamTraining;
+	return true;
+}
+
+bool FFM13World::SetTrainingIntensity(const FString& Level, FString& OutReason)
+{
+	if (Level != TEXT("locker") && Level != TEXT("normal") && Level != TEXT("hart")) { OutReason = TEXT("Unbekannte Intensitaet."); return false; }
+	TrainingIntensity = Level;
+	return true;
 }
 
 void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
@@ -442,18 +489,8 @@ void FFM13World::ApplyGrades(int32 OwnGoals, int32 OppGoals)
 			*FString::Join(LastReport.TeamOfMatchday, TEXT(", ")), Matchday));
 }
 
-// Tagesform und Kondition nach jedem verarbeiteten Spieltag (js/match-live.js, processPostMatchRoutine()).
-// Erst die Tagesform aus Moral und alter Kondition, dann der Kraftverlust der Startelf und die Erholung der Bank.
-void FFM13World::ApplyFitnessAfterMatchday(bool bHome)
+int32 FFM13World::NextFitnessLoss(bool bHome) const
 {
-	int32 Dummy = 0;
-	const TArray<int32> Elf = LineupIndices(Dummy);
-	for (FFM13Player& P : Squad)
-	{
-		const double Zufall = Rng.RandRange(0, 999999) / 1000000.0 * 40.0 - 20.0;
-		P.DailyForm = FM13Fitness::Tagesform(P.Morale, P.Fitness, Zufall);
-	}
-
 	FM13Fitness::FKraftEingabe E;
 	E.bFitnessGuru = bFitnessGuru;
 	E.bAthletiktrainer = AthletikTrainer.bHired;
@@ -474,7 +511,22 @@ void FFM13World::ApplyFitnessAfterMatchday(bool bHome)
 	E.bBus = bBusTravel;
 	E.bBusSponsor = bBusSponsor;
 	E.bBusBanden = bBusBanden;
-	const int32 Kraftverlust = FM13Fitness::Verlust(E);
+	return FM13Fitness::Verlust(E);
+}
+
+// Tagesform und Kondition nach jedem verarbeiteten Spieltag (js/match-live.js, processPostMatchRoutine()).
+// Erst die Tagesform aus Moral und alter Kondition, dann der Kraftverlust der Startelf und die Erholung der Bank.
+void FFM13World::ApplyFitnessAfterMatchday(bool bHome)
+{
+	int32 Dummy = 0;
+	const TArray<int32> Elf = LineupIndices(Dummy);
+	for (FFM13Player& P : Squad)
+	{
+		const double Zufall = Rng.RandRange(0, 999999) / 1000000.0 * 40.0 - 20.0;
+		P.DailyForm = FM13Fitness::Tagesform(P.Morale, P.Fitness, Zufall);
+	}
+
+	const int32 Kraftverlust = NextFitnessLoss(bHome);
 
 	for (int32 i = 0; i < Squad.Num(); ++i)
 		Squad[i].Fitness = FM13Fitness::NachSpiel(Squad[i].Fitness, Elf.Contains(i), Kraftverlust, TeamTraining);
@@ -873,7 +925,6 @@ void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
 		}
 		R.Weather = FM13Match::Weathers()[WeatherIndex].Name;
 		FinishOwnReport(R, bHome ? M.Away : M.Home, bHome, TArray<FString>(), TArray<FString>());
-		RollInjuries(R);
 	}
 	if (Lostopf.Num() % 2 == 1) Weiter.Add(Lostopf.Last()); // Freilos
 	Cup.Alive = Weiter;
@@ -1288,7 +1339,7 @@ void FFM13World::PrepareOppPlan()
 void FFM13World::RollCards(FFM13OwnMatchReport& Report, TArray<FString>& OutYellow, TArray<FString>& OutRed)
 {
 	// Schiedsrichter-Strenge und Wetter wirken auf die Karten (js/referees.js, js/weather.js)
-	const float Mult = FM13Match::RefereeFor(Season, Matchday, LeagueLevel, ClubName.Len()).CardMult * FM13Match::Weathers()[WeatherIndex].CardMult;
+	const float Mult = FM13Match::RefereeFor(Season, Matchday, LeagueLevel, ClubName.Len()).CardMult * (float)FM13Match::Weathers()[WeatherIndex].CardMult;
 	const TArray<int32> Elf = StartingEleven();
 	if (!Elf.Num()) return;
 	const int32 Gelbe = FMath::Min(5, FM13Match::Poisson(Rng, 1.6f * Mult));
@@ -1909,7 +1960,6 @@ void FFM13World::PlayEuropeMatchday()
 			}
 			R.Weather = FM13Match::Weathers()[WeatherIndex].Name;
 			FinishOwnReport(R, bEigenHeim ? Gast : Heim, bEigenHeim, TArray<FString>(), TArray<FString>());
-			RollInjuries(R);
 		}
 	};
 	Europe.LastResults.Reset();

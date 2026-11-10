@@ -224,6 +224,26 @@ struct FFM13TacticsView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 DerbyStimmungCost = 0;
 };
 
+// Training: Wochenplan mit sieben Tagen, Intensitaet und dem Risiko daraus
+USTRUCT(BlueprintType)
+struct FFM13TrainingView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DayNames;     // Mo bis So
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DayUnits;     // Schluessel der Einheit je Tag
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DayLabels;    // Anzeigename der Einheit je Tag
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> UnitKeys;     // alle waehlbaren Einheiten
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> UnitLabels;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Sessions = 0;           // Trainingstage ohne freie Tage
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 Risk = 0;               // Risiko des Wochenplans in Prozent (10 = neutral)
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Focus;                // Schwerpunkt der Woche
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString TeamTraining;         // wirkt im Spiel
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Intensity;            // locker, normal, hart
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") float InjuryPercent = 0.f;    // Grundrisiko je Spieler der Startelf am naechsten Spieltag
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 FitnessLoss = 0;        // Kraftverlust der Startelf im naechsten Ligaspiel
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 BenchRecovery = 0;      // Erholung der Bank
+};
+
 USTRUCT(BlueprintType)
 struct FFM13EuropeView
 {

@@ -1,5 +1,6 @@
 #include "FM13GameInstance.h"
 #include "FM13Core/FM13Strength.h"
+#include "FM13Core/FM13Fitness.h"
 #include "FM13Core/FM13SaveCodec.h"
 #include "FM13Core/FM13BrowserImport.h"
 #include "FM13Core/FM13Development.h"
@@ -540,6 +541,34 @@ bool UFM13GameInstance::AcceptIncomingOffer(int32 Index, FString& OutReason) { c
 bool UFM13GameInstance::DeclineIncomingOffer(int32 Index, FString& OutReason) { const bool b = Kern.DeclineIncomingOffer(Index, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::ToggleLineupPlayer(int32 PlayerId, FString& OutReason) { const bool b = Kern.ToggleLineupPlayer(PlayerId, OutReason); if (b) Changed(); return b; }
 void UFM13GameInstance::AutoLineup() { Kern.ClearManualLineup(); Changed(); }
+bool UFM13GameInstance::SetWeeklyTrainingDay(int32 Day, const FString& Unit, FString& OutReason) { const bool b = Kern.SetWeeklyTrainingDay(Day, Unit, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::ApplyWeeklyTrainingPreset(const FString& Name, FString& OutReason) { const bool b = Kern.ApplyWeeklyTrainingPreset(Name, OutReason); if (b) Changed(); return b; }
+bool UFM13GameInstance::SetTrainingIntensity(const FString& Level, FString& OutReason) { const bool b = Kern.SetTrainingIntensity(Level, OutReason); if (b) Changed(); return b; }
+
+FFM13TrainingView UFM13GameInstance::GetTraining() const
+{
+	FFM13TrainingView V;
+	auto Label = [](const FString& Key)
+	{
+		for (const FM13Fitness::FEinheit& E : FM13Fitness::Einheiten()) if (Key == E.Key) return FString(E.Label);
+		return Key;
+	};
+	const TArray<FString> Plan = Kern.WeeklyPlan.Num() == 7 ? Kern.WeeklyPlan : FM13Fitness::Startplan();
+	for (int32 T = 0; T < 7; ++T) { V.DayNames.Add(FM13Fitness::TagName(T)); V.DayUnits.Add(Plan[T]); V.DayLabels.Add(Label(Plan[T])); }
+	for (const FM13Fitness::FEinheit& E : FM13Fitness::Einheiten()) { V.UnitKeys.Add(E.Key); V.UnitLabels.Add(E.Label); }
+	const FM13Fitness::FWoche W = FM13Fitness::Woche(Plan);
+	V.Sessions = W.Einheiten;
+	V.Risk = W.Risk;
+	V.Focus = Label(W.Dominant);
+	V.TeamTraining = Label(Kern.TeamTraining);
+	V.Intensity = Kern.TrainingIntensity;
+	V.InjuryPercent = (float)(Kern.InjuryChance() * 100.0);
+	bool bHome = true;
+	Kern.NextLeagueOpponent(&bHome);
+	V.FitnessLoss = Kern.NextFitnessLoss(bHome);
+	V.BenchRecovery = FM13Fitness::Erholung(Kern.TeamTraining);
+	return V;
+}
 bool UFM13GameInstance::ChooseTalk(const FString& Type, FString& OutReason) { const bool b = Kern.ChooseTalk(Type, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::SetMatchPrep(const FString& Archetype, FString& OutReason)
 {

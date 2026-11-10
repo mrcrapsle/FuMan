@@ -65,6 +65,8 @@ struct FFM13Player
 	int32 DailyForm = 50;       // Tagesform 5 bis 95, jeder Spieltag neu
 	uint8 Trait = 0;            // FM13Strength::ETrait, 0 = keiner
 	int32 AppearancesTotal = 0; // Einsätze insgesamt (Führungsqualität, js/locker-room.js)
+	int32 TimesInjured = 0;     // frühere Verletzungen: macht anfälliger
+	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };

@@ -80,6 +80,9 @@ private:
 	FReply OnPrep(int32 Index);
 	FReply OnDerbyPrep(int32 Index);
 	FReply OnTableMode(int32 Mode);
+	FReply OnTrainingDay(int32 Day);
+	FReply OnTrainingPreset(int32 Index);
+	FReply OnTrainingIntensity(int32 Index);
 
 	void Status(const FString& Text, float Seconds = 5.f);
 };

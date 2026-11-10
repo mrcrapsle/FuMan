@@ -671,6 +671,7 @@ static void TestTeamstaerke()
 	PRUEFE(W.FindPlayer(W.CaptainId) != nullptr, "Nach dem ersten Spieltag traegt jemand die Binde");
 	PRUEFE(W.PairA.Num() == 55 && W.PairValue[0] == 1, "Eingespieltheit: 55 Paare mit je einem Punkt");
 	for (int32& V : W.PairValue) V = 30;
+	for (FFM13Player& P : W.Squad) { P.InjuredMatchdays = 0; P.SuspendedMatchdays = 0; }
 	W.ManualLineup.Reset();
 	for (int32 k = 0; k < W.PairA.Num() && W.ManualLineup.Num() < 11; ++k) { W.ManualLineup.AddUnique(W.PairA[k]); W.ManualLineup.AddUnique(W.PairB[k]); }
 	PRUEFE(W.LineupChemistry() == 3, "Volle Eingespieltheit: +3 (%d)", W.LineupChemistry());
@@ -752,6 +753,75 @@ static void TestKondition()
 	PRUEFE(Tagesform(65, 100, -20.0) == 34, "Tagesform mit Zufall -20: 34");
 	PRUEFE(Tagesform(65, 100, 20.0) == 74, "Tagesform mit Zufall +20: 74");
 	PRUEFE(Tagesform(5, 10, -20.0) == 16, "Tagesform schwach: 16");
+	std::printf("\n");
+}
+
+// Wochenplan, Kraftverlust und Verletzungswurf gegen die Rechnung des Browserspiels (ReferenzStaerke.h)
+static void TestTrainingReferenz()
+{
+	std::printf("Training: Wochenplan, Kraftverlust und Verletzungswurf gegen das Browserspiel\n");
+	int32 Gleich = 0, Faelle = 0;
+	for (const auto& R : RefWochen)
+	{
+		TArray<FString> Plan;
+		for (int32 T = 0; T < 7; ++T) Plan.Add(RefEinheiten[R[T]]);
+		const FM13Fitness::FWoche W = FM13Fitness::Woche(Plan);
+		const bool b = W.Load == R[7] && W.Frei == R[8] && W.Einheiten == R[9] && W.Risk == R[10] && W.Dominant == FString(RefEinheiten[R[11]]) && W.TeamTraining == FString(RefEinheiten[R[12]]);
+		++Faelle; if (b) ++Gleich;
+		PRUEFE(b, "Wochenplan Fall %d weicht ab (Risiko %d statt %d)", Faelle, W.Risk, R[10]);
+	}
+	std::printf("  %d von %d Wochenplaenen gleich\n", Gleich, Faelle);
+
+	static const char* Intens[3] = { "normal", "hart", "locker" };
+	Gleich = Faelle = 0;
+	for (const auto& X : RefKraft)
+	{
+		FM13Fitness::FKraftEingabe E;
+		E.bFitnessGuru = X[0] != 0; E.bAthletiktrainer = X[1] != 0; E.bErnaehrung = X[2] != 0; E.ErnaehrungStufe = X[3]; E.bErnaehrungLeistung = X[4] != 0;
+		E.bPhysio = X[5] != 0; E.bPhysioBelastung = X[6] != 0; E.bGreenkeeper = X[7] != 0; E.bGreenkeeperTempo = X[8] != 0; E.bAuswaerts = X[9] == 0;
+		E.Intensitaet = Intens[X[10]]; E.Teamtraining = RefTraining[X[11]];
+		E.Tempo = FM13Tactics::Style(RefStile[X[12]]).Tempo; E.Pressing = FM13Tactics::Style(RefStile[X[12]]).Press;
+		E.WetterFaktor = FM13Match::Weathers()[X[13]].FitLossMult; E.LigaStufe = X[14]; E.bBus = X[15] != 0; E.bBusSponsor = X[16] != 0; E.bBusBanden = X[17] != 0;
+		const int32 V = FM13Fitness::Verlust(E);
+		++Faelle; if (V == X[18]) ++Gleich;
+		PRUEFE(V == X[18], "Kraftverlust Fall %d: %d statt %d", Faelle, V, X[18]);
+	}
+	std::printf("  %d von %d Kraftverlusten gleich\n", Gleich, Faelle);
+
+	Gleich = Faelle = 0;
+	for (const FRefVerletzung& R : RefVerletzung)
+	{
+		TArray<FString> Plan;
+		for (int32 T = 0; T < 7; ++T) Plan.Add(RefEinheiten[R.Plan[T]]);
+		const int32* X = R.X;
+		FM13Fitness::FVerletzung E;
+		E.Teamtraining = RefTraining[X[0]]; E.Wetter = FM13Match::Weathers()[X[1]].InjuryMult; E.Haerte = RefHaerte[X[2]]; E.Intensitaet = Intens[X[3]];
+		E.WochenRisiko = FM13Fitness::Woche(Plan).Risk;
+		const double Team = FM13Fitness::VerletzungTeam(E);
+		const double Spieler = FM13Fitness::VerletzungSpieler(Team, X[4], X[5], X[6] != 0, E.Wetter, X[7] != 0);
+		const int32 Dauer = FM13Fitness::VerletzungDauer(X[8], X[9], X[10] != 0);
+		const bool b = std::fabs(Team - R.Team) < 1e-12 && std::fabs(Spieler - R.Spieler) < 1e-12 && Dauer == R.Dauer;
+		++Faelle; if (b) ++Gleich;
+		PRUEFE(b, "Verletzung Fall %d: Team %.6f statt %.6f, Spieler %.6f statt %.6f, Dauer %d statt %d", Faelle, Team, R.Team, Spieler, R.Spieler, Dauer, R.Dauer);
+	}
+	std::printf("  %d von %d Verletzungswuerfen gleich\n", Gleich, Faelle);
+
+	// Wochenplan in der Spielwelt
+	FFM13World W;
+	W.NewGame(TEXT("Trainingsverein"), 61);
+	FString Grund;
+	PRUEFE(W.WeeklyPlan.Num() == 7 && W.TeamTraining == FString(TEXT("ausgeglichen")), "Startplan: fuenfmal ausgeglichen, Erholung, frei");
+	PRUEFE(W.ApplyWeeklyTrainingPreset(TEXT("kondition"), Grund) && W.TeamTraining == FString(TEXT("kondition")), "Standardplan Kondition setzt das Teamtraining");
+	PRUEFE(W.SetWeeklyTrainingDay(0, TEXT("taktik"), Grund) && W.SetWeeklyTrainingDay(1, TEXT("taktik"), Grund) && W.SetWeeklyTrainingDay(3, TEXT("taktik"), Grund)
+		&& W.TeamTraining == FString(TEXT("taktik")), "Drei Taktik-Tage: Schwerpunkt Taktik");
+	PRUEFE(!W.SetWeeklyTrainingDay(7, TEXT("taktik"), Grund) && !W.SetWeeklyTrainingDay(0, TEXT("yoga"), Grund) && !W.ApplyWeeklyTrainingPreset(TEXT("urlaub"), Grund), "Unbekannter Tag, Einheit oder Plan abgelehnt");
+	PRUEFE(W.SetTrainingIntensity(TEXT("hart"), Grund) && !W.SetTrainingIntensity(TEXT("brutal"), Grund), "Intensitaet hart, unbekannte abgelehnt");
+	const double Hart = W.InjuryChance();
+	W.SetTrainingIntensity(TEXT("locker"), Grund);
+	PRUEFE(W.InjuryChance() < Hart, "Lockeres Training senkt das Verletzungsrisiko");
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.WeeklyPlan[0] == FString(TEXT("taktik")) && L.TrainingIntensity == FString(TEXT("locker")), "Wochenplan bleibt im Spielstand (%s)", *Fehler);
 	std::printf("\n");
 }
 
@@ -997,6 +1067,7 @@ int main()
 	TestRundeB();
 	TestTeamstaerke();
 	TestKondition();
+	TestTrainingReferenz();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

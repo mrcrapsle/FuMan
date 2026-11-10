@@ -1,4 +1,5 @@
 #include "FM13SaveCodec.h"
+#include "FM13Fitness.h"
 #include "FM13Json.h"
 
 // ---------- Schreiben ----------
@@ -66,6 +67,8 @@ namespace
 		W.Field(TEXT("dailyForm"), P.DailyForm);
 		W.Field(TEXT("trait"), (int64)P.Trait);
 		W.Field(TEXT("appsTotal"), P.AppearancesTotal);
+		W.Field(TEXT("timesInjured"), P.TimesInjured);
+		W.FieldBool(TEXT("chronic"), P.bChronic);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -172,6 +175,10 @@ namespace FM13Save
 		W.Field(TEXT("captain"), S.CaptainId);
 		W.Field(TEXT("promotionBoostLevel"), S.PromotionBoostLevel);
 		W.Field(TEXT("promotionBoostSeason"), S.PromotionBoostSeason);
+		W.Field(TEXT("campusReha"), S.CampusReha);
+		W.ArrayKey(TEXT("weeklyPlan"));
+		for (const FString& Tag : S.WeeklyPlan) W.ElementStr(Tag);
+		W.EndArray();
 		W.ArrayKey(TEXT("pairChemistry"));
 		for (int32 k = 0; k < S.PairA.Num(); ++k) { W.ElementInt(S.PairA[k]); W.ElementInt(S.PairB[k]); W.ElementInt(S.PairValue[k]); }
 		W.EndArray();
@@ -382,6 +389,8 @@ namespace
 		P.DailyForm = FMath::Clamp((int32)R.Int(Obj, TEXT("dailyForm"), 50), 5, 95);
 		P.Trait = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("trait"), 0), 0, 8);
 		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(Obj, TEXT("appsTotal"), 0));
+		P.TimesInjured = FMath::Max(0, (int32)R.Int(Obj, TEXT("timesInjured"), 0));
+		P.bChronic = R.Bool(Obj, TEXT("chronic"), false);
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
@@ -490,6 +499,9 @@ namespace FM13Save
 		W.CaptainId = (int32)R.Int(Root, TEXT("captain"), 0);
 		W.PromotionBoostLevel = (int32)R.Int(Root, TEXT("promotionBoostLevel"), -1);
 		W.PromotionBoostSeason = (int32)R.Int(Root, TEXT("promotionBoostSeason"), 0);
+		W.CampusReha = FMath::Clamp((int32)R.Int(Root, TEXT("campusReha"), 0), 0, 5);
+		for (int32 N : R.Items(Root, TEXT("weeklyPlan"))) W.WeeklyPlan.Add(P.Nodes[N].Text);
+		if (W.WeeklyPlan.Num() != 7) W.WeeklyPlan = FM13Fitness::Startplan();
 		{
 			const TArray<int32> Paare = R.Items(Root, TEXT("pairChemistry"));
 			for (int32 k = 0; k + 2 < Paare.Num(); k += 3)

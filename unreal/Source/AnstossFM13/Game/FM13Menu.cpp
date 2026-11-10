@@ -95,6 +95,11 @@ namespace
 	// Derbywoche
 	const TCHAR* DerbyKeys[] = { TEXT("stimmung"), TEXT("praemie"), TEXT("kampfansage") };
 	const TCHAR* DerbyLabels[] = { TEXT("Stimmung machen"), TEXT("Derby-Praemie"), TEXT("Kampfansage") };
+	// Training
+	const TCHAR* PlanKeys[] = { TEXT("ausgeglichen"), TEXT("kondition"), TEXT("technik"), TEXT("taktik"), TEXT("regeneration") };
+	const TCHAR* PlanLabels[] = { TEXT("Ausgeglichen"), TEXT("Kondition"), TEXT("Technik"), TEXT("Taktik"), TEXT("Regeneration") };
+	const TCHAR* IntensKeys[] = { TEXT("locker"), TEXT("normal"), TEXT("hart") };
+	const TCHAR* IntensLabels[] = { TEXT("Locker"), TEXT("Normal"), TEXT("Hart") };
 }
 
 void SFM13Menu::Construct(const FArguments& InArgs)
@@ -697,6 +702,31 @@ TSharedRef<SWidget> SFM13Menu::BuildTactics()
 			+ SHorizontalBox::Slot().AutoWidth()[SNew(SBox).WidthOverride(170.f)[Knopf(T.StyleLabels[i], FOnClicked::CreateSP(this, &SFM13Menu::OnStyle, i), T.StyleKeys[i] == T.Style ? CKnopfAktiv : CKnopf, 12)]]
 			+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(10.f, 0.f))[Txt(FString::Printf(TEXT("Staerke %+d, Ansatz %s"), T.StyleBonuses[i], *T.StyleArchetypes[i]), CGedimmt, 12)]
 		];
+	// Training der Woche
+	const FFM13TrainingView Tr = G->GetTraining();
+	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Training der Woche"))];
+	TSharedRef<SHorizontalBox> Tage = SNew(SHorizontalBox);
+	for (int32 i = 0; i < Tr.DayNames.Num(); ++i)
+		Tage->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))
+		[
+			SNew(SBox).WidthOverride(118.f)[Knopf(FString::Printf(TEXT("%s: %s"), *Tr.DayNames[i], Tr.DayLabels.IsValidIndex(i) ? *Tr.DayLabels[i] : TEXT("-")),
+				FOnClicked::CreateSP(this, &SFM13Menu::OnTrainingDay, i), CKnopf, 11)]
+		];
+	Box->AddSlot().AutoHeight()[Tage];
+	Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 2.f))[Txt(TEXT("Ein Klick auf einen Tag wechselt zur naechsten Einheit."), CGedimmt, 11)];
+	TSharedRef<SHorizontalBox> Plaene = SNew(SHorizontalBox);
+	for (int32 i = 0; i < 5; ++i)
+		Plaene->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString(TEXT("Plan ")) + PlanLabels[i], FOnClicked::CreateSP(this, &SFM13Menu::OnTrainingPreset, i), CKnopf, 11)];
+	Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 4.f))[Plaene];
+	TSharedRef<SHorizontalBox> Intens = SNew(SHorizontalBox)
+		+ SHorizontalBox::Slot().AutoWidth().VAlign(VAlign_Center).Padding(FMargin(0.f, 0.f, 8.f, 0.f))[Txt(TEXT("Intensitaet:"), CText, 12)];
+	for (int32 i = 0; i < 3; ++i)
+		Intens->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(IntensLabels[i], FOnClicked::CreateSP(this, &SFM13Menu::OnTrainingIntensity, i), Tr.Intensity == IntensKeys[i] ? CKnopfAktiv : CKnopf, 11)];
+	Box->AddSlot().AutoHeight()[Intens];
+	Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 4.f))[Txt(FString::Printf(TEXT("Schwerpunkt %s (wirkt als %s). %d Einheiten, Risiko des Plans %d Prozent. Verletzungsrisiko je Stammspieler %.1f Prozent. Kraftverlust der Elf %d, Erholung der Bank %d."),
+		*Tr.Focus, *Tr.TeamTraining, Tr.Sessions, Tr.Risk, Tr.InjuryPercent, Tr.FitnessLoss, Tr.BenchRecovery), Tr.Risk > 18 ? CSchlecht : (Tr.Risk > 10 ? CAkzent : CGut), 12)];
+	Box->AddSlot().AutoHeight()[Txt(TEXT("Taktik gibt +2 Staerke, Kondition erholt die Bank schneller, Erholung schont die Elf und senkt das Verletzungsrisiko."), CGedimmt, 11)];
+
 	Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 8.f))[Txt(TEXT("Pressing schlaegt Ballbesitz, Ballbesitz knackt Konter, Konter bestraft Pressing (je +2). Wer drei von fuenf Spielen gleich spielt, wird gelesen."), CGedimmt, 11)];
 	return Box;
 }
@@ -925,6 +955,48 @@ FReply SFM13Menu::OnDerbyPrep(int32 Index)
 FReply SFM13Menu::OnTableMode(int32 Mode)
 {
 	TableMode = FMath::Clamp(Mode, 0, 2);
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnTrainingDay(int32 Day)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		const FFM13TrainingView T = G->GetTraining();
+		FString Grund;
+		if (!T.DayUnits.IsValidIndex(Day) || !T.UnitKeys.Num()) Status(TEXT("Unbekannter Tag."));
+		else
+		{
+			const int32 Jetzt = T.UnitKeys.IndexOfByKey(T.DayUnits[Day]);
+			const int32 Neu = (Jetzt + 1) % T.UnitKeys.Num();
+			if (!G->SetWeeklyTrainingDay(Day, T.UnitKeys[Neu], Grund)) Status(Grund);
+		}
+	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnTrainingPreset(int32 Index)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		FString Grund;
+		if (Index < 0 || Index > 4) Status(TEXT("Unbekannter Standardplan."));
+		else Status(G->ApplyWeeklyTrainingPreset(PlanKeys[Index], Grund) ? FString::Printf(TEXT("Standardplan %s uebernommen."), PlanLabels[Index]) : Grund);
+	}
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnTrainingIntensity(int32 Index)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		FString Grund;
+		if (Index < 0 || Index > 2) Status(TEXT("Unbekannte Intensitaet."));
+		else Status(G->SetTrainingIntensity(IntensKeys[Index], Grund) ? FString::Printf(TEXT("Trainingsintensitaet: %s."), IntensLabels[Index]) : Grund);
+	}
 	Refresh();
 	return FReply::Handled();
 }

@@ -136,9 +136,9 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `youth-pathway.js` | 293 | offen | Jugend-Laufbahn: macht den Weg eines Talents sichtbar. |  |
 | `youth-academy-extended.js` | 248 | offen | Jugendakademie ERWEITERTE FUNKTIONEN |  |
 | `academy-ranking.js` | 138 | offen | Akademie-Rangliste |  |
-| `training.js` | 874 | teilweise | Training | Intensität, Teamtraining, Kondition und Tagesform; Personal (Athletik, Ernährung, Physio, Greenkeeper) und Perk Fitness-Guru im Kraftverlust. Offen: Wochen-Auswertung, Einstellen und Ausbau, Stärke-Effekte des Personals, Perk-Freischaltung |
+| `training.js` | 874 | teilweise | Training | Wochenplan mit sieben Tagen, Standardpläne, Intensität, Kondition und Tagesform (60 Wochenpläne und 80 Kraftverluste gegen das Browserspiel geprüft). Offen: Einzeltraining, Trainingslager, eigene Vorlagen, Extras |
 | `training-games.js` | 299 | offen | TRAINING-MINISPIELE (Elfmeterschießen & Flankentraining) |  |
-| `medical-department.js` | 126 | teilweise | Verletzungen | Verletzungswurf nach dem Spiel (Abteilung offen) |
+| `medical-department.js` | 126 | teilweise | Verletzungen | Verletzungswurf wie im Browserspiel (80 Vergleichsfälle): Wochenplan, Intensität, Wetter, Härte, Alter, frühere Verletzungen, Reha und Physio. Offen: Verletzungen durch Ereignisse, Verlauf je Spieler, Panel |
 
 ### Finanzen und Wirtschaft
 
