@@ -322,6 +322,35 @@ public:
 	bool ChooseTransferStrategy(FM13Transfers::EStrategie Choice, FString& OutReason);
 	void TickTransferStrategy();                      // nach jedem Spieltag: nichts gewaehlt -> ausgewogen
 	void ResolveTransferStrategy(int32 FinalRank);    // Saisonende, vor der Vorstandsversammlung
+	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
+	struct FFM13Rumor
+	{
+		FString Id;
+		FM13Transfers::EQuelle Source = FM13Transfers::EQuelle::Boulevard;
+		bool bTruth = false;
+		FString Club;
+		FString Type;            // abwerbung (Verein will deinen Spieler) oder markt (Marktspieler wechselt)
+		int32 PlayerId = 0;
+		FString PlayerName;
+		int32 Created = 0;
+		int32 Season = 0;
+		int32 ResolveAt = 0;
+		FString Reaction;        // leer, dementieren, anheizen, schweigen
+		bool bBackedOff = false;
+		FString Outcome;         // leer (offen), ente, wahr, zurueckgezogen, erledigt
+	};
+	TArray<FFM13Rumor> Rumors;      // neueste zuerst
+	int32 RumorHits[3] = { 0, 0, 0 };
+	int32 RumorMisses[3] = { 0, 0, 0 };
+	int32 RumorNr = 0;
+	int32 InterestThreshold() const;        // getTransferInterestThreshold(): Kaderschnitt, mind. 20
+	int32 ClubLevelByName(const FString& Name) const;   // Liga-Stufe eines Vereins, -1 wenn nicht vorhanden
+	FString RandomOpposingClub(bool bPreferHigherOrEqual);  // pickRandomOpposingClubName()
+	bool TriggerAIOffer(int32 PlayerId, const FString& Club, double Multiplier);   // triggerNewAITransferOffer(gezielt)
+	bool CreateRumor(FFM13Rumor& Out);
+	void TickRumors();                      // nach jedem Spieltag
+	void ResolveRumor(FFM13Rumor& R);
+	bool ReactToRumor(const FString& Id, const FString& Art, FString& OutReason);
 	int32 CountYouthGraduates() const;                // Eigengewaechse mit 10 oder mehr Ligaspielen
 	int64 SeasonProfit() const;                       // Summe der Buchungen dieser Saison
 	bool ExerciseBuyback(int32 PlayerId, FString& OutReason);

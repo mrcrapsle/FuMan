@@ -221,6 +221,7 @@ bool FFM13World::PlayMatchday()
 	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
 	TickTransferStrategy();
+	TickRumors();
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
 	PrepareOppPlan();
@@ -3435,4 +3436,191 @@ void FFM13World::ResolveTransferStrategy(int32 FinalRank)
 	Strategy.Result = A.bErfuellt ? 1 : 2;
 	AddMessage(FString::Printf(TEXT("Transferstrategie %s"), A.bErfuellt ? TEXT("erfuellt") : TEXT("verfehlt")),
 		FString::Printf(TEXT("Platz %d, Ziel Platz %d, Eigengewaechse %d, Saisonbilanz %lld. Vorstand %+d."), FinalRank, Strategy.Goal, Eigen, (long long)SeasonProfit(), A.Vorstand));
+}
+
+// ---------- Gerueuchteku che (js/rumors.js) ----------
+
+int32 FFM13World::InterestThreshold() const
+{
+	if (Squad.Num() == 0) return 48;
+	int64 Summe = 0;
+	for (const FFM13Player& P : Squad) Summe += P.Strength;
+	return FMath::Max(20, (int32)FM13Transfers::JsRunden((double)Summe / Squad.Num()));
+}
+
+int32 FFM13World::ClubLevelByName(const FString& Name) const
+{
+	for (int32 L = 0; L < Leagues.Num(); ++L)
+		for (const FFM13Club& C : Leagues[L].Clubs) if (C.Name == Name) return L;
+	return -1;
+}
+
+FString FFM13World::RandomOpposingClub(bool bPreferHigherOrEqual)
+{
+	TArray<FString> Namen;
+	for (int32 L = 0; L < Leagues.Num(); ++L)
+		for (const FFM13Club& C : Leagues[L].Clubs)
+			if (!C.bOwn && (!bPreferHigherOrEqual || L <= LeagueLevel)) Namen.Add(C.Name);
+	if (Namen.Num() == 0) return TEXT("Ein Konkurrent");
+	return Namen[RngTransfer.RandRange(0, Namen.Num() - 1)];
+}
+
+// Obergrenze je Liga-Stufe fuer ein KI-Angebot (KI_ANGEBOT_OBERGRENZE in js/transfermarket.js)
+namespace
+{
+	int64 KiObergrenze(int32 Stufe)
+	{
+		static const int64 Grenzen[] = { 250000000, 60000000, 15000000, 5000000, 1500000, 400000 };
+		return Grenzen[FMath::Clamp(Stufe, 0, 5)];
+	}
+}
+
+bool FFM13World::TriggerAIOffer(int32 PlayerId, const FString& Club, double Multiplier)
+{
+	const FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) return false;
+	if (IncomingOffers.ContainsByPredicate([PlayerId](const FFM13IncomingOffer& O) { return O.PlayerId == PlayerId && !O.bYouth; })) return false;
+	const double Roh = (double)P->MarketValue * Multiplier;
+	const int32 Stufe = ClubLevelByName(Club);
+	const int64 Obergrenze = KiObergrenze(Stufe >= 0 ? Stufe : 0);
+	// Kleine Abloesen auf 500 genau, ab 50.000 auf 5.000 genau; nie ueber die Obergrenze des Kaeufers
+	const int64 Betrag = Roh < 50000 ? FMath::Max<int64>(1000, FM13Transfers::JsRunden(Roh / 500.0) * 500)
+		: FMath::Max<int64>(10000, FM13Transfers::JsRunden(Roh / 5000.0) * 5000);
+	FFM13IncomingOffer O;
+	O.PlayerId = P->Id;
+	O.PlayerName = P->Name;
+	O.Club = Club;
+	O.Price = FMath::Min(Obergrenze, Betrag);
+	O.ExpiresMatchday = Matchday + 3;
+	IncomingOffers.Add(O);
+	AddMessage(FString::Printf(TEXT("Angebot fuer %s"), *P->Name), FString::Printf(TEXT("%s bietet %lld fuer %s."), *Club, (long long)O.Price, *P->Name));
+	return true;
+}
+
+bool FFM13World::CreateRumor(FFM13Rumor& Out)
+{
+	const FM13Transfers::EQuelle Quelle = FM13Transfers::QuelleWuerfeln(RngTransfer.FRand());
+	const bool bWahr = RngTransfer.FRand() < FM13Transfers::QuelleTrefferquote(Quelle);
+	const int32 Schwelle = InterestThreshold();
+	auto Offen = [this](int32 Id) { return Rumors.ContainsByPredicate([Id](const FFM13Rumor& R) { return R.Outcome.IsEmpty() && R.PlayerId == Id; }); };
+	TArray<int32> Kandidaten;   // Kaderindizes
+	for (int32 i = 0; i < Squad.Num(); ++i)
+	{
+		const FFM13Player& P = Squad[i];
+		if (P.Strength < Schwelle || Offen(P.Id)) continue;
+		if (IncomingOffers.ContainsByPredicate([&P](const FFM13IncomingOffer& O) { return O.PlayerId == P.Id && !O.bYouth; })) continue;
+		Kandidaten.Add(i);
+	}
+	TArray<int32> Markt;        // Marktindizes
+	for (int32 i = 0; i < Market.Num(); ++i) if (!Offen(Market[i].Player.Id)) Markt.Add(i);
+	const FString Verein = RandomOpposingClub(true);
+	FFM13Rumor R;
+	R.Id = FString::Printf(TEXT("rum_%d"), ++RumorNr);
+	R.Source = Quelle;
+	R.bTruth = bWahr;
+	R.Club = Verein;
+	R.Created = Matchday;
+	R.Season = Season;
+	if (Kandidaten.Num() && (RngTransfer.FRand() < 0.6f || Markt.Num() == 0))
+	{
+		const FFM13Player& P = Squad[Kandidaten[RngTransfer.RandRange(0, Kandidaten.Num() - 1)]];
+		R.Type = TEXT("abwerbung");
+		R.PlayerId = P.Id;
+		R.PlayerName = P.Name;
+		R.ResolveAt = Matchday + 1 + RngTransfer.RandRange(0, 2);
+		Out = R;
+		return true;
+	}
+	if (Markt.Num() == 0) return false;
+	const FFM13MarketOffer& M = Market[Markt[RngTransfer.RandRange(0, Markt.Num() - 1)]];
+	R.Type = TEXT("markt");
+	R.PlayerId = M.Player.Id;
+	R.PlayerName = M.Player.Name;
+	R.ResolveAt = Matchday + 2;
+	Out = R;
+	return true;
+}
+
+// Jeden Spieltag: faellige Geruechte aufloesen, neue streuen (hoechstens drei offene, bis Spieltag 33).
+void FFM13World::TickRumors()
+{
+	for (FFM13Rumor& R : Rumors)
+		if (R.Outcome.IsEmpty() && (R.Season != Season || Matchday >= R.ResolveAt)) ResolveRumor(R);
+	int32 Offen = 0;
+	for (const FFM13Rumor& R : Rumors) if (R.Outcome.IsEmpty()) Offen++;
+	if (Offen < 3 && Matchday < 34 && RngTransfer.FRand() < 0.3f)
+	{
+		FFM13Rumor Neu;
+		if (CreateRumor(Neu))
+		{
+			Rumors.Insert(Neu, 0);
+			AddMessage(FString::Printf(TEXT("Geruecht: %s"), *Neu.PlayerName),
+				Neu.Type == TEXT("abwerbung") ? FString::Printf(TEXT("%s soll an %s interessiert sein."), *Neu.Club, *Neu.PlayerName)
+				: FString::Printf(TEXT("%s soll kurz vor einem Wechsel zu %s stehen."), *Neu.PlayerName, *Neu.Club));
+		}
+	}
+	// Nur die jeweils acht neuesten abgeschlossenen Geruechte bleiben
+	int32 Abgeschlossen = 0;
+	for (int32 i = 0; i < Rumors.Num(); ++i)
+	{
+		if (Rumors[i].Outcome.IsEmpty()) continue;
+		if (++Abgeschlossen > 8) { Rumors.RemoveAt(i); --i; }
+	}
+}
+
+void FFM13World::ResolveRumor(FFM13Rumor& R)
+{
+	const int32 Q = (int32)R.Source;
+	if (!R.bTruth)
+	{
+		R.Outcome = TEXT("ente");
+		RumorMisses[Q]++;
+		return;
+	}
+	RumorHits[Q]++;
+	if (R.Type == TEXT("markt"))
+	{
+		const int32 Idx = Market.IndexOfByPredicate([&R](const FFM13MarketOffer& M) { return M.Player.Id == R.PlayerId; });
+		if (Idx < 0) { R.Outcome = TEXT("erledigt"); return; }
+		Market.RemoveAt(Idx);
+		if (Poker.bActive && Poker.PlayerId == R.PlayerId) ClosePoker();
+		AddMessage(FString::Printf(TEXT("Geruecht bestaetigt: %s ist weg"), *R.PlayerName), FString::Printf(TEXT("%s wechselt zu %s."), *R.PlayerName, *R.Club));
+		R.Outcome = TEXT("wahr");
+		return;
+	}
+	const FFM13Player* P = FindPlayer(R.PlayerId);
+	if (!P) { R.Outcome = TEXT("erledigt"); return; }
+	if (R.Reaction == TEXT("dementieren") && R.bBackedOff)
+	{
+		R.Outcome = TEXT("zurueckgezogen");
+		AddMessage(FString::Printf(TEXT("%s zieht zurueck"), *R.Club), FString::Printf(TEXT("Nach deinem Dementi verzichtet %s auf ein Angebot fuer %s."), *R.Club, *P->Name));
+		return;
+	}
+	const double Mult = FM13Transfers::GeruechtMultiplikator(false, RngTransfer.FRand(), R.Reaction == TEXT("anheizen"));
+	TriggerAIOffer(R.PlayerId, R.Club, Mult);
+	R.Outcome = TEXT("wahr");
+}
+
+bool FFM13World::ReactToRumor(const FString& Id, const FString& Art, FString& OutReason)
+{
+	const int32 Idx = Rumors.IndexOfByPredicate([&Id](const FFM13Rumor& R) { return R.Id == Id; });
+	if (Idx < 0 || !Rumors[Idx].Outcome.IsEmpty() || Rumors[Idx].Type != TEXT("abwerbung")) { OutReason = TEXT("Zu diesem Geruecht gibt es nichts mehr zu sagen."); return false; }
+	FFM13Rumor& R = Rumors[Idx];
+	if (!R.Reaction.IsEmpty()) { OutReason = TEXT("Du hast dich dazu schon geaeussert."); return false; }
+	FFM13Player* P = FindPlayer(R.PlayerId);
+	if (!P) { OutReason = TEXT("Der Spieler ist nicht mehr im Kader."); return false; }
+	R.Reaction = Art;
+	if (Art == TEXT("dementieren"))
+	{
+		P->Morale = FM13Transfers::DementiMoral(P->Character, P->Morale);
+		R.bBackedOff = R.bTruth && RngTransfer.FRand() < 0.5f;
+		AddMessage(TEXT("Dementi"), FString::Printf(TEXT("%s ist unverkaeuflich. %s"), *P->Name,
+			FM13Transfers::GeruechtWechselwillig(P->Character) ? TEXT("Er haette gern mit dem Verein gesprochen (Moral -5).") : TEXT("Er fuehlt sich wertgeschaetzt (Moral +3).")));
+	}
+	else if (Art == TEXT("anheizen"))
+	{
+		P->Morale = FM13Transfers::AnheizenMoral(P->Morale);
+		AddMessage(TEXT("Angeheizt"), FString::Printf(TEXT("Ein Angebot fiele hoeher aus - %s fuehlt sich weggeschoben (Moral -3)."), *P->Name));
+	}
+	return true;
 }

@@ -1496,6 +1496,54 @@ static void TestMedizincheck()
 	Aus.BoardSat = 50;
 	Aus.ResolveTransferStrategy(18);
 	PRUEFE(Aus.BoardSat == 50 && Aus.Strategy.Result == 0, "Ausgewogen: keine Veraenderung");
+	// Gerueuchtekueche (js/rumors.js): Aufloesung, Reaktion, Obergrenze, Spielstand
+	FFM13World GW;
+	GW.NewGame(TEXT("Geruechte"), 153, 0);
+	GW.Matchday = 4;
+	// Ente: keine Wirkung auf den Kader, Trefferquote zaehlt Fehlschlag
+	FFM13World::FFM13Rumor Ente;
+	Ente.Id = TEXT("rum_t1"); Ente.Source = FM13Transfers::EQuelle::Blog; Ente.bTruth = false;
+	Ente.Type = TEXT("abwerbung"); Ente.Club = TEXT("Testklub"); Ente.PlayerId = GW.Squad[0].Id; Ente.PlayerName = GW.Squad[0].Name; Ente.Season = GW.Season; Ente.ResolveAt = 5;
+	GW.Rumors.Insert(Ente, 0);
+	GW.Matchday = 5;
+	GW.TickRumors();
+	const int32 EnteIdx = GW.Rumors.IndexOfByPredicate([](const FFM13World::FFM13Rumor& X) { return X.Id == TEXT("rum_t1"); });
+	PRUEFE(EnteIdx >= 0 && GW.Rumors[EnteIdx].Outcome == TEXT("ente") && GW.RumorMisses[1] >= 1, "Ente: Fehlschlag gezaehlt");
+	// Wahres Abwerbe-Geruecht: ein Angebot des Vereins kommt, Dementi wirkt auf die Moral
+	GW.Squad[1].Character = 2;   // Ehrgeizig
+	GW.Squad[1].Morale = 60;
+	FFM13World::FFM13Rumor Wahr;
+	Wahr.Id = TEXT("rum_t2"); Wahr.Source = FM13Transfers::EQuelle::Fach; Wahr.bTruth = true;
+	Wahr.Type = TEXT("abwerbung"); Wahr.Club = TEXT("Testklub"); Wahr.PlayerId = GW.Squad[1].Id; Wahr.PlayerName = GW.Squad[1].Name; Wahr.Season = GW.Season; Wahr.ResolveAt = 5;
+	GW.Rumors.Insert(Wahr, 0);
+	FString GwGrund;
+	PRUEFE(GW.ReactToRumor(TEXT("rum_t2"), TEXT("dementieren"), GwGrund) && GW.Squad[1].Morale == 55, "Dementi: Ehrgeizige verlieren 5 Moral");
+	PRUEFE(!GW.ReactToRumor(TEXT("rum_t2"), TEXT("anheizen"), GwGrund) && GwGrund.Contains(TEXT("schon")), "Zweite Reaktion abgelehnt");
+	GW.TickRumors();
+	const int32 WahrIdx = GW.Rumors.IndexOfByPredicate([](const FFM13World::FFM13Rumor& X) { return X.Id == TEXT("rum_t2"); });
+	PRUEFE(WahrIdx >= 0 && (GW.Rumors[WahrIdx].Outcome == TEXT("wahr") || GW.Rumors[WahrIdx].Outcome == TEXT("zurueckgezogen")), "Wahres Geruecht wird aufgeloest");
+	PRUEFE(GW.RumorHits[2] >= 1, "Trefferquote Fach zaehlt Treffer");
+	if (WahrIdx >= 0 && GW.Rumors[WahrIdx].Outcome == TEXT("wahr"))
+	{
+		bool bAngebot = false;
+		for (const FFM13IncomingOffer& O : GW.IncomingOffers) if (O.PlayerId == GW.Squad[1].Id && O.Club == TEXT("Testklub")) bAngebot = true;
+		PRUEFE(bAngebot, "Wahres Geruecht: ein Angebot des Vereins liegt vor");
+	}
+	// Obergrenze: ein Klub aus der 5. Stufe bietet hoechstens 400.000
+	FFM13World Ober;
+	Ober.NewGame(TEXT("Obergrenze"), 154, 0);
+	Ober.Matchday = 4;
+	const int32 OberId = Ober.Squad[0].Id;
+	Ober.Squad[0].MarketValue = 90000000;
+	FString Verein5;
+	for (const FFM13Club& C : Ober.Leagues[5].Clubs) if (!C.bOwn) { Verein5 = C.Name; break; }
+	PRUEFE(Ober.TriggerAIOffer(OberId, Verein5, 1.0) && Ober.IncomingOffers.Last().Price <= 400000, "KI-Angebot der 5. Stufe ist auf 400.000 begrenzt");
+	// Spielstand: Geruechte, Trefferquoten und Angebote bleiben erhalten
+	FFM13World GSp = GW;
+	FFM13World GLd;
+	FString GwFehler;
+	const bool bGOk = FM13Save::Decode(FM13Save::Encode(GSp), GLd, GwFehler);
+	PRUEFE(bGOk && GLd.Rumors.Num() == GSp.Rumors.Num() && GLd.RumorHits[2] == GSp.RumorHits[2] && GLd.Rumors[0].Reaction == TEXT("dementieren"), "Geruechte bleiben im Spielstand (%s)", *GwFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

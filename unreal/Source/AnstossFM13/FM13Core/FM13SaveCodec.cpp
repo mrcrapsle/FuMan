@@ -187,6 +187,33 @@ namespace FM13Save
 		W.Field(TEXT("strategyGoal"), S.Strategy.Goal);
 		W.Field(TEXT("strategyDelta"), S.Strategy.BudgetDelta);
 		W.Field(TEXT("strategyResult"), S.Strategy.Result);
+		W.Field(TEXT("rumorNr"), S.RumorNr);
+		W.Field(TEXT("rumorHit0"), S.RumorHits[0]);
+		W.Field(TEXT("rumorHit1"), S.RumorHits[1]);
+		W.Field(TEXT("rumorHit2"), S.RumorHits[2]);
+		W.Field(TEXT("rumorMiss0"), S.RumorMisses[0]);
+		W.Field(TEXT("rumorMiss1"), S.RumorMisses[1]);
+		W.Field(TEXT("rumorMiss2"), S.RumorMisses[2]);
+		W.ArrayKey(TEXT("rumors"));
+		for (const FFM13World::FFM13Rumor& G : S.Rumors)
+		{
+			W.ElementObject();
+			W.Field(TEXT("id"), G.Id);
+			W.Field(TEXT("source"), (int64)G.Source);
+			W.FieldBool(TEXT("truth"), G.bTruth);
+			W.Field(TEXT("club"), G.Club);
+			W.Field(TEXT("type"), G.Type);
+			W.Field(TEXT("playerId"), G.PlayerId);
+			W.Field(TEXT("playerName"), G.PlayerName);
+			W.Field(TEXT("created"), G.Created);
+			W.Field(TEXT("season"), G.Season);
+			W.Field(TEXT("resolveAt"), G.ResolveAt);
+			W.Field(TEXT("reaction"), G.Reaction);
+			W.FieldBool(TEXT("backedOff"), G.bBackedOff);
+			W.Field(TEXT("outcome"), G.Outcome);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.Field(TEXT("pokerActive"), S.Poker.bActive ? 1 : 0);
 		W.Field(TEXT("pokerPlayer"), S.Poker.PlayerId);
 		W.Field(TEXT("pokerOffer"), S.Poker.Offer);
@@ -801,6 +828,31 @@ namespace FM13Save
 		W.Strategy.Goal = (int32)R.Int(Root, TEXT("strategyGoal"), 0);
 		W.Strategy.BudgetDelta = R.Int(Root, TEXT("strategyDelta"), 0);
 		W.Strategy.Result = (int32)R.Int(Root, TEXT("strategyResult"), 0);
+		W.RumorNr = (int32)R.Int(Root, TEXT("rumorNr"), 0);
+		W.RumorHits[0] = (int32)R.Int(Root, TEXT("rumorHit0"), 0);
+		W.RumorHits[1] = (int32)R.Int(Root, TEXT("rumorHit1"), 0);
+		W.RumorHits[2] = (int32)R.Int(Root, TEXT("rumorHit2"), 0);
+		W.RumorMisses[0] = (int32)R.Int(Root, TEXT("rumorMiss0"), 0);
+		W.RumorMisses[1] = (int32)R.Int(Root, TEXT("rumorMiss1"), 0);
+		W.RumorMisses[2] = (int32)R.Int(Root, TEXT("rumorMiss2"), 0);
+		for (int32 N : R.Items(Root, TEXT("rumors")))
+		{
+			FFM13World::FFM13Rumor G;
+			G.Id = R.Str(N, TEXT("id"), TEXT(""));
+			G.Source = (FM13Transfers::EQuelle)R.Int(N, TEXT("source"), 0);
+			G.bTruth = R.Bool(N, TEXT("truth"), false);
+			G.Club = R.Str(N, TEXT("club"), TEXT(""));
+			G.Type = R.Str(N, TEXT("type"), TEXT(""));
+			G.PlayerId = (int32)R.Int(N, TEXT("playerId"), 0);
+			G.PlayerName = R.Str(N, TEXT("playerName"), TEXT(""));
+			G.Created = (int32)R.Int(N, TEXT("created"), 0);
+			G.Season = (int32)R.Int(N, TEXT("season"), 0);
+			G.ResolveAt = (int32)R.Int(N, TEXT("resolveAt"), 0);
+			G.Reaction = R.Str(N, TEXT("reaction"), TEXT(""));
+			G.bBackedOff = R.Bool(N, TEXT("backedOff"), false);
+			G.Outcome = R.Str(N, TEXT("outcome"), TEXT(""));
+			W.Rumors.Add(G);
+		}
 		for (int32 N : R.Items(Root, TEXT("buybackOptions")))
 		{
 			FFM13BuybackOption O;
