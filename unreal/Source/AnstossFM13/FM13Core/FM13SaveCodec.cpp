@@ -372,6 +372,11 @@ namespace FM13Save
 			W.Field(TEXT("sellerMinimum"), O.SellerMinimum);
 			W.Field(TEXT("askingPrice"), O.AskingPrice);
 			W.FieldBool(TEXT("pokerBroken"), O.bPokerBroken);
+			W.Field(TEXT("medIssue"), (int64)O.Medical.Issue);
+			W.Field(TEXT("medInjuries"), O.Medical.Injuries);
+			W.Field(TEXT("medWeeks"), O.Medical.Weeks);
+			W.FieldBool(TEXT("medChecked"), O.Medical.bChecked);
+			W.FieldBool(TEXT("medRolled"), O.bMedicalRolled);
 			W.Key(TEXT("player")); W.bFirst = true; // WritePlayer setzt selbst das Komma
 			{
 				FWriter Inner;
@@ -761,6 +766,11 @@ namespace FM13Save
 			O.SellerMinimum = R.Int(N, TEXT("sellerMinimum"), 0);
 			O.AskingPrice = R.Int(N, TEXT("askingPrice"), 0);
 			O.bPokerBroken = R.Bool(N, TEXT("pokerBroken"), false);
+			O.Medical.Issue = (EFM13Medical)R.Int(N, TEXT("medIssue"), 0);
+			O.Medical.Injuries = (int32)R.Int(N, TEXT("medInjuries"), 0);
+			O.Medical.Weeks = (int32)R.Int(N, TEXT("medWeeks"), 0);
+			O.Medical.bChecked = R.Bool(N, TEXT("medChecked"), false);
+			O.bMedicalRolled = R.Bool(N, TEXT("medRolled"), false);
 			O.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
 			W.Market.Add(O);
 		}

@@ -249,6 +249,11 @@ public:
 	bool AcceptPokerAsking(FString& OutReason);
 	bool HagglePokerWage(FString& OutReason);
 	bool SignPokerDeal(FString& OutReason);
+	// Medizincheck (js/medical-check.js): nach der Abloese-Einigung, kostet 3 % der Abloese
+	bool RunMedicalCheck(FString& OutReason);
+	FFM13MedBefund& EnsureMedical(FFM13MarketOffer& O);  // wuerfelt den Befund beim ersten Bedarf
+	double PhysioAusfall() const;                        // getPhysioEffekt().ausfall, 1 ohne Physio
+	void ApplyMedicalOnArrival(FFM13Player& P, const FFM13MedBefund& B);
 	int32 MarketIndexOf(int32 PlayerId) const;
 	bool TickPokerRival(int32 MarktIndex);            // true, wenn der Spieler zum Rivalen gegangen ist
 	bool BuyPlayer(int32 MarketIndex, FString& OutReason);

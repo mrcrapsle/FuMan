@@ -1,4 +1,5 @@
 #include "FM13World.h"
+#include "FM13Transfers.h"
 #include "FM13Economy.h"
 #include "FM13Match.h"
 #include "FM13Names.h"
@@ -3137,12 +3138,93 @@ bool FFM13World::SignPokerDeal(FString& OutReason)
 	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
 	if (Money < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Poker.AgreedFee); return false; }
 	if (!FitsWageBudget(Poker.WageDemand)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	const FFM13MedBefund Befund = EnsureMedical(Market[Idx]);
 	FFM13Player P = Market[Idx].Player;
 	P.Wage = (int32)Poker.WageDemand;
 	Book(FString(TEXT("Spielerkauf: ")) + P.Name, -Poker.AgreedFee);
 	Squad.Add(P);
+	ApplyMedicalOnArrival(Squad.Last(), Befund);
 	Market.RemoveAt(Idx);
 	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt fuer %lld (Gehalt %lld pro Spieltag)."), *P.Name, (long long)Poker.AgreedFee, (long long)Poker.WageDemand));
 	ClosePoker();
 	return true;
+}
+
+// ---------- Medizincheck (js/medical-check.js) ----------
+
+namespace
+{
+	FString BefundText(const FFM13MedBefund& B)
+	{
+		switch (B.Issue)
+		{
+			case EFM13Medical::Chronisch: return FString::Printf(TEXT("chronische Probleme (%d fruehere Verletzungen, dauerhaft hoeheres Verletzungsrisiko)"), B.Injuries);
+			case EFM13Medical::Verletzt: return FString::Printf(TEXT("aktuell verletzt (faellt %d Spiele aus)"), B.Weeks);
+			default: return TEXT("unauffaellig");
+		}
+	}
+}
+
+double FFM13World::PhysioAusfall() const
+{
+	if (!Physio.bHired) return 1.0;
+	return Physio.Task == TEXT("belastung") ? 0.3 : 0.5;   // getPhysioEffekt() in js/campus-staff.js
+}
+
+FFM13MedBefund& FFM13World::EnsureMedical(FFM13MarketOffer& O)
+{
+	if (!O.bMedicalRolled)
+	{
+		// Drei Wuerfe in fester Reihenfolge, damit der Ablauf je Seed gleich bleibt
+		const double Zufall = RngTransfer.FRand();
+		const double ZufallAnzahl = RngTransfer.FRand();
+		const double ZufallWochen = RngTransfer.FRand();
+		O.Medical = FM13Transfers::WuerfleBefund(O.Player.Age, Zufall, ZufallAnzahl, ZufallWochen);
+		O.bMedicalRolled = true;
+	}
+	return O.Medical;
+}
+
+bool FFM13World::RunMedicalCheck(FString& OutReason)
+{
+	const int32 Idx = MarketIndexOf(Poker.PlayerId);
+	if (!Poker.bActive || Idx < 0 || Poker.AgreedFee <= 0) { OutReason = TEXT("Der Medizincheck kommt erst, wenn die Abloese vereinbart ist."); return false; }
+	FFM13MarketOffer& O = Market[Idx];
+	FFM13MedBefund& B = EnsureMedical(O);
+	if (B.bChecked) { OutReason = FString::Printf(TEXT("%s wurde schon untersucht: %s."), *O.Player.Name, *BefundText(B)); return false; }
+	const int64 Gebuehr = FM13Transfers::MedizinGebuehr(Poker.AgreedFee, PhysioAusfall());
+	if (Money < Gebuehr) { OutReason = FString::Printf(TEXT("Der Medizincheck kostet %lld - so viel ist nicht auf dem Konto."), (long long)Gebuehr); return false; }
+	Book(TEXT("Medizincheck"), -Gebuehr);
+	B.bChecked = true;
+	if (!FM13Transfers::MedizinAuffaellig(B.Issue))
+	{
+		Poker.Log.Add(FString::Printf(TEXT("Medizincheck (%lld): %s ist kerngesund."), (long long)Gebuehr, *O.Player.Name));
+		return true;
+	}
+	// Der Verein senkt Ablöse, Forderung und Schmerzgrenze um denselben Faktor
+	const double Faktor = FM13Transfers::MedizinRabatt(B.Issue);
+	const int64 Alt = Poker.AgreedFee;
+	Poker.AgreedFee = FM13Transfers::JsRunden((double)Alt * Faktor / 1000.0) * 1000;
+	O.AskingPrice = FM13Transfers::JsRunden((double)O.AskingPrice * Faktor / 1000.0) * 1000;
+	O.SellerMinimum = FMath::Min<int64>(O.AskingPrice, FM13Transfers::JsRunden((double)O.SellerMinimum * Faktor / 1000.0) * 1000);
+	O.Price = O.AskingPrice;
+	Poker.Log.Add(FString::Printf(TEXT("Medizincheck (%lld): %s. %s senkt die Abloese von %lld auf %lld - oder du laesst es."),
+		(long long)Gebuehr, *BefundText(B), *O.SellerClub, (long long)Alt, (long long)Poker.AgreedFee));
+	return true;
+}
+
+void FFM13World::ApplyMedicalOnArrival(FFM13Player& P, const FFM13MedBefund& B)
+{
+	// Der Befund wird Wirklichkeit: chronisch erhoeht das Verletzungsrisiko, verletzt fehlt zuerst
+	if (B.Issue == EFM13Medical::Chronisch)
+	{
+		P.bChronic = true;
+		P.TimesInjured = FMath::Max(P.TimesInjured, B.Injuries);
+	}
+	else if (B.Issue == EFM13Medical::Verletzt)
+	{
+		P.InjuredMatchdays = FMath::Max(P.InjuredMatchdays, B.Weeks);
+	}
+	if (FM13Transfers::MedizinAuffaellig(B.Issue) && !B.bChecked)
+		AddMessage(FString::Printf(TEXT("Boese Ueberraschung: %s"), *P.Name), FString::Printf(TEXT("Ohne Medizincheck verpflichtet - jetzt stellt die Vereinsaerztin fest: %s."), *BefundText(B)));
 }

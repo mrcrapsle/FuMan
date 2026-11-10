@@ -233,6 +233,16 @@ struct FFM13Message
 	int32 Matchday = 1;
 };
 
+// Medizincheck (js/medical-check.js): verdeckter Befund je Marktspieler, einmal gewuerfelt
+enum class EFM13Medical : uint8 { Ok, Chronisch, Verletzt };
+struct FFM13MedBefund
+{
+	EFM13Medical Issue = EFM13Medical::Ok;
+	int32 Injuries = 0;   // chronisch: 3 bis 5 fruehere Verletzungen
+	int32 Weeks = 0;      // verletzt: 2 bis 5 Spiele Ausfall
+	bool bChecked = false;
+};
+
 struct FFM13MarketOffer
 {
 	FFM13Player Player;
@@ -241,6 +251,8 @@ struct FFM13MarketOffer
 	int64 SellerMinimum = 0;     // verdeckte Schmerzgrenze
 	int64 AskingPrice = 0;       // Forderung, sinkt nicht unter die Schmerzgrenze
 	bool bPokerBroken = false;   // Verein verhandelt nicht mehr, nur noch Sofortkauf
+	FFM13MedBefund Medical;      // erst gewuerfelt, wenn der Befund gebraucht wird
+	bool bMedicalRolled = false;
 };
 
 struct FFM13SeasonRecord

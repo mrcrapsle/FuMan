@@ -10,6 +10,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Locker.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Youth.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Poker.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Transfers.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
 #include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
@@ -22,6 +23,7 @@
 #include "Referenzwerte.h"
 #include <set>
 #include <map>
+#include <cmath>
 
 static int GBestanden = 0, GFehler = 0;
 #define PRUEFE(Bed, ...) do { if (Bed) { ++GBestanden; } else { ++GFehler; std::printf("  FEHLER %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
@@ -1261,6 +1263,96 @@ static void TestJugendLaufbahn()
 	std::printf("\n");
 }
 
+// Transfer-Regeln (js/medical-check.js, js/buyback.js, js/transfer-strategy.js, js/rumors.js, js/pre-contracts.js).
+// Werte von Hand nach den JS-Formeln gerechnet.
+static void TestTransferRegeln()
+{
+	std::printf("Transfer-Regeln: Medizin, Rueckkauf, Strategie, Geruechte, Vorvertraege\n");
+	using namespace FM13Transfers;
+	PRUEFE(JsRunden(2.5) == 3 && JsRunden(2.49) == 2, "JsRunden: Halbe nach oben");
+	PRUEFE(MedizinGebuehr(1000000, 1.0) == 30000 && MedizinGebuehr(10000, 1.0) == 1500 && MedizinGebuehr(1000000, 0.5) == 15000, "Medizin-Gebuehr: 3  Prozent, auf 100 gerundet, mind. 1.500");
+	PRUEFE(MedizinRabatt(EFM13Medical::Chronisch) == 0.8 && MedizinRabatt(EFM13Medical::Verletzt) == 0.85 && MedizinRabatt(EFM13Medical::Ok) == 1.0, "Medizin-Rabatt 0,8  oder  0,85");
+	PRUEFE(WuerfleBefund(25, 0.2, 0, 0).Issue == EFM13Medical::Verletzt && WuerfleBefund(25, 0.2, 0, 0).Weeks == 2, "Befund: 0,2 bei Alter 25 ist verletzt (Quote 0,12 + 0,1)");
+	PRUEFE(WuerfleBefund(30, 0.1, 0, 0).Issue == EFM13Medical::Chronisch && WuerfleBefund(30, 0.1, 0, 0).Injuries == 3, "Befund: 30 Jahre, Quote 0,22, chronisch mit 3 Verletzungen");
+	PRUEFE(WuerfleBefund(20, 0.5, 0, 0).Issue == EFM13Medical::Ok, "Befund: 0,5 ist unauffaellig");
+	PRUEFE(RueckkaufSofort(100000) == 90000 && RueckkaufPreis(100000) == 140000 && RueckkaufPreis(123456) == 173000, "Rueckkauf: 90  Prozent sofort, 140  Prozent Preis auf 1.000");
+	PRUEFE(RueckkaufMoeglich(25) && !RueckkaufMoeglich(26), "Rueckkauf nur bis 25 Jahre");
+	PRUEFE(RueckkaufEntwicklung(20, 0.5) == 4 && RueckkaufEntwicklung(23, 0.9) == 4 && RueckkaufEntwicklung(25, 0.5) == 0 && RueckkaufEntwicklung(30, 0.5) == -2, "Rueckkauf-Entwicklung je Altersstufe");
+	PRUEFE(StrategieBudgetDelta(10000000, EStrategie::Jugend) == -3000000 && StrategieBudgetDelta(10000000, EStrategie::Sofort) == 4000000 && StrategieBudgetDelta(10000000, EStrategie::Sparen) == -5000000, "Strategie: Budget -30  Prozent  oder  +40  Prozent  oder  -50  Prozent");
+	PRUEFE(StrategieZiel(9, 1, 18) == 10 && StrategieZiel(2, -2, 18) == 1 && StrategieZiel(17, 2, 18) == 18, "Strategie: Ziel begrenzt auf 1 bis Teamzahl");
+	const FStrategieAbrechnung J = StrategieAbrechnung(EStrategie::Jugend, 3, 0, 0, 0);
+	PRUEFE(J.bErfuellt && J.Vorstand == 6 && J.Fans == 3, "Jugend erfuellt: Vorstand +6, Fans +3");
+	PRUEFE(!StrategieAbrechnung(EStrategie::Sofort, 0, 5, 4, 0).bErfuellt && StrategieAbrechnung(EStrategie::Sofort, 0, 5, 4, 0).Vorstand == -8, "Sofort-Erfolg verfehlt: -8");
+	PRUEFE(!StrategieAbrechnung(EStrategie::Sparen, 0, 0, 0, -1).bErfuellt && StrategieAbrechnung(EStrategie::Sparen, 0, 0, 0, -1).Vorstand == -6, "Sparen mit Minus: -6");
+	PRUEFE(DementiMoral(2, 60) == 55 && DementiMoral(0, 60) == 63 && DementiMoral(2, 3) == 0, "Dementi: Ehrgeizige -5, andere +3, nie unter 0");
+	PRUEFE(AnheizenMoral(2) == 0 && AnheizenMoral(50) == 47, "Anheizen: Moral -3");
+	PRUEFE(std::fabs(GeruechtMultiplikator(true, 0.5, false) - 1.225) < 1e-9 && std::fabs(GeruechtMultiplikator(true, 0.5, true) - 1.40875) < 1e-9, "Geruecht-Angebot: 1,225 und angeheizt x 1,15");
+	PRUEFE(VorvertragGehalt(1000) == 1200 && VorvertragGehalt(1001) == 1200 && VorvertragHandgeld(1200, false) == 14400 && VorvertragHandgeld(1200, true) == 28800, "Vorvertrag: Gehalt x 1,2, Handgeld 12 bzw. 24 Gehaelter");
+	PRUEFE(std::fabs(VorvertragChance(60, 50, 2, false) - 0.95) < 1e-9 && std::fabs(VorvertragChance(50, 50, 5, false) - 0.6) < 1e-9 && std::fabs(VorvertragChance(50, 50, 5, true) - 0.85) < 1e-9, "Vorvertrag-Zusage: Elf, Rang und Handgeld");
+	std::printf("\n");
+}
+
+// Medizincheck (js/medical-check.js): Befund, Gebuehr, Preisnachlass und Auswirkung nach der Unterschrift
+static void TestMedizincheck()
+{
+	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
+	FFM13World W;
+	W.NewGame(TEXT("Medizin"), 141, 0);
+	W.Money = 50000000;
+	FString G;
+	const int32 Id = W.Market[0].Player.Id;
+	W.OpenPoker(Id, G);
+	W.Poker.Offer = W.Market[0].AskingPrice;
+	W.SubmitPokerOffer(G);
+	const int64 Alt = W.Poker.AgreedFee;
+	const int64 Vor = W.Money;
+	// Chronisch: Check kostet 3 % der Abloese, Preis sinkt um 20 %
+	W.Market[0].Medical.Issue = EFM13Medical::Chronisch;
+	W.Market[0].Medical.Injuries = 4;
+	W.Market[0].bMedicalRolled = true;
+	PRUEFE(W.RunMedicalCheck(G), "Check gelingt bei geeignetem Konto");
+	const int64 Gebuehr = FM13Transfers::MedizinGebuehr(Alt, 1.0);
+	PRUEFE(W.Money == Vor - Gebuehr, "Check kostet die Gebuehr (%lld)", (long long)Gebuehr);
+	PRUEFE(W.Poker.AgreedFee == FM13Transfers::JsRunden((double)Alt * 0.8 / 1000.0) * 1000, "Abloese sinkt um 20 %%");
+	PRUEFE(!W.RunMedicalCheck(G), "Zweiter Check wird abgelehnt");
+	PRUEFE(W.Market[0].Medical.bChecked, "Befund ist als untersucht markiert");
+	W.SignPokerDeal(G);
+	bool bChronisch = false;
+	for (const FFM13Player& P : W.Squad) if (P.Id == Id) bChronisch = P.bChronic && P.TimesInjured >= 4;
+	PRUEFE(bChronisch, "Chronischer Befund wirkt sich nach der Unterschrift aus");
+
+	// Ohne Check: verletzt kommt verletzt an und meldet sich im Postfach
+	FFM13World A;
+	A.NewGame(TEXT("Blind"), 142, 0);
+	A.Money = 50000000;
+	const int32 IdA = A.Market[0].Player.Id;
+	A.OpenPoker(IdA, G);
+	A.Poker.Offer = A.Market[0].AskingPrice;
+	A.SubmitPokerOffer(G);
+	A.Market[0].Medical.Issue = EFM13Medical::Verletzt;
+	A.Market[0].Medical.Weeks = 4;
+	A.Market[0].bMedicalRolled = true;
+	const int32 Nachrichten = A.Messages.Num();
+	PRUEFE(A.SignPokerDeal(G), "Blinder Sofortkauf gelingt");
+	bool bVerletzt = false;
+	for (const FFM13Player& P : A.Squad) if (P.Id == IdA) bVerletzt = P.InjuredMatchdays == 4;
+	PRUEFE(bVerletzt, "Verletzter Befund fehlt nach der Unterschrift");
+	PRUEFE(A.Messages.Num() == Nachrichten + 2 && A.Messages[A.Messages.Num() - 2].Title.Contains(TEXT("Boese Ueberraschung")), "Ohne Check gibt es eine Meldung");
+
+	// Konto zu klein fuer den Check: nichts wird abgebucht
+	FFM13World K;
+	K.NewGame(TEXT("Knapp"), 143, 0);
+	K.Money = 50000000;
+	const int32 IdK = K.Market[0].Player.Id;
+	K.OpenPoker(IdK, G);
+	K.Poker.Offer = K.Market[0].AskingPrice;
+	K.SubmitPokerOffer(G);
+	K.Money = 100;
+	K.Market[0].bMedicalRolled = true;
+	PRUEFE(!K.RunMedicalCheck(G) && K.Money == 100 && !K.Market[0].Medical.bChecked, "Zu wenig Geld: kein Check, nichts abgebucht");
+	std::printf("\n");
+}
+
 // Transferpoker (js/transfer-poker.js): Forderung, Schmerzgrenze, Gehalt. Werte von Hand nach den JS-Formeln gerechnet.
 static void TestTransferpoker()
 {
@@ -1573,6 +1665,8 @@ int main()
 	TestJugend();
 	TestJugendLaufbahn();
 	TestTransferpoker();
+	TestTransferRegeln();
+	TestMedizincheck();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();
