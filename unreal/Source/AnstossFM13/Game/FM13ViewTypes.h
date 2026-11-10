@@ -244,6 +244,23 @@ struct FFM13TrainingView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 BenchRecovery = 0;      // Erholung der Bank
 };
 
+// Jugend-Laufbahn: offene Entscheidungen, Leihen, Verlauf und Rangliste
+USTRUCT(BlueprintType)
+struct FFM13YouthPathwayView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int32> DecisionIndex;     // Index in GetYouth()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DecisionText;    // Name, Alter, Staerke, Frist
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> DecisionWage;    // Gehalt bei Profivertrag
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int32> DecisionPlayerId;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> LoanOffers;      // Verein, Stufe, Staerke je Angebot
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int32> LoanOfferPlayerId;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> LoanOfferClub;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Loans;          // laufende Leihen mit Bilanz
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Moments;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Ranking;        // Rangliste nach Talentwert
+};
+
 // Mannschaftsrat: Mitglieder, offenes Anliegen mit Antworten, letzte Entscheidungen
 USTRUCT(BlueprintType)
 struct FFM13CouncilView

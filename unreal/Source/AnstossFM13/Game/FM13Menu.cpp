@@ -407,6 +407,39 @@ TSharedRef<SWidget> SFM13Menu::BuildYouth()
 		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[Zeile({ P.Position, P.Name, FString::FromInt(P.Strength), FString::FromInt(P.Potential), FString::FromInt(P.Age) }, B, CText, false, Knoepfe)];
 	}
 	if (!Jugend.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Noch keine Talente. Am Saisonende kommt der neue Jahrgang."), CGedimmt)];
+
+	// Laufbahn: offene Profi-Entscheidungen mit Vertrag, Leihe oder Abschied
+	const FFM13YouthPathwayView Lauf = G->GetYouthPathway();
+	if (Lauf.DecisionText.Num())
+	{
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Profi-Entscheidung"))];
+		for (int32 k = 0; k < Lauf.DecisionText.Num(); ++k)
+		{
+			TSharedRef<SHorizontalBox> Knoepfe = SNew(SHorizontalBox)
+				+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Profivertrag (%s)"), *Lauf.DecisionWage[k]), FOnClicked::CreateSP(this, &SFM13Menu::OnPromote, Lauf.DecisionIndex[k]), FLinearColor(0.08f, 0.35f, 0.20f, 1.f), 11)]
+				+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(TEXT("Ziehen lassen"), FOnClicked::CreateSP(this, &SFM13Menu::OnRelease, Lauf.DecisionIndex[k]), FLinearColor(0.35f, 0.10f, 0.10f, 1.f), 11)];
+			for (int32 o = 0; o < Lauf.LoanOffers.Num(); ++o)
+				if (Lauf.LoanOfferPlayerId[o] == Lauf.DecisionPlayerId[k])
+					Knoepfe->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(FString::Printf(TEXT("Leihe: %s"), *Lauf.LoanOfferClub[o]), FOnClicked::CreateSP(this, &SFM13Menu::OnYouthLoan, Lauf.LoanOfferPlayerId[o], o), CKnopf, 11)];
+			Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 2.f))[Txt(Lauf.DecisionText[k], CAkzent, 12)];
+			Box->AddSlot().AutoHeight()[Knoepfe];
+		}
+	}
+	if (Lauf.Loans.Num())
+	{
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Leihen"))];
+		for (const FString& Z : Lauf.Loans) Box->AddSlot().AutoHeight()[Txt(Z, CText, 12)];
+	}
+	if (Lauf.Ranking.Num())
+	{
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Rangliste der Talente"))];
+		for (const FString& Z : Lauf.Ranking) Box->AddSlot().AutoHeight()[Txt(Z, CText, 12)];
+	}
+	if (Lauf.Moments.Num())
+	{
+		Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Momente"))];
+		for (int32 k = 0; k < Lauf.Moments.Num() && k < 8; ++k) Box->AddSlot().AutoHeight()[Txt(Lauf.Moments[k], CGedimmt, 11)];
+	}
 	return Box;
 }
 
@@ -1115,6 +1148,19 @@ FReply SFM13Menu::OnStaffMeeting()
 FReply SFM13Menu::OnCouncilAnswer(int32 Option)
 {
 	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->AnswerCouncil(Option, Grund) ? TEXT("Der Rat ist informiert.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnYouthLoan(int32 PlayerId, int32 Offer)
+{
+	if (UFM13GameInstance* G = Game.Get())
+	{
+		const FFM13YouthPathwayView Lauf = G->GetYouthPathway();
+		FString Grund;
+		if (!Lauf.LoanOfferClub.IsValidIndex(Offer)) Status(TEXT("Dieses Angebot gibt es nicht mehr."));
+		else Status(G->LoanYouthTalent(PlayerId, Lauf.LoanOfferClub[Offer], Grund) ? TEXT("Verliehen.") : Grund);
+	}
 	Refresh();
 	return FReply::Handled();
 }

@@ -2,6 +2,8 @@
 #include "FM13Core/FM13Strength.h"
 #include "FM13Core/FM13Fitness.h"
 #include "FM13Core/FM13Staff.h"
+#include "FM13Core/FM13Youth.h"
+#include "FM13Core/FM13Economy.h"
 #include "FM13Core/FM13SaveCodec.h"
 #include "FM13Core/FM13BrowserImport.h"
 #include "FM13Core/FM13Development.h"
@@ -554,6 +556,47 @@ bool UFM13GameInstance::StaffInterim(int32 Slot, FString& OutReason) { const boo
 bool UFM13GameInstance::StaffMeeting(FString& OutReason) { const bool b = Kern.StaffMeeting(OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::StaffSetWageCap(int64 Cap, FString& OutReason) { const bool b = Kern.StaffSetWageCap(Cap, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::StaffResolvePoach(bool bPay, FString& OutReason) { const bool b = Kern.StaffResolvePoach(bPay, OutReason); if (b) Changed(); return b; }
+
+bool UFM13GameInstance::LoanYouthTalent(int32 PlayerId, const FString& Club, FString& OutReason) { const bool b = Kern.LoanYouth(PlayerId, Club, OutReason); if (b) Changed(); return b; }
+
+// Jugend-Laufbahn: wer entscheiden muss, welche Leihen offen sind, der Verlauf und die Rangliste (calculateYouthTalentScore)
+FFM13YouthPathwayView UFM13GameInstance::GetYouthPathway() const
+{
+	FFM13YouthPathwayView V;
+	for (int32 i = 0; i < Kern.YouthTalents.Num(); ++i)
+	{
+		const FFM13Player& P = Kern.YouthTalents[i];
+		if (P.ProDecisionLeft > 0)
+		{
+			V.DecisionIndex.Add(i);
+			V.DecisionPlayerId.Add(P.Id);
+			V.DecisionText.Add(FString::Printf(TEXT("%s (%s, %d J.) Staerke %d, noch %d Spieltage"), *P.Name, *FM13PositionName(P.Pos), P.Age, P.Strength, P.ProDecisionLeft));
+			const double Faktor = P.PotentialTier == 1 ? 0.8 : (P.PotentialTier == 3 ? 1.3 : 1.0);
+			const int32 Basis = FM13Economy::Wage(FM13Economy::MarketValue(P.Strength, nullptr), P.Strength);
+			V.DecisionWage.Add(FString::Printf(TEXT("%s/Spieltag"), *FormatMoney((int64)FMath::RoundToInt((float)(Basis * Faktor / 10.0)) * 10)));
+		}
+		if (P.Age >= 17 && P.ProDecisionLeft > 0)
+			for (const FFM13World::FFM13YouthLoan& C : Kern.YouthLoanClubs(P))
+			{
+				V.LoanOfferPlayerId.Add(P.Id);
+				V.LoanOfferClub.Add(C.Club);
+				V.LoanOffers.Add(FString::Printf(TEXT("%s: %s, Staerke %d"), *P.Name, *C.Club, C.ClubStrength));
+			}
+	}
+	for (const FFM13World::FFM13YouthLoan& L : Kern.YouthLoans)
+		V.Loans.Add(FString::Printf(TEXT("%s bei %s, noch %d Spieltage, %d Einsaetze, %d Tore, Staerke %d"), *L.Player.Name, *L.Club, L.Duration, L.Apps, L.Goals, L.Player.Strength));
+	V.Moments = Kern.YouthMoments;
+	struct FRang { int32 Wert; FString Text; };
+	TArray<FRang> Liste;
+	for (const FFM13Player& P : Kern.YouthTalents)
+	{
+		const int32 Wert = FM13Youth::Talentwert(P.Strength, P.Potential, P.Age, P.Trait != 0, P.MentorId != 0);
+		Liste.Add(FRang{ Wert, FString::Printf(TEXT("%s, %d J., Talentwert %d"), *P.Name, P.Age, Wert) });
+	}
+	Liste.Sort([](const FRang& A, const FRang& B) { return A.Wert > B.Wert; });
+	for (const FRang& E : Liste) V.Ranking.Add(E.Text);
+	return V;
+}
 
 bool UFM13GameInstance::AnswerCouncil(int32 Option, FString& OutReason) { const bool b = Kern.AnswerConcern(Option, OutReason); if (b) Changed(); return b; }
 

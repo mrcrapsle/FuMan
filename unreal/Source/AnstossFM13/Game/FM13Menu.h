@@ -92,6 +92,7 @@ private:
 	FReply OnStaffMeeting();
 	FReply OnStaffPoach(bool bPay);
 	FReply OnCouncilAnswer(int32 Option);
+	FReply OnYouthLoan(int32 PlayerId, int32 Offer);
 
 	void Status(const FString& Text, float Seconds = 5.f);
 };
