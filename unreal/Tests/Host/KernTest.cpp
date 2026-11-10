@@ -7,6 +7,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Fitness.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Strength.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Staff.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Locker.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
 #include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
@@ -952,6 +953,103 @@ static void TestPersonal()
 	std::printf("\n");
 }
 
+// Kabine (js/locker-room.js, js/team-council.js): Cliquen, Stimmung, Kapitaen, Rat, Freundschaften
+static void TestKabine()
+{
+	std::printf("Kabine: Cliquen, Fuehrung, Kapitaen, Mannschaftsrat, Freundschaften\n");
+	PRUEFE(FM13Locker::NationFromRoll(0) == 0 && FM13Locker::NationFromRoll(4) == 0 && FM13Locker::NationFromRoll(5) == 1 && FM13Locker::NationFromRoll(9) == 5,
+		"Nationen: fuenf von zehn Deutsche, dann je ein Land");
+	PRUEFE(FM13Locker::Altersgruppe(23) == 0 && FM13Locker::Altersgruppe(24) == 1 && FM13Locker::Altersgruppe(30) == 2, "Altersgruppen jung bis 23, erfahren ab 30");
+	PRUEFE(std::fabs(FM13Locker::Fuehrung(true, 30, 150, 50) - (30 + 8 + 18 + 7.5)) < 1e-9, "Fuehrung: Leader 30, Alter 8, Einsaetze 18, Moral 7,5");
+	PRUEFE(FM13Locker::Status(false, false, 20, 0) == FM13Locker::EStatus::Talent && FM13Locker::Status(false, false, 28, 0) == FM13Locker::EStatus::Etabliert, "Rangordnung: Talent und Etabliert");
+
+	// Ein Kader aus fuenf Cliquen zu je drei Spielern: Viele Grueppchen kosten -1
+	FFM13World Gruppen;
+	Gruppen.NewGame(TEXT("Gruppen"), 91);
+	Gruppen.Squad.Reset();
+	for (int32 i = 0; i < 15; ++i)
+	{
+		FFM13Player P;
+		P.Id = 1000 + i; P.Name = TEXT("Spieler"); P.Strength = 60; P.Age = 24; P.Morale = 80; P.Nation = (uint8)(i / 3); P.Pos = EFM13Position::MIT;
+		Gruppen.Squad.Add(P);
+	}
+	PRUEFE(std::fabs(Gruppen.CliqueModifier() + 1.0) < 1e-9, "Fuenf Cliquen zu drei: -1 (%.2f)", Gruppen.CliqueModifier());
+
+	// Eine einende Clique: alle gleich, Stimmung gut: +1,5
+	FFM13World Eins;
+	Eins.NewGame(TEXT("Eins"), 92);
+	for (FFM13Player& P : Eins.Squad) { P.Nation = 0; P.Age = 24; P.Morale = 80; }
+	PRUEFE(std::fabs(Eins.CliqueModifier() - 1.5) < 1e-9, "Eine einende Clique: +1,5 (%.2f)", Eins.CliqueModifier());
+	// Dieselbe Clique rumort: kein Bonus, dafuer -0,5
+	for (FFM13Player& P : Eins.Squad) P.Morale = 30;
+	PRUEFE(std::fabs(Eins.CliqueModifier() + 0.5) < 1e-9, "Rumorende Clique: -0,5 (%.2f)", Eins.CliqueModifier());
+
+	// Mannschaftsrat: Kapitaen plus die zwei Fuehrungsspieler; Stabilisator je nach Schnitt
+	FFM13World Rat;
+	Rat.NewGame(TEXT("Rat"), 93);
+	Rat.Squad[0].Trait = FM13Strength::Leader;
+	Rat.CaptainId = Rat.Squad[1].Id;
+	Rat.ElectCouncil();
+	PRUEFE(Rat.CouncilIds.Num() == 3 && Rat.CouncilIds[0] == Rat.CaptainId && Rat.CouncilIds.Contains(Rat.Squad[0].Id), "Rat: Kapitaen und der Leader");
+	for (int32 Id : Rat.CouncilIds) if (FFM13Player* P = Rat.FindPlayer(Id)) P->Morale = 80;
+	PRUEFE(std::fabs(Rat.CouncilStabilizer() - 3.0) < 1e-9, "Rat mit Moral 80: +3");
+	for (int32 Id : Rat.CouncilIds) if (FFM13Player* P = Rat.FindPlayer(Id)) P->Morale = 30;
+	PRUEFE(std::fabs(Rat.CouncilStabilizer() + 2.0) < 1e-9, "Rat mit Moral 30: -2");
+
+	// Kapitaenswechsel: alter -12, neuer +8; ohne Stellung im Rat -4 fuer den Rat
+	FFM13World Wechsel;
+	Wechsel.NewGame(TEXT("Wechsel"), 94);
+	Wechsel.CaptainId = Wechsel.Squad[0].Id;
+	Wechsel.ElectCouncil();
+	const int32 Alt = Wechsel.Squad[0].Id, Neu = Wechsel.Squad[10].Id;
+	Wechsel.Squad[0].Morale = 60; Wechsel.Squad[10].Morale = 60; Wechsel.Squad[10].AppearancesTotal = 0; Wechsel.Squad[10].Age = 22;
+	FString Folge;
+	PRUEFE(Wechsel.ChangeCaptain(Neu, false, Folge) && Wechsel.CaptainId == Neu, "Kapitaenswechsel gelingt");
+	PRUEFE(Wechsel.FindPlayer(Alt)->Morale == 48 && Wechsel.FindPlayer(Neu)->Morale == 68, "Alter Kapitaen -12, neuer +8");
+	PRUEFE(Folge.Contains(TEXT("Standing")), "Ohne Standing: Hinweis in der Kabine");
+
+	// Freundschaften: nach langer Zeit im Kader sind die Paare gegenseitig und nie mit sich selbst
+	FFM13World Freunde;
+	Freunde.NewGame(TEXT("Freunde"), 95);
+	for (int32 k = 0; k < 300; ++k) Freunde.TickFriendships();
+	bool bSymmetrisch = true, bSelbst = false;
+	for (const FFM13Player& P : Freunde.Squad)
+	{
+		if (P.FriendId == P.Id) bSelbst = true;
+		if (P.FriendId != 0) { const FFM13Player* Q = Freunde.FindPlayer(P.FriendId); if (!Q || Q->FriendId != P.Id) bSymmetrisch = false; }
+	}
+	PRUEFE(bSymmetrisch && !bSelbst, "Kabinen-Freunde sind gegenseitig und nie mit sich selbst");
+
+	// Monatlicher Kabinentick: rumorende Clique zieht die anderen herunter, zufriedene hebt sich
+	FFM13World Monat;
+	Monat.NewGame(TEXT("Monat"), 96);
+	Monat.Squad.Reset();
+	for (int32 i = 0; i < 9; ++i)
+	{
+		FFM13Player P;
+		P.Id = 2000 + i; P.Name = TEXT("M"); P.Strength = 60; P.Age = 24; P.Pos = EFM13Position::MIT;
+		P.Nation = i < 3 ? 0 : (i < 6 ? 1 : 2); P.Morale = i < 3 ? 30 : 80;
+		Monat.Squad.Add(P);
+	}
+	Monat.TickLockerRoom();
+	// Die rumorende Clique zieht alle anderen um 1 herunter, die zufriedenen Cliquen heben sich um 1: unter dem Strich 80.
+	bool bNetto = true;
+	for (int32 i = 3; i < 9; ++i) if (Monat.Squad[i].Morale != 80) bNetto = false;
+	PRUEFE(bNetto && Monat.Squad[0].Morale == 30, "Monatlich: rumorende Clique -1 fuer die anderen, zufriedene +1 (%d)", Monat.Squad[3].Morale);
+
+	// Spielstand: Nation, Freund, Dienstzeit und Rat bleiben erhalten
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Kabinenspeicher"), 97);
+	Sp.Squad[0].Nation = 3; Sp.Squad[0].FriendId = Sp.Squad[1].Id; Sp.Squad[1].FriendId = Sp.Squad[0].Id; Sp.Squad[0].SquadTenure = 25;
+	Sp.CaptainId = Sp.Squad[2].Id; Sp.ElectCouncil();
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.Squad[0].Nation == 3 && Ld.Squad[0].FriendId == Sp.Squad[1].Id && Ld.Squad[0].SquadTenure == 25 && Ld.CouncilIds.Num() == Sp.CouncilIds.Num() && Ld.CouncilIds[0] == Sp.CouncilIds[0],
+		"Kabine bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
 // Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
 static void TestKonditionSaison()
 {
@@ -1033,7 +1131,11 @@ static void TestRundeB()
 	for (const FFM13Player& P : W.Squad) if ((P.Pos == EFM13Position::ST || P.Pos == EFM13Position::TW) && Falsch.Num() < 6) Falsch.Add(P.Id);
 	for (const FFM13Player& P : W.Squad) if (P.Pos == EFM13Position::ABW && Falsch.Num() < 11) Falsch.Add(P.Id);
 	const int32 StaerkeAuto = (W.ClearManualLineup(), W.OwnStrength());
-	PRUEFE(W.SetManualLineup(Falsch, Grund) && W.OwnStrength() < StaerkeAuto, "Falsche Positionen kosten Staerke (%d < %d)", W.OwnStrength(), StaerkeAuto);
+	// Wie im Browserspiel (calcTeamStrength) zaehlt die Staerke der gewaehlten Spieler, unabhaengig von der Position
+	double Summe = 0.0; int32 Anzahl = 0;
+	for (int32 Id : Falsch) { Summe += W.FindPlayer(Id)->Strength; ++Anzahl; }
+	PRUEFE(W.SetManualLineup(Falsch, Grund) && Anzahl == 11 && W.OwnStrength() == FMath::RoundToInt((float)(Summe / 11.0)), "Die Elf zaehlt mit der Staerke der Spieler, nicht mit der Position (%d)", W.OwnStrength());
+	(void)StaerkeAuto;
 	W.ClearManualLineup();
 	// Verletzte Stammkraft in der eigenen Elf wird ersetzt
 	TArray<int32> Elf = W.StartingEleven();
@@ -1196,6 +1298,7 @@ int main()
 	TestKondition();
 	TestTrainingReferenz();
 	TestPersonal();
+	TestKabine();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

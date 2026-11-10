@@ -1,5 +1,6 @@
 #include "FM13BrowserImport.h"
 #include "FM13Fitness.h"
+#include "FM13Locker.h"
 #include "FM13Staff.h"
 #include "FM13Economy.h"
 #include "FM13Json.h"
@@ -78,6 +79,15 @@ namespace
 		P.Trait = TraitFrom(R.Str(N, TEXT("trait"), TEXT("")));
 		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(N, TEXT("appearances"), 0));
 		P.TimesInjured = FMath::Max(0, (int32)R.Int(N, TEXT("timesInjured"), 0));
+		{
+			// nationPool aus dem Browserspiel: Name auf Index abbilden, unbekannt = Deutschland
+			const FString Land = R.Str(N, TEXT("nation"), TEXT("Deutschland"));
+			uint8 Index = 0;
+			for (uint8 k = 0; k < FM13Locker::AnzahlNationen(); ++k) if (Land == FString(FM13Locker::Nation(k))) Index = k;
+			if (Land == TEXT("Österreich")) Index = 1;
+			P.Nation = Index;
+		}
+		P.SquadTenure = FMath::Max(0, (int32)R.Int(N, TEXT("squadTenureMatchdays"), 0));
 		P.bChronic = R.Bool(N, TEXT("chronicIssue"), false);
 		P.Archetype = FM13Dev::ArchetypeFor(NewId);
 		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
@@ -333,6 +343,19 @@ namespace FM13BrowserImport
 			return 0;
 		};
 		W.CaptainId = NeueId(R.Str(G, TEXT("captainId"), TEXT("")));
+		// Kabinen-Freunde und Mannschaftsrat auf die neuen Nummern umsetzen
+		{
+			const TArray<int32> Kaderknoten = R.Items(Root, TEXT("squad"));
+			for (int32 k = 0; k < W.Squad.Num() && k < Kaderknoten.Num(); ++k)
+			{
+				const FString Freund = R.Str(Kaderknoten[k], TEXT("friendPlayerId"), TEXT(""));
+				W.Squad[k].FriendId = Freund.IsEmpty() ? 0 : NeueId(Freund);
+			}
+		}
+		{
+			const TArray<int32> Eintraege = R.Items(R.Find(Root, TEXT("teamCouncil")), TEXT("memberIds"));
+			for (int32 N : Eintraege) { const int32 Id = NeueId(Doc.Nodes[N].Text); if (Id) W.CouncilIds.Add(Id); }
+		}
 		const int32 Chemie = R.Find(G, TEXT("pairChemistry"));
 		if (R.IsObject(Chemie))
 		{

@@ -70,6 +70,9 @@ namespace
 		W.Field(TEXT("trait"), (int64)P.Trait);
 		W.Field(TEXT("appsTotal"), P.AppearancesTotal);
 		W.Field(TEXT("timesInjured"), P.TimesInjured);
+		W.Field(TEXT("nation"), (int64)P.Nation);
+		W.Field(TEXT("friendId"), P.FriendId);
+		W.Field(TEXT("tenure"), P.SquadTenure);
 		W.FieldBool(TEXT("chronic"), P.bChronic);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
@@ -160,6 +163,7 @@ namespace FM13Save
 		W.Field(TEXT("tvPaid"), S.TvPaidThisSeason);
 		W.Field(TEXT("nextPlayerId"), S.NextPlayerId);
 		W.Field(TEXT("rngSeed"), (int64)S.Rng.GetCurrentSeed());
+		W.Field(TEXT("rngKabineSeed"), (int64)S.RngKabine.GetCurrentSeed());
 		W.FieldBool(TEXT("dfbViaLandespokal"), S.bDfbViaLandespokal);
 		W.Field(TEXT("formation"), S.Formation);
 		W.Field(TEXT("tacticStyle"), S.TacticStyle);
@@ -178,6 +182,9 @@ namespace FM13Save
 		W.Field(TEXT("promotionBoostLevel"), S.PromotionBoostLevel);
 		W.Field(TEXT("promotionBoostSeason"), S.PromotionBoostSeason);
 		W.Field(TEXT("campusReha"), S.CampusReha);
+		W.ArrayKey(TEXT("council"));
+		for (int32 Id : S.CouncilIds) W.ElementInt(Id);
+		W.EndArray();
 		W.Field(TEXT("wageBudgetCap"), S.WageBudgetCap);
 		W.Field(TEXT("lastMeetingSeason"), S.LastMeetingSeason);
 		W.Field(TEXT("poachSlot"), S.PoachSlot);
@@ -402,6 +409,9 @@ namespace
 		P.Trait = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("trait"), 0), 0, 8);
 		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(Obj, TEXT("appsTotal"), 0));
 		P.TimesInjured = FMath::Max(0, (int32)R.Int(Obj, TEXT("timesInjured"), 0));
+		P.Nation = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("nation"), 0), 0, 5);
+		P.FriendId = (int32)R.Int(Obj, TEXT("friendId"), 0);
+		P.SquadTenure = FMath::Max(0, (int32)R.Int(Obj, TEXT("tenure"), 0));
 		P.bChronic = R.Bool(Obj, TEXT("chronic"), false);
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
@@ -494,6 +504,7 @@ namespace FM13Save
 		W.TvPaidThisSeason = R.Int(Root, TEXT("tvPaid"), 0);
 		W.NextPlayerId = (int32)R.Int(Root, TEXT("nextPlayerId"), 1);
 		W.Rng.Initialize((int32)R.Int(Root, TEXT("rngSeed"), 1));
+		W.RngKabine.Initialize((int32)R.Int(Root, TEXT("rngKabineSeed"), 1));
 		W.bDfbViaLandespokal = R.Bool(Root, TEXT("dfbViaLandespokal"), false);
 		W.Formation = R.Str(Root, TEXT("formation"), TEXT("4-4-2"));
 		W.TacticStyle = R.Str(Root, TEXT("tacticStyle"), TEXT("ausgeglichen"));
@@ -509,6 +520,7 @@ namespace FM13Save
 		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(Root, TEXT("campusTrainingGround"), 0), 0, 5);
 		W.TackleHardness = R.Str(Root, TEXT("tackleHardness"), TEXT("normal"));
 		W.CaptainId = (int32)R.Int(Root, TEXT("captain"), 0);
+		for (int32 N : R.Items(Root, TEXT("council"))) W.CouncilIds.Add((int32)P.Nodes[N].Number);
 		W.PromotionBoostLevel = (int32)R.Int(Root, TEXT("promotionBoostLevel"), -1);
 		W.PromotionBoostSeason = (int32)R.Int(Root, TEXT("promotionBoostSeason"), 0);
 		W.CampusReha = FMath::Clamp((int32)R.Int(Root, TEXT("campusReha"), 0), 0, 5);

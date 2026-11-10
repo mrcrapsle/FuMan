@@ -66,6 +66,9 @@ struct FFM13Player
 	uint8 Trait = 0;            // FM13Strength::ETrait, 0 = keiner
 	int32 AppearancesTotal = 0; // Einsätze insgesamt (Führungsqualität, js/locker-room.js)
 	int32 TimesInjured = 0;     // frühere Verletzungen: macht anfälliger
+	uint8 Nation = 0;           // Herkunft (FM13Locker::Nation), bestimmt die Cliquen
+	int32 FriendId = 0;         // Kabinen-Freund (0 = keiner)
+	int32 SquadTenure = 0;      // Spieltage im Kader (ab 20 kann man Freund werden)
 	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }

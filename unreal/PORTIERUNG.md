@@ -103,8 +103,8 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `player-scandals.js` | 180 | offen | Spieler-Skandale |  |
 | `squad-radar.js` | 231 | offen | SQUAD-STRENGTH-RADAR |  |
 | `squadplanning.js` | 262 | offen | KADERPLANUNGSTOOL |  |
-| `locker-room.js` | 187 | teilweise | Kabine, Kapitän | Kapitän nach Führungsqualität, Bonus in der Teamstärke. Offen: Cliquen, Unzufriedene, Kapitänswahl von Hand |
-| `team-council.js` | 186 | offen | Mannschaftsrat: Kapitän + zwei Führungsspieler. Einmal im Monat bringt der Rat höchstens |  |
+| `locker-room.js` | 187 | portiert | Kabine: Nationen, Cliquen, Stimmung, Rangordnung, Kapitän, Kabinen-Freunde | FM13Locker, FFM13World::CliqueModifier/TickLockerRoom/ChangeCaptain/TickFriendships (Kabinentests). Offen: Anzeige im Menü, Freundschaft bei Abgang, Büro-Besuch |
+| `team-council.js` | 186 | teilweise | Mannschaftsrat | Wahl aus Kapitän und Führungsspieler, Stabilisator in der Teamstärke. Offen: monatliche Anliegen und Antworten (Mannschaftsabend, Prämie, Einsatzzeit)
 | `contracts.js` | 296 | teilweise | Verträge | Verlängern (Verhandlung offen) |
 | `contract-tools.js` | 222 | offen | VERTRAGS- UND TRANSFER-WERKZEUGE (Phase 26.2): Gehalts-Ampel, Verlängerungs-Assistent, |  |
 | `contract-ultimatum.js` | 222 | offen | (aus match.js ausgelagert - reine Datei-Organisation, keine Verhaltensänderung) |  |

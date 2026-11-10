@@ -6,6 +6,7 @@
 #include "FM13Development.h"
 #include "FM13Fitness.h"
 #include "FM13Staff.h"
+#include "FM13Locker.h"
 #include <cmath>
 #include "FM13Strength.h"
 
@@ -68,6 +69,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 {
 	*this = FFM13World();
 	Rng.Initialize(Seed);
+	RngKabine.Initialize(Seed * 7919 + 13);
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
@@ -117,6 +119,7 @@ FFM13Player FFM13World::CreatePlayer(EFM13Position Pos, int32 MinStr, int32 MaxS
 	P.Character = (uint8)Rng.RandRange(0, 5);
 	P.Morale = 80;
 	P.Trait = Rng.FRand() < 0.35f ? (uint8)(1 + Rng.RandRange(0, 7)) : 0; // js/entities.js: 35 % haben einen Trait
+	P.Nation = FM13Locker::NationFromRoll(RngKabine.RandRange(0, 9));
 	P.DailyForm = 50 + Rng.RandRange(-10, 9); // Startwert wie js/entities.js
 	return P;
 }
@@ -206,6 +209,8 @@ bool FFM13World::PlayMatchday()
 	}
 	TickIncomingOffers();
 	if (Matchday % 4 == 0) RefreshMarket();
+	TickFriendships();
+	if (Matchday % 4 == 0) TickLockerRoom();
 	++Matchday;
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
@@ -1200,6 +1205,8 @@ int32 FFM13World::TeamStrength(bool bHome) const
 	E.StyleBonus = FM13Tactics::StyleBonus(TacticStyle);
 	E.FormationOff = (FM13Tactics::Formation(Formation).Off - 60) * 0.04;
 	E.TackleHardness = TackleHardness;
+	E.CouncilStabilizer = CouncilStabilizer() * 0.3;
+	E.CliqueModifier = CliqueModifier();
 	return FM13Strength::Team(E);
 }
 
@@ -1294,6 +1301,7 @@ void FFM13World::EnsureCaptain()
 		if (P.InjuredMatchdays <= 0 && (!Neu || Fuehrung(P) > Fuehrung(*Neu))) Neu = &P;
 	if (!Neu) Neu = &Squad[0];
 	CaptainId = Neu->Id;
+	ElectCouncil();
 	AddMessage(FString::Printf(TEXT("%s uebernimmt die Binde"), *Neu->Name),
 		FString::Printf(TEXT("%s hat die groesste Fuehrungsqualitaet und fuehrt die Mannschaft jetzt als Kapitaen aufs Feld."), *Neu->Name));
 }
@@ -2307,4 +2315,167 @@ void FFM13World::TickStaff()
 			AddMessage(TEXT("Weiterbildung abgeschlossen"), FString::Printf(TEXT("%s ist jetzt auf Stufe %d."), FM13Staff::Rollen()[Slot].Name, S.Level));
 		}
 	}
+}
+
+// ---------- Kabine und Mannschaftsrat (js/locker-room.js, js/team-council.js) ----------
+
+namespace
+{
+	struct FKabineClique { uint8 Nation; uint8 Alter; TArray<int32> Mitglieder; int32 Stimmung; int32 Fuehrer; };
+
+	// computeSquadCliques(): Cliquen aus Nation und Altersgruppe, ab drei Spielern, in der Reihenfolge des Kaders
+	TArray<FKabineClique> Cliquen(const TArray<FFM13Player>& Kader)
+	{
+		TArray<FKabineClique> Liste;
+		for (const FFM13Player& P : Kader)
+		{
+			const uint8 Alter = FM13Locker::Altersgruppe(P.Age);
+			int32 k = 0;
+			for (; k < Liste.Num(); ++k) if (Liste[k].Nation == P.Nation && Liste[k].Alter == Alter) break;
+			if (k == Liste.Num()) Liste.Add(FKabineClique{ P.Nation, Alter, {}, 0, -1 });
+			Liste[k].Mitglieder.Add(P.Id);
+		}
+		TArray<FKabineClique> Ergebnis;
+		for (FKabineClique& C : Liste)
+		{
+			if (C.Mitglieder.Num() < 3) continue;
+			int64 Summe = 0;
+			int32 Bester = -1;
+			double BesteFuehrung = -1e9;
+			for (int32 Id : C.Mitglieder)
+			{
+				for (const FFM13Player& P : Kader) if (P.Id == Id)
+				{
+					Summe += P.Morale;
+					const double F = FM13Locker::Fuehrung(P.Trait == 4, P.Age, P.AppearancesTotal, P.Morale);
+					if (F > BesteFuehrung) { BesteFuehrung = F; Bester = Id; }
+				}
+			}
+			C.Stimmung = (int32)std::floor((double)Summe / C.Mitglieder.Num() + 0.5);
+			C.Fuehrer = Bester;
+			Ergebnis.Add(C);
+		}
+		return Ergebnis;
+	}
+
+	double FuehrungVon(const TArray<FFM13Player>& Kader, int32 Id)
+	{
+		for (const FFM13Player& P : Kader) if (P.Id == Id) return FM13Locker::Fuehrung(P.Trait == 4, P.Age, P.AppearancesTotal, P.Morale);
+		return 0.0;
+	}
+}
+
+double FFM13World::CliqueModifier() const
+{
+	const TArray<FKabineClique> C = Cliquen(Squad);
+	int32 Groesste = 0, GroesstRumort = 0, Rumort = 0;
+	for (const FKabineClique& K : C)
+	{
+		const bool bRumort = K.Stimmung < FM13Locker::UnruheMoral;
+		if (bRumort) ++Rumort;
+		if (K.Mitglieder.Num() > Groesste) { Groesste = K.Mitglieder.Num(); GroesstRumort = bRumort ? 1 : 0; }
+	}
+	return FM13Locker::CliqueModifikator(Squad.Num(), Groesste, GroesstRumort != 0, C.Num(), Rumort);
+}
+
+double FFM13World::CouncilStabilizer() const
+{
+	if (CouncilIds.Num() == 0) return 0.0;
+	int64 Summe = 0;
+	int32 N = 0;
+	for (int32 Id : CouncilIds) for (const FFM13Player& P : Squad) if (P.Id == Id) { Summe += P.Morale; ++N; }
+	if (N == 0) return 0.0;
+	return FM13Locker::Stabilisator((int32)std::floor((double)Summe / N + 0.5));
+}
+
+// electTeamCouncil(): Kapitaen plus die zwei Fuehrungsspieler (ohne Kapitaen drei)
+void FFM13World::ElectCouncil()
+{
+	struct FKandidat { int32 Id; double F; };
+	TArray<FKandidat> Rest;
+	for (const FFM13Player& P : Squad) if (P.Id != CaptainId) Rest.Add({ P.Id, FM13Locker::Fuehrung(P.Trait == 4, P.Age, P.AppearancesTotal, P.Morale) });
+	Rest.Sort([](const FKandidat& A, const FKandidat& B) { return A.F > B.F; });
+	CouncilIds.Reset();
+	if (CaptainId != 0 && FindPlayer(CaptainId)) CouncilIds.Add(CaptainId);
+	const int32 Anzahl = CouncilIds.Num() ? 2 : 3;
+	for (int32 k = 0; k < Rest.Num() && k < Anzahl; ++k) CouncilIds.Add(Rest[k].Id);
+}
+
+// handleCaptainChange(): der alte Kapitaen verliert 12 Moral, der neue gewinnt 8. Die Kabine reagiert je nach Stellung.
+bool FFM13World::ChangeCaptain(int32 NewId, bool bViaCouncil, FString& OutFolge)
+{
+	FFM13Player* Neu = FindPlayer(NewId);
+	if (!Neu || NewId == CaptainId) return false;
+	FFM13Player* Alt = CaptainId ? FindPlayer(CaptainId) : nullptr;
+	if (Alt) Alt->Morale = FMath::Clamp(Alt->Morale - 12, 10, 100);
+	Neu->Morale = FMath::Clamp(Neu->Morale + 8, 10, 100);
+	const FM13Locker::EStatus Stellung = FM13Locker::Status(false, CouncilIds.Contains(NewId), Neu->Age, Neu->AppearancesTotal);
+	CaptainId = NewId;
+	if (bViaCouncil)
+	{
+		for (FFM13Player& P : Squad) if (&P != Alt && &P != Neu) P.Morale = FMath::Clamp(P.Morale + 2, 10, 100);
+		OutFolge = TEXT("Der Rat steht hinter der Entscheidung, die Kabine zieht mit (+2 Moral).");
+	}
+	else if (Stellung != FM13Locker::EStatus::Rat && Stellung != FM13Locker::EStatus::Etabliert)
+	{
+		for (int32 Id : CouncilIds) if (Id != NewId && Id != (Alt ? Alt->Id : -1)) if (FFM13Player* P = FindPlayer(Id)) P->Morale = FMath::Clamp(P->Morale - 4, 10, 100);
+		OutFolge = FString::Printf(TEXT("%s hat in der Kabine noch wenig Standing - die Fuehrungsspieler sind irritiert (-4 Moral)."), *Neu->Name);
+	}
+	else OutFolge = FString::Printf(TEXT("%s ist in der Kabine anerkannt."), *Neu->Name);
+	ElectCouncil();
+	return true;
+}
+
+// Monatlich: rumorende Cliquen ziehen den Rest des Kaders herunter (ohne Kapitaen mit Autoritaet nur halb so oft),
+// zufriedene Cliquen heben sich selbst.
+void FFM13World::TickLockerRoom()
+{
+	ElectCouncil();
+	const TArray<FKabineClique> C = Cliquen(Squad);
+	const FFM13Player* Kap = CaptainId ? FindPlayer(CaptainId) : nullptr;
+	const bool bAutoritaet = Kap && FM13Locker::KapitaenAutoritaet(Kap->Morale, FuehrungVon(Squad, Kap->Id));
+	for (const FKabineClique& K : C)
+	{
+		if (K.Stimmung < FM13Locker::UnruheMoral)
+		{
+			if (!bAutoritaet || RngKabine.FRand() < 0.5f)
+				for (FFM13Player& P : Squad) if (!K.Mitglieder.Contains(P.Id)) P.Morale = FMath::Clamp(P.Morale - 1, 10, 100);
+		}
+		else if (K.Stimmung >= FM13Locker::ZufriedenMoral)
+		{
+			for (int32 Id : K.Mitglieder) if (FFM13Player* P = FindPlayer(Id)) P->Morale = FMath::Clamp(P->Morale + 1, 10, 100);
+		}
+	}
+}
+
+// tickLockerFriendships(): wer lange genug im Kader ist, wird gelegentlich Freund eines Mitspielers (5 %)
+void FFM13World::TickFriendships()
+{
+	for (FFM13Player& P : Squad) P.SquadTenure++;
+	TArray<int32> Ohne;
+	for (const FFM13Player& P : Squad) if (P.FriendId == 0 && P.SquadTenure >= 20) Ohne.Add(P.Id);
+	if (Ohne.Num() < 2 || RngKabine.FRand() >= 0.05f) return;
+	const int32 A = Ohne[RngKabine.RandRange(0, Ohne.Num() - 1)];
+	TArray<int32> Andere;
+	for (int32 Id : Ohne) if (Id != A) Andere.Add(Id);
+	const int32 B = Andere[RngKabine.RandRange(0, Andere.Num() - 1)];
+	if (FFM13Player* PA = FindPlayer(A)) PA->FriendId = B;
+	if (FFM13Player* PB = FindPlayer(B)) PB->FriendId = A;
+}
+
+// pickUnhappyVisitor(): ein Leistungstraeger ueber dem Kaderschnitt mit Moral unter 35, nicht im Rat, nicht verletzt
+int32 FFM13World::UnhappyVisitor() const
+{
+	if (Squad.Num() < 5) return 0;
+	TArray<int32> Staerken;
+	for (const FFM13Player& P : Squad) Staerken.Add(P.Strength);
+	Staerken.Sort([](int32 A, int32 B) { return A < B; });
+	const int32 Median = Staerken[Squad.Num() / 2];
+	const FFM13Player* Bester = nullptr;
+	for (const FFM13Player& P : Squad)
+	{
+		if (P.Morale >= 35 || P.Strength < Median || P.InjuredMatchdays > 0 || P.Id == CaptainId || CouncilIds.Contains(P.Id)) continue;
+		if (!Bester || P.Morale < Bester->Morale) Bester = &P;
+	}
+	return Bester ? Bester->Id : 0;
 }

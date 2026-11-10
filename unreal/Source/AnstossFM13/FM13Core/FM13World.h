@@ -61,6 +61,14 @@ public:
 	int32 CampusTrainingGround = 0;                 // Campus: Trainingsgelände mit Flutlicht, +1 je Stufe
 	FString TackleHardness = TEXT("normal");        // Zweikampfhärte: hart, normal, vorsichtig
 	int32 CaptainId = 0;                            // Kapitän (0 = keiner)
+	TArray<int32> CouncilIds;                       // Mannschaftsrat: Kapitän und zwei Führungsspieler
+	double CouncilStabilizer() const;               // getCouncilMoraleStabilizer()
+	double CliqueModifier() const;                  // getCliqueChemistryModifier()
+	void ElectCouncil();                            // electTeamCouncil()
+	bool ChangeCaptain(int32 NewId, bool bViaCouncil, FString& OutFolge);  // handleCaptainChange()
+	void TickLockerRoom();                          // monatlich nach dem Rat
+	void TickFriendships();                         // jeder Spieltag
+	int32 UnhappyVisitor() const;                   // pickUnhappyVisitor(), 0 = keiner
 	TArray<int32> PairA, PairB, PairValue;          // Eingespieltheit je Spielerpaar (PairA < PairB), höchstens 30
 	int32 PromotionBoostLevel = -1;                 // Aufstiegseuphorie: Liga und Saison nach dem Aufstieg
 	int32 PromotionBoostSeason = 0;
@@ -132,6 +140,7 @@ public:
 	FFM13OwnMatchReport LastReport;
 	FFM13OwnMatchReport LastCupReport;   // eigenes Pokalspiel dieses Spieltags (bPlayed = false, wenn keins)
 	FRandomStream Rng;
+	FRandomStream RngKabine;            // eigener Zufall fuer Nationen, Cliquen und Freundschaften: die Spielzahlen bleiben unberuehrt
 
 	// ---------- Ablauf ----------
 	void NewGame(const FString& InClubName, int32 Seed, int32 StartLevel = FM13::StartLeagueLevel);
