@@ -25,7 +25,7 @@ namespace FM13Match
 		}
 	}
 
-	FExpectedGoals ExpectedGoals(int32 HomeStrength, int32 AwayStrength, EFM13Playstyle HomeStyle, EFM13Playstyle AwayStyle)
+	FExpectedGoals ExpectedGoals(double HomeStrength, double AwayStrength, EFM13Playstyle HomeStyle, EFM13Playstyle AwayStyle)
 	{
 		const float Diff = (float)(HomeStrength - AwayStrength);
 		FExpectedGoals R;

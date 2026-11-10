@@ -53,6 +53,23 @@ public:
 	bool bBusBanden = false;                        // Bandensponsor-Variante
 	FFM13Staff AthletikTrainer, Ernaehrungsberater, Physio, Greenkeeper; // Personal im Campus
 	bool bFitnessGuru = false;                      // Perk Fitness-Guru
+	// Stärke der eigenen Elf (calcTeamStrength, js/match.js)
+	FFM13Staff CoTrainer, Analyst;
+	int32 LicenseLevel = 0;                         // Trainerlizenz 0 bis 3 (Stärke +0, +1, +2, +4)
+	int32 Stress = 15;                              // Privatleben: Stress des Managers, -0,03 Stärke je Punkt
+	bool bTactician = false;                        // Perk Taktiker: +3
+	int32 CampusTrainingGround = 0;                 // Campus: Trainingsgelände mit Flutlicht, +1 je Stufe
+	FString TackleHardness = TEXT("normal");        // Zweikampfhärte: hart, normal, vorsichtig
+	int32 CaptainId = 0;                            // Kapitän (0 = keiner)
+	TArray<int32> PairA, PairB, PairValue;          // Eingespieltheit je Spielerpaar (PairA < PairB), höchstens 30
+	int32 PromotionBoostLevel = -1;                 // Aufstiegseuphorie: Liga und Saison nach dem Aufstieg
+	int32 PromotionBoostSeason = 0;
+	int32 TeamStrength(bool bHome) const;           // calcTeamStrength()
+	double OwnMatchStrengthExact(TCHAR OppArchetype, bool bHome) const; // Ligaspiel: getOwnLeagueMatchStrength() plus Ansprache
+	double OwnCupStrength(bool bHome) const;        // Pokal, Europapokal, Relegation
+	double PromotionEuphoria() const;
+	int32 LineupChemistry() const;                  // Eingespieltheit der Elf: 0 bis 3
+	EFM13Playstyle OwnPlaystyle() const;
 	TArray<FString> RecentStyles;           // Spielstile der letzten Ligaspiele (für die Gegner-Analyse)
 	TCHAR OppPlanArchetype = 0;             // geplanter Ansatz des nächsten Liga-Gegners
 	bool bOppPlanReacted = false;           // der Gegner hat sich auf dich eingestellt
@@ -200,6 +217,8 @@ private:
 	void PickScorers(int32 Goals, TArray<FString>& OutNames);
 	void ApplyGrades(int32 OwnGoals, int32 OppGoals);
 	void ApplyFitnessAfterMatchday(bool bHome);
+	void TickPairChemistry();
+	void EnsureCaptain();
 	TArray<int32> MatchGoals;   // Tore und Vorlagen des letzten eigenen Spiels je Kaderindex
 	TArray<int32> MatchAssists;
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);

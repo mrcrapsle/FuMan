@@ -5,6 +5,9 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Match.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13World.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Fitness.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Strength.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
+#include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13BrowserImport.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
@@ -495,7 +498,7 @@ static void TestRundeA()
 	int32 St = 0;
 	for (int32 Id : W.StartingEleven()) if (W.FindPlayer(Id)->Pos == EFM13Position::ST) ++St;
 	PRUEFE(St == 3, "4-3-3 stellt 3 Stuermer auf (%d)", St);
-	PRUEFE(W.SetTacticStyle(TEXT("pressing"), Grund) && W.OwnMatchStrength(TEXT('B')) == W.OwnStrength() + 2 + FMath::RoundToInt(0.48f - 0.12f) + 2, "Spielstaerke mit Stil, Formation und Duell");
+	PRUEFE(W.SetTacticStyle(TEXT("pressing"), Grund) && std::fabs(W.OwnMatchStrengthExact(TEXT('B'), true) - W.OwnMatchStrengthExact(TEXT('N'), true) - 2.0) < 1e-9, "Pressing gegen Ballbesitz: Taktik-Duell +2");
 	PRUEFE(W.NextLeagueOpponent() != nullptr && W.OppPlanArchetype != 0, "Gegnerplan fuer das naechste Ligaspiel");
 
 	// Gesperrte und Verletzte spielen nicht; Karten im Spiel
@@ -580,6 +583,100 @@ static void TestRundeA()
 	FString F;
 	PRUEFE(FM13Save::Decode(Text, L, F) && FM13Save::Encode(L) == Text, "Spielstand mit Taktik, Sponsor, Angeboten, Erfolgen (%s)", *F);
 	PRUEFE(L.Formation == W.Formation && L.Sponsor.Name == W.Sponsor.Name && L.Achievements.Num() == W.Achievements.Num(), "Neue Felder nach dem Laden");
+}
+
+// Teamstaerke gegen calcTeamStrength() des Browserspiels (ReferenzStaerke.h aus referenz-staerke.js)
+static void TestTeamstaerke()
+{
+	std::printf("Teamstaerke: calcTeamStrength und pickBestLineupIds gegen das Browserspiel\n");
+	int32 Gleich = 0, Faelle = 0;
+	for (const FRefStaerke& Ref : RefStaerke)
+	{
+		FM13Strength::FEingabe E;
+		for (int32 i = 0; i < 11; ++i)
+		{
+			FM13Strength::FSpieler S;
+			S.Strength = Ref.Spieler[i][0]; S.Fitness = Ref.Spieler[i][1]; S.DailyForm = Ref.Spieler[i][2]; S.Morale = Ref.Spieler[i][3]; S.Age = Ref.Spieler[i][4];
+			S.Pos = (EFM13Position)Ref.Spieler[i][5]; S.Trait = (uint8)Ref.Spieler[i][6]; S.bCaptain = i == Ref.Kapitaen;
+			E.Elf.Add(S);
+		}
+		const int32* X = Ref.X;
+		static const int32 Lizenz[4] = { 0, 1, 2, 4 };
+		E.bHome = X[0] != 0; E.LicenseBoost = Lizenz[X[1]]; E.Fans = X[2]; E.ChemistryBonus = FM13Strength::ChemistryBonus(X[3] * 55, 55);
+		E.bTactician = X[4] != 0; E.WeatherGoalMult = FM13Match::Weathers()[X[5]].GoalMult; E.Stress = X[6];
+		E.TeamTraining = RefTraining[X[7]]; E.StyleBonus = FM13Tactics::StyleBonus(RefStile[X[8]]);
+		E.FormationOff = (FM13Tactics::Formation(RefFormationen[X[9]]).Off - 60) * 0.04; E.TackleHardness = RefHaerte[X[10]]; E.TrainingGround = X[11];
+		const int32* Co = X + 12; const int32* Gk = X + 16; const int32* An = X + 20; const int32* Nu = X + 24;
+		E.bCoTrainer = Co[0] != 0; E.CoTrainerLevel = Co[1]; E.CoTrainerWirkung = Co[2] >= 70 ? 1.0 : (Co[2] >= 40 ? 0.85 : 0.65);
+		E.bGreenkeeper = Gk[0] != 0; E.GreenkeeperLevel = Gk[1]; E.bGreenkeeperTempo = Gk[3] != 0;
+		E.bAnalystTiefe = An[0] != 0 && An[3] != 0; E.AnalystLevel = An[1];
+		E.bErnaehrungLeistung = Nu[0] != 0 && Nu[3] != 0; E.ErnaehrungLevel = Nu[1];
+		E.bSynergie = Co[0] != 0 && An[0] != 0;
+		const int32 Wert = FM13Strength::Team(E);
+		++Faelle;
+		if (Wert == Ref.Erwartet) ++Gleich;
+		PRUEFE(Wert == Ref.Erwartet, "Teamstaerke Fall %d: %d statt %d", Faelle, Wert, Ref.Erwartet);
+	}
+	std::printf("  %d von %d Teamstaerken gleich\n", Gleich, Faelle);
+
+	// Automatische Aufstellung: dieselben elf Spieler wie pickBestLineupIds()
+	int32 ElfGleich = 0, ElfFaelle = 0;
+	for (const FRefElf& Ref : RefElf)
+	{
+		FFM13World W;
+		W.NewGame(TEXT("Aufstellverein"), 5);
+		W.Squad.Reset();
+		W.ManualLineup.Reset();
+		for (int32 i = 0; i < Ref.Anzahl; ++i)
+		{
+			FFM13Player P;
+			P.Id = i + 1; P.Strength = Ref.Spieler[i][0]; P.Fitness = Ref.Spieler[i][1]; P.Pos = (EFM13Position)Ref.Spieler[i][2];
+			P.InjuredMatchdays = Ref.Spieler[i][3]; P.SuspendedMatchdays = Ref.Spieler[i][4];
+			W.Squad.Add(P);
+		}
+		FString Grund;
+		W.SetFormation(RefFormationen[Ref.Formation], Grund);
+		TArray<int32> Ids = W.StartingEleven();
+		Ids.Sort([](int32 A, int32 B) { return A < B; });
+		bool bGleich = Ids.Num() == Ref.AnzahlElf;
+		for (int32 i = 0; bGleich && i < Ids.Num(); ++i) if (Ids[i] != Ref.Elf[i] + 1) bGleich = false;
+		++ElfFaelle;
+		if (bGleich) ++ElfGleich;
+		PRUEFE(bGleich, "Aufstellung Fall %d weicht ab", ElfFaelle);
+	}
+	std::printf("  %d von %d Aufstellungen gleich\n", ElfGleich, ElfFaelle);
+
+	// Kapitaen, Eingespieltheit, Heimvorteil und Aufstiegseuphorie in der Spielwelt
+	FFM13World W;
+	W.NewGame(TEXT("Staerkeverein"), 33);
+	PRUEFE(W.CaptainId == 0 && W.LineupChemistry() == 0, "Vor dem ersten Spiel: kein Kapitaen, keine Eingespieltheit");
+	bool bMoral80 = true;
+	for (const FFM13Player& P : W.Squad) if (P.Morale != 80 || P.Fitness != 100 || P.Trait > 8) bMoral80 = false;
+	PRUEFE(bMoral80, "Neue Spieler: Moral 80, Kondition 100, gueltiger Trait");
+	PRUEFE(W.TeamStrength(true) - W.TeamStrength(false) >= 1 && W.TeamStrength(true) - W.TeamStrength(false) <= 3, "Heimvorteil +3 gegen Auswaertsfans bis +1,5");
+	W.PlayMatchday();
+	PRUEFE(W.FindPlayer(W.CaptainId) != nullptr, "Nach dem ersten Spieltag traegt jemand die Binde");
+	PRUEFE(W.PairA.Num() == 55 && W.PairValue[0] == 1, "Eingespieltheit: 55 Paare mit je einem Punkt");
+	for (int32& V : W.PairValue) V = 30;
+	W.ManualLineup.Reset();
+	for (int32 k = 0; k < W.PairA.Num() && W.ManualLineup.Num() < 11; ++k) { W.ManualLineup.AddUnique(W.PairA[k]); W.ManualLineup.AddUnique(W.PairB[k]); }
+	PRUEFE(W.LineupChemistry() == 3, "Volle Eingespieltheit: +3 (%d)", W.LineupChemistry());
+	W.PromotionBoostLevel = W.LeagueLevel; W.PromotionBoostSeason = W.Season;
+	W.Matchday = 10; PRUEFE(W.PromotionEuphoria() == 3.0, "Aufstiegseuphorie bis Spieltag 10: +3");
+	W.Matchday = 17; PRUEFE(W.PromotionEuphoria() == 1.5, "Aufstiegseuphorie bis Spieltag 17: +1,5");
+	W.Matchday = 18; PRUEFE(W.PromotionEuphoria() == 0.0, "Aufstiegseuphorie danach: 0");
+	W.PromotionBoostSeason = W.Season + 1; W.Matchday = 5; PRUEFE(W.PromotionEuphoria() == 0.0, "Aufstiegseuphorie nur in der Saison nach dem Aufstieg");
+	// Kapitaen faellt aus: der Spieler mit der groessten Fuehrungsqualitaet uebernimmt
+	FFM13World K;
+	K.NewGame(TEXT("Kapitaensverein"), 34);
+	for (FFM13Player& P : K.Squad) { P.Trait = 0; P.Age = 24; P.Morale = 60; P.AppearancesTotal = 0; }
+	K.Squad[5].Trait = FM13Strength::Leader;
+	K.PlayMatchday();
+	PRUEFE(K.CaptainId == K.Squad[5].Id, "Der Leader wird Kapitaen");
+	K.Squad[5].InjuredMatchdays = 3; K.Squad[2].Age = 34;
+	K.PlayMatchday();
+	PRUEFE(K.CaptainId == K.Squad[2].Id, "Verletzter Kapitaen: der Erfahrenste uebernimmt");
+	std::printf("\n");
 }
 
 // Kondition und Tagesform (js/match-live.js): Werte von Hand nach den JS-Regeln gerechnet
@@ -746,11 +843,11 @@ static void TestRundeB()
 	PRUEFE(std::fabs(W.TalkBonus(TEXT("fokus")) - FMath::RoundToInt(Fokus * 5.f) / 10.f) < 0.11f, "Dreimal dieselbe Rede: halber Effekt");
 	PRUEFE(W.ChooseTalk(TEXT("mut"), Grund) && W.PendingTalk == FString(TEXT("mut")) && !W.ChooseTalk(TEXT("bitten"), Grund), "Ansprache waehlen");
 
-	// Moral wirkt ab 75 und unter 35
+	// Moral in der Teamstaerke: (Schnitt - 80) x 0,06 wie im Browserspiel
 	for (FFM13Player& P : W.Squad) P.Morale = 80;
-	PRUEFE(W.MoraleBonus() == 1.f, "Hohe Moral +1");
+	PRUEFE(std::fabs(W.MoraleBonus()) < 1e-6f, "Moral 80: kein Bonus");
 	for (FFM13Player& P : W.Squad) P.Morale = 30;
-	PRUEFE(W.MoraleBonus() == -1.f, "Tiefe Moral -1");
+	PRUEFE(std::fabs(W.MoraleBonus() + 3.f) < 1e-5f, "Moral 30: -3");
 	for (FFM13Player& P : W.Squad) P.Morale = 60;
 
 	// Spielvorbereitung: richtig getippt +2,5
@@ -885,6 +982,7 @@ int main()
 	TestPokalUndVerletzungen();
 	TestRundeA();
 	TestRundeB();
+	TestTeamstaerke();
 	TestKondition();
 	TestKonditionSaison();
 	TestSpielerNoten();

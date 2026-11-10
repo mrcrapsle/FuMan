@@ -1,4 +1,5 @@
 #include "FM13GameInstance.h"
+#include "FM13Core/FM13Strength.h"
 #include "FM13Core/FM13SaveCodec.h"
 #include "FM13Core/FM13BrowserImport.h"
 #include "FM13Core/FM13Development.h"
@@ -75,6 +76,7 @@ FFM13PlayerView UFM13GameInstance::MakePlayerView(const FFM13Player& P, bool bIn
 	V.GoalsSeason = P.GoalsSeason;
 	V.Assists = P.Assists;
 	V.Fitness = P.Fitness;
+	V.Trait = FM13Strength::TraitName(P.Trait);
 	V.DailyForm = P.DailyForm;
 	auto Note = [](int32 Zehntel) { return FString::Printf(TEXT("%d,%d"), Zehntel / 10, Zehntel % 10); };
 	if (P.GradeGames > 0) V.GradeAverage = Note((P.GradeSum + P.GradeGames / 2) / P.GradeGames);
@@ -175,6 +177,7 @@ TArray<FFM13PlayerView> UFM13GameInstance::GetSquad() const
 	{
 		FFM13PlayerView V = MakePlayerView(P, Elf.Contains(P.Id));
 		V.bBenched = Kern.ManualBench.Contains(P.Id);
+		V.bCaptain = Kern.CaptainId != 0 && P.Id == Kern.CaptainId;
 		Out.Add(V);
 	}
 	// Sortierung wie im Kader: Position, dann Stärke

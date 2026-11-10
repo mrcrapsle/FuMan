@@ -309,7 +309,7 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 	TSharedRef<SVerticalBox> Box = SNew(SVerticalBox);
 	if (!G) return Box;
 	const int32 Auswahl = Controller.IsValid() ? Controller->Selection : -1;
-	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 50.f, 60.f, 60.f, 60.f, 60.f, 110.f, 130.f, 100.f, 60.f };
+	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 50.f, 60.f, 60.f, 60.f, 60.f, 210.f, 130.f, 100.f, 60.f };
 	Box->AddSlot().AutoHeight()[BuildOffers(false)];
 	const FFM13TacticsView Taktik = G->GetTactics();
 	Box->AddSlot().AutoHeight()
@@ -320,7 +320,7 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 			: FString::Printf(TEXT("* = Startelf, automatisch (beste Elf im %s, Verletzte und Gesperrte fehlen)"), *Taktik.Formation), CGedimmt, 11)]
 		+ SHorizontalBox::Slot().AutoWidth().Padding(FMargin(10.f, 0.f))[Knopf(TEXT("Automatisch aufstellen"), FOnClicked::CreateSP(this, &SFM13Menu::OnAutoLineup), Taktik.bManualLineup ? CKnopfAktiv : CKnopf, 11)]
 	];
-	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Vorl."), TEXT("Note"), TEXT("Kond."), TEXT("Form"), TEXT("Moral"), TEXT("Charakter"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
+	Box->AddSlot().AutoHeight()[Zeile({ TEXT("Pos"), TEXT("Name"), TEXT("Staerke"), TEXT("Pot."), TEXT("Alter"), TEXT("Tore"), TEXT("Vorl."), TEXT("Note"), TEXT("Kond."), TEXT("Form"), TEXT("Moral"), TEXT("Charakter / Faehigkeit"), TEXT("Marktwert"), TEXT("Gehalt"), TEXT("Vertrag") }, B, CGedimmt, false, nullptr, true)];
 	const TArray<FFM13PlayerView> Kader = G->GetSquad();
 	for (int32 i = 0; i < Kader.Num(); ++i)
 	{
@@ -333,9 +333,10 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 		FString Name = P.InjuredMatchdays > 0 ? FString::Printf(TEXT("%s (verletzt %d)"), *P.Name, P.InjuredMatchdays) : P.Name;
 		if (P.SuspendedMatchdays > 0) Name += FString::Printf(TEXT(" (gesperrt %d)"), P.SuspendedMatchdays);
 		if (P.bBenched) Name += TEXT(" (draussen)");
+		if (P.bCaptain) Name = TEXT("(C) ") + Name;
 		Box->AddSlot().AutoHeight().Padding(FMargin(0.f, 1.f))[Zeile({ P.Position + (P.bInStartingEleven ? TEXT(" *") : TEXT("")), Name, FString::FromInt(P.Strength),
 			FString::FromInt(P.Potential), FString::FromInt(P.Age), FString::FromInt(P.GoalsSeason), FString::FromInt(P.Assists),
-			P.GradeAverage.IsEmpty() ? TEXT("-") : P.GradeAverage, FString::FromInt(P.Fitness), FString::FromInt(P.DailyForm), FString::FromInt(P.Morale), P.Character, Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
+			P.GradeAverage.IsEmpty() ? TEXT("-") : P.GradeAverage, FString::FromInt(P.Fitness), FString::FromInt(P.DailyForm), FString::FromInt(P.Morale), P.Trait.IsEmpty() ? P.Character : P.Character + TEXT(" / ") + P.Trait, Geld(P.MarketValue), Geld(P.Wage), FString::Printf(TEXT("%d J."), P.ContractYears) },
 			B, (P.InjuredMatchdays > 0 || P.SuspendedMatchdays > 0) ? CSchlecht : (P.ContractYears <= 1 ? CAkzent : CText), i == Auswahl, Knoepfe)];
 	}
 	return Box;
@@ -622,7 +623,7 @@ TSharedRef<SWidget> SFM13Menu::BuildTactics()
 		Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Chef-Analyst: Der Gegner plant %s%s. Dein Stil: Taktik-Duell %+d."), *T.OppPlan,
 			T.bOppReacted ? TEXT(" - er hat sich auf dich eingestellt") : TEXT(""), T.MatchupBonus), T.MatchupBonus > 0 ? CGut : (T.MatchupBonus < 0 ? CSchlecht : CGedimmt))];
 	}
-	Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Spielstaerke %d = Elf %d %+d Spielstil %+.1f Formation %+d Duell. Kraftkosten %+d Prozent (Verletzungsrisiko)."),
+	Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Spielstaerke %d (Schnitt der Elf %d). Darin stecken Kondition, Tagesform, Heimvorteil, Moral, Spielstil %+d, Formation %+.1f und Taktik-Duell %+d. Kraftkosten %+d Prozent."),
 		T.MatchStrength, T.ElfStrength, T.StyleBonus, T.FormationBonus, T.MatchupBonus, T.FitnessCostPercent), CAkzent)];
 	if (!T.Predictable.IsEmpty())
 		Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("Achtung: Du spielst berechenbar (%s). Gegner stellen sich darauf ein."), *T.Predictable), CSchlecht, 12)];

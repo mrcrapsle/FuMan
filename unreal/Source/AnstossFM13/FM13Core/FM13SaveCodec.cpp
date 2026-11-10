@@ -63,6 +63,8 @@ namespace
 		W.Field(TEXT("lastGrade"), P.LastGrade);
 		W.Field(TEXT("fitness"), P.Fitness);
 		W.Field(TEXT("dailyForm"), P.DailyForm);
+		W.Field(TEXT("trait"), (int64)P.Trait);
+		W.Field(TEXT("appsTotal"), P.AppearancesTotal);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -161,10 +163,22 @@ namespace FM13Save
 		W.FieldBool(TEXT("busSponsor"), S.bBusSponsor);
 		W.FieldBool(TEXT("busBanden"), S.bBusBanden);
 		W.FieldBool(TEXT("fitnessGuru"), S.bFitnessGuru);
-		const FFM13Staff* Personal[4] = { &S.AthletikTrainer, &S.Ernaehrungsberater, &S.Physio, &S.Greenkeeper };
-		const TCHAR* PersonalKeys[4] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper") };
-		for (int32 i = 0; i < 4; ++i)
+		W.FieldBool(TEXT("tactician"), S.bTactician);
+		W.Field(TEXT("license"), S.LicenseLevel);
+		W.Field(TEXT("stress"), S.Stress);
+		W.Field(TEXT("campusTrainingGround"), S.CampusTrainingGround);
+		W.Field(TEXT("tackleHardness"), S.TackleHardness);
+		W.Field(TEXT("captain"), S.CaptainId);
+		W.Field(TEXT("promotionBoostLevel"), S.PromotionBoostLevel);
+		W.Field(TEXT("promotionBoostSeason"), S.PromotionBoostSeason);
+		W.ArrayKey(TEXT("pairChemistry"));
+		for (int32 k = 0; k < S.PairA.Num(); ++k) { W.ElementInt(S.PairA[k]); W.ElementInt(S.PairB[k]); W.ElementInt(S.PairValue[k]); }
+		W.EndArray();
+		const FFM13Staff* Personal[6] = { &S.AthletikTrainer, &S.Ernaehrungsberater, &S.Physio, &S.Greenkeeper, &S.CoTrainer, &S.Analyst };
+		const TCHAR* PersonalKeys[6] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
+		for (int32 i = 0; i < 6; ++i)
 		{
+			W.Field(*(FString(PersonalKeys[i]) + TEXT("Morale")), Personal[i]->Morale);
 			W.FieldBool(*(FString(PersonalKeys[i]) + TEXT("Hired")), Personal[i]->bHired);
 			W.Field(*(FString(PersonalKeys[i]) + TEXT("Level")), Personal[i]->Level);
 			W.Field(*(FString(PersonalKeys[i]) + TEXT("Task")), Personal[i]->Task);
@@ -364,6 +378,8 @@ namespace
 		P.LastGrade = (int32)R.Int(Obj, TEXT("lastGrade"), 0);
 		P.Fitness = FMath::Clamp((int32)R.Int(Obj, TEXT("fitness"), 100), 10, 100);
 		P.DailyForm = FMath::Clamp((int32)R.Int(Obj, TEXT("dailyForm"), 50), 5, 95);
+		P.Trait = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("trait"), 0), 0, 8);
+		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(Obj, TEXT("appsTotal"), 0));
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
@@ -464,10 +480,28 @@ namespace FM13Save
 		W.bBusSponsor = R.Bool(Root, TEXT("busSponsor"), false);
 		W.bBusBanden = R.Bool(Root, TEXT("busBanden"), false);
 		W.bFitnessGuru = R.Bool(Root, TEXT("fitnessGuru"), false);
-		FFM13Staff* Personal[4] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper };
-		const TCHAR* PersonalKeys[4] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper") };
-		for (int32 i = 0; i < 4; ++i)
+		W.bTactician = R.Bool(Root, TEXT("tactician"), false);
+		W.LicenseLevel = FMath::Clamp((int32)R.Int(Root, TEXT("license"), 0), 0, 3);
+		W.Stress = FMath::Clamp((int32)R.Int(Root, TEXT("stress"), 15), 0, 100);
+		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(Root, TEXT("campusTrainingGround"), 0), 0, 5);
+		W.TackleHardness = R.Str(Root, TEXT("tackleHardness"), TEXT("normal"));
+		W.CaptainId = (int32)R.Int(Root, TEXT("captain"), 0);
+		W.PromotionBoostLevel = (int32)R.Int(Root, TEXT("promotionBoostLevel"), -1);
+		W.PromotionBoostSeason = (int32)R.Int(Root, TEXT("promotionBoostSeason"), 0);
 		{
+			const TArray<int32> Paare = R.Items(Root, TEXT("pairChemistry"));
+			for (int32 k = 0; k + 2 < Paare.Num(); k += 3)
+			{
+				W.PairA.Add((int32)P.Nodes[Paare[k]].Number);
+				W.PairB.Add((int32)P.Nodes[Paare[k + 1]].Number);
+				W.PairValue.Add(FMath::Clamp((int32)P.Nodes[Paare[k + 2]].Number, 0, 30));
+			}
+		}
+		FFM13Staff* Personal[6] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper, &W.CoTrainer, &W.Analyst };
+		const TCHAR* PersonalKeys[6] = { TEXT("athletik"), TEXT("ernaehrung"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
+		for (int32 i = 0; i < 6; ++i)
+		{
+			Personal[i]->Morale = FMath::Clamp((int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Morale")), 80), 0, 100);
 			Personal[i]->bHired = R.Bool(Root, *(FString(PersonalKeys[i]) + TEXT("Hired")), false);
 			Personal[i]->Level = FMath::Clamp((int32)R.Int(Root, *(FString(PersonalKeys[i]) + TEXT("Level")), 1), 1, 3);
 			Personal[i]->Task = R.Str(Root, *(FString(PersonalKeys[i]) + TEXT("Task")), TEXT(""));

@@ -65,6 +65,16 @@ Nach jedem Spieltag speichert das Spiel automatisch (`Saved/SaveGames/autosave.j
 - **Spielerstatistik:** Vorlagen (Saison und Karriere) und eine Note nach jedem Ligaspiel für die Startelf. Der Kader zeigt Vorlagen und den Notenschnitt.
 - **Liga:** Heim- und Auswärtstabelle, eine Liga-Statistik und Auszeichnungen am Saisonende.
 
+## Teamstärke wie im Browserspiel
+
+Die Stärke der eigenen Elf rechnet jetzt dieselbe Formel wie `calcTeamStrength()` im Browserspiel. Ein Skript führt die Originalfunktion in Node aus, und die Tests vergleichen 60 Fälle damit.
+
+- **Kondition und Tagesform** zählen in die Stärke. Eine müde Elf spielt schwächer, die automatische Aufstellung wechselt deshalb erschöpfte Spieler aus.
+- **Heimvorteil:** +3 daheim, auch für die Gegner. Auswärts helfen die mitgereisten Fans.
+- **Kapitän, Fähigkeiten (Traits) und Eingespieltheit** geben Boni. Der Kader zeigt den Kapitän mit „(C)“.
+- **Personal, Lizenz, Perks und Stress** aus dem Browser-Spielstand wirken mit.
+- **Aufstiegseuphorie:** +3 Stärke bis Spieltag 10 nach einem Aufstieg, +1,5 bis Spieltag 17.
+
 Was aus jedem Ordner und Modul des Browserspiels schon in Unreal steckt, steht in [PORTIERUNG.md](PORTIERUNG.md).
 
 ## Grafik
@@ -111,8 +121,9 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4116 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4266 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
+   - Teamstärke und automatische Aufstellung gegen die Original-JS-Funktionen (`node unreal/Tests/Host/referenz-staerke.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.
    - Eigener Spielstand: Rundlauf, identisches Weiterspielen, Ablehnung kaputter Stände.
    - **Import:** Alle 11 echten Spielstände aus `tests/fixtures/saves` werden übernommen, die Tabellen passen zu den Spielplänen, und jeder Stand spielt 40 Spieltage weiter.

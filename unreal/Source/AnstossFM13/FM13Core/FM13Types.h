@@ -8,6 +8,7 @@
 
 namespace FM13
 {
+	const int32 AiHomeAdvantage = 3;   // AI_HOME_ADVANTAGE: Heimvorteil der KI-Vereine, die eigene Elf bekommt ihn in calcTeamStrength()
 	constexpr int32 NumLeagues = 6;            // 1. Bundesliga bis 6. Liga (Landesliga)
 	constexpr int32 TeamsPerLeague = 18;
 	constexpr int32 MatchdaysPerSeason = 34;
@@ -61,6 +62,8 @@ struct FFM13Player
 	int32 LastGrade = 0;        // letzte Note in Zehnteln (0 = noch keine)
 	int32 Fitness = 100;        // Kondition 10 bis 100
 	int32 DailyForm = 50;       // Tagesform 5 bis 95, jeder Spieltag neu
+	uint8 Trait = 0;            // FM13Strength::ETrait, 0 = keiner
+	int32 AppearancesTotal = 0; // Einsätze insgesamt (Führungsqualität, js/locker-room.js)
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }
 };
@@ -71,6 +74,7 @@ struct FFM13Staff
 	bool bHired = false;
 	int32 Level = 1;
 	FString Task;
+	int32 Morale = 80;        // staffMeta.morale: unter 70 wirkt er nur zu 85 %, unter 40 zu 65 %
 };
 
 // Hauptsponsor (js/sponsors.js, vereinfacht: keine Verhandlung, keine Themenboni)

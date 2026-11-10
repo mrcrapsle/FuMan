@@ -23,6 +23,20 @@ namespace
 		return EFM13Playstyle::Ausgeglichen;
 	}
 
+	// Trait aus dem Browserspiel (js/entities.js). Verglichen wird der Anfang ohne Umlaute und ß.
+	uint8 TraitFrom(const FString& Name)
+	{
+		if (Name.Left(4) == TEXT("Tor-")) return 1;
+		if (Name.Left(7) == TEXT("Freisto")) return 2;
+		if (Name.Left(8) == TEXT("Elfmeter")) return 3;
+		if (Name == TEXT("Leader")) return 4;
+		if (Name.Left(7) == TEXT("Eisenfu")) return 5;
+		if (Name.Left(2) == TEXT("Fl") && Name.Contains(TEXT("gelflitzer"))) return 6;
+		if (Name.Left(9) == TEXT("Zweikampf")) return 7;
+		if (Name == TEXT("Wetterfest")) return 8;
+		return 0;
+	}
+
 	FFM13Player ReadPlayer(const FReader& R, int32 N, int32 NewId, bool bYouth)
 	{
 		FFM13Player P;
@@ -56,6 +70,8 @@ namespace
 		P.Morale = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("morale"), 65.0)), 5, 100);
 		P.Fitness = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("fitness"), 100.0)), 10, 100);
 		P.DailyForm = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("dailyForm"), 50.0)), 5, 95);
+		P.Trait = TraitFrom(R.Str(N, TEXT("trait"), TEXT("")));
+		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(N, TEXT("appearances"), 0));
 		P.Archetype = FM13Dev::ArchetypeFor(NewId);
 		// Saisons im Verein: aus der Stärke-Historie (ein Eintrag je Saison)
 		P.SeasonsAtClub = FMath::Max(0, R.Items(N, TEXT("strengthHistory")).Num() - 1);
@@ -285,10 +301,45 @@ namespace FM13BrowserImport
 		const int32 Meta = R.Find(Root, TEXT("staffMeta"));
 		const int32 Rpg = R.Find(R.Find(Root, TEXT("managerRPG")), TEXT("perks"));
 		W.bFitnessGuru = R.Bool(Rpg, TEXT("fitnessGuru"), false);
-		FFM13Staff* Stab[4] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper };
-		const TCHAR* Schluessel[4] = { TEXT("fitCoach"), TEXT("nutritionist"), TEXT("physio"), TEXT("greenkeeper") };
-		for (int32 i = 0; i < 4; ++i)
+		W.bTactician = R.Bool(Rpg, TEXT("tactician"), false);
+		// Privatleben (Lizenz, Stress), Campus, Zweikampfhaerte, Aufstiegseuphorie
+		const int32 Privat = R.Find(Root, TEXT("privateLife"));
+		W.LicenseLevel = FMath::Clamp((int32)R.Int(Privat, TEXT("license"), 0), 0, 3);
+		W.Stress = FMath::Clamp(FMath::RoundToInt((float)R.Real(Privat, TEXT("stress"), 15.0)), 0, 100);
+		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("trainingground")), TEXT("lvl"), 0), 0, 5);
+		W.TackleHardness = R.Str(G, TEXT("tackleHardness"), TEXT("normal"));
+		const int32 Schub = R.Find(G, TEXT("promotionBoost"));
+		W.PromotionBoostLevel = (int32)R.Int(Schub, TEXT("level"), -1);
+		W.PromotionBoostSeason = (int32)R.Int(Schub, TEXT("season"), 0);
+		// Kapitaen und Eingespieltheit haengen an den Browser-Ids der Spieler (Texte): auf die neuen Nummern umsetzen
+		TArray<FString> BrowserIds;
+		for (int32 N : R.Items(Root, TEXT("squad"))) BrowserIds.Add(R.Str(N, TEXT("id"), TEXT("")));
+		auto NeueId = [&W, &BrowserIds](const FString& Alt)
 		{
+			for (int32 k = 0; k < BrowserIds.Num() && k < W.Squad.Num(); ++k) if (!Alt.IsEmpty() && BrowserIds[k] == Alt) return W.Squad[k].Id;
+			return 0;
+		};
+		W.CaptainId = NeueId(R.Str(G, TEXT("captainId"), TEXT("")));
+		const int32 Chemie = R.Find(G, TEXT("pairChemistry"));
+		if (R.IsObject(Chemie))
+		{
+			const FNode& C = Doc.Nodes[Chemie];
+			for (int32 k = 0; k < C.Keys.Num() && k < C.Children.Num(); ++k)
+			{
+				TArray<FString> Teile;
+				C.Keys[k].ParseIntoArray(Teile, TEXT("_"), true);
+				if (Teile.Num() != 2) continue;
+				const int32 A = NeueId(Teile[0]), B = NeueId(Teile[1]);
+				if (A == 0 || B == 0 || A == B) continue;
+				W.PairA.Add(FMath::Min(A, B)); W.PairB.Add(FMath::Max(A, B));
+				W.PairValue.Add(FMath::Clamp((int32)Doc.Nodes[C.Children[k]].Number, 0, 30));
+			}
+		}
+		FFM13Staff* Stab[6] = { &W.AthletikTrainer, &W.Ernaehrungsberater, &W.Physio, &W.Greenkeeper, &W.CoTrainer, &W.Analyst };
+		const TCHAR* Schluessel[6] = { TEXT("fitCoach"), TEXT("nutritionist"), TEXT("physio"), TEXT("greenkeeper"), TEXT("coTrainer"), TEXT("analyst") };
+		for (int32 i = 0; i < 6; ++i)
+		{
+			Stab[i]->Morale = FMath::Clamp(FMath::RoundToInt((float)R.Real(R.Find(Meta, Schluessel[i]), TEXT("morale"), 80.0)), 0, 100);
 			const int32 S = R.Find(Personal, Schluessel[i]);
 			Stab[i]->bHired = R.Bool(S, TEXT("hired"), false);
 			Stab[i]->Task = R.Str(S, TEXT("task"), TEXT(""));

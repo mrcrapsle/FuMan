@@ -15,7 +15,7 @@ namespace FM13Match
 	float GoalBonus(EFM13Playstyle Style);
 	float ConcedeBonus(EFM13Playstyle Style);
 
-	FExpectedGoals ExpectedGoals(int32 HomeStrength, int32 AwayStrength, EFM13Playstyle HomeStyle, EFM13Playstyle AwayStyle);
+	FExpectedGoals ExpectedGoals(double HomeStrength, double AwayStrength, EFM13Playstyle HomeStyle, EFM13Playstyle AwayStyle);
 	int32 Poisson(FRandomStream& Rng, float Lambda);
 
 	// Erwartung vor dem Spiel und Vorstandsreaktion danach (match-live.js, boardShift)

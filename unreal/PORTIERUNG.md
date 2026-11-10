@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 145 Modulen in `js/`).
+Stand nach Runde B und der Stärkeformel: **16 portiert, 34 teilweise, 84 offen, 11 entfallen** (von 145 Modulen in `js/`).
 
 ## Ordner
 
@@ -35,7 +35,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `entities.js` | 314 | portiert | Spieler und Vereine | FM13Economy (Marktwert, Gehalt 1:1), FM13Names, CreatePlayer |
 | `utils.js` | 167 | portiert | Torformel, Tabellenreihenfolge | FM13Match::ExpectedGoals, Poisson, FM13CompareRows |
 | `leagues.js` | 425 | portiert | 6 Ligen, Spielplan, Auf- und Abstieg | FM13League, FM13World::AdvanceLeagues |
-| `match.js` | 632 | teilweise | Spieltag-Ablauf, Taktik-Boni | PlayMatchday, FM13Tactics (Live-Teile offen) |
+| `match.js` | 632 | teilweise | Spieltag-Ablauf, Teamstärke | calcTeamStrength 1:1 (FM13Strength, 60 Vergleichsfälle gegen das Browserspiel), Heimvorteil der KI, Eingespieltheit. Neutral bis zum Port: Kabine, Unterwelt, Fan-Aktionen, Team-Anweisungen, Trainingslager, Spielerrollen, Zweikampfhärte bei Karten und Verletzungen |
 | `match-post.js` | 567 | teilweise | Vorstand, Entlassung | CheckJobSecurity, CheckSeasonEndSacking (Pressestimmen offen) |
 | `season-end.js` | 601 | teilweise | Saisonende, Budgets | ConcludeSeason, PlanSeason (vereinfacht) |
 | `save.js` | 663 | portiert | Spielstand | FM13SaveCodec, Autosave, Slots |
@@ -51,7 +51,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 |---|---:|---|---|---|
 | `opponent-tactics.js` | 98 | portiert | Gegner-Taktik | FM13Tactics, PrepareOppPlan (Runde A) |
 | `tactic-system.js` | 67 | teilweise | Taktik-Bilanz | Taktik-Seite im Menü (Bilanz je Kombination offen) |
-| `squad.js` | 1022 | teilweise | Kader, Formationen | Kader-Seite, Formationen Aufstellung von Hand, Moral und Charakter (Runde B) |
+| `squad.js` | 1022 | teilweise | Kader, Formationen | Kader-Seite, Formationen, Aufstellung von Hand, automatische Aufstellung wie pickBestLineupIds (40 Vergleichsfälle), Moral, Charakter, Traits |
 | `matchprep.js` | 940 | offen | SPIELVORBEREITUNG (Phase 26.1): Aufstellungs- und Taktikvorlagen sowie der Spieltag-Check |  |
 | `match-prep.js` | 86 | portiert | Spielvorbereitung | SetMatchPrep: Ansatz des Gegners treffen gibt +2,5 (1:1), Taktik-Seite |
 | `match-scout.js` | 74 | teilweise | Spielprognose | Forecast aus der Torerwartung (Sieg/Remis/Niederlage), Taktik-Seite |
@@ -81,7 +81,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `national-team.js` | 172 | offen | Länderspiele & Turniere: feste Länderspielpausen nach den Spieltagen 6, 13, 24 und 30. |  |
 | `league-awards.js` | 100 | teilweise | Liga-Auszeichnungen | Torschützenkönig, Spieler und Talent der Saison (Runde B); Elf der Saison offen |
 | `league-stats.js` | 145 | teilweise | Liga-Statistik | Heim-/Auswärtstabelle, Liga-Statistik (Runde B); Torjägerliste aller Vereine offen |
-| `promotion-boost.js` | 53 | offen | Aufstiegsschub (Phase 25.18): KI-Aufsteiger rücken beim Saisonwechsel in evolveAiTeamStren |  |
+| `promotion-boost.js` | 53 | teilweise | Aufstiegsschub | Aufstiegseuphorie +3 bis Spieltag 10, +1,5 bis 17. Offen: Aufstiegsbudget, TV-Vorschuss |
 | `season-events.js` | 243 | offen | Saison-Ereignisse (Phase 15): Saisoneröffnung vor dem 1. Spieltag, Hallenturnier in der |  |
 | `season-preview.js` | 151 | offen | Saisonvorschau & Experten-Check: vor jeder Saison tippen die Experten die komplette Tabell |  |
 | `season-objectives.js` | 391 | offen | Season Goals & Objectives System |  |
@@ -103,7 +103,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `player-scandals.js` | 180 | offen | Spieler-Skandale |  |
 | `squad-radar.js` | 231 | offen | SQUAD-STRENGTH-RADAR |  |
 | `squadplanning.js` | 262 | offen | KADERPLANUNGSTOOL |  |
-| `locker-room.js` | 187 | offen | Kabine: Rangordnung, Grüppchen (Cliquen), Unzufriedene und die Kapitänsfrage. Baut auf dem |  |
+| `locker-room.js` | 187 | teilweise | Kabine, Kapitän | Kapitän nach Führungsqualität, Bonus in der Teamstärke. Offen: Cliquen, Unzufriedene, Kapitänswahl von Hand |
 | `team-council.js` | 186 | offen | Mannschaftsrat: Kapitän + zwei Führungsspieler. Einmal im Monat bringt der Rat höchstens |  |
 | `contracts.js` | 296 | teilweise | Verträge | Verlängern (Verhandlung offen) |
 | `contract-tools.js` | 222 | offen | VERTRAGS- UND TRANSFER-WERKZEUGE (Phase 26.2): Gehalts-Ampel, Verlängerungs-Assistent, |  |
@@ -178,14 +178,14 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 | `member-assembly.js` | 181 | offen | Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern |  |
 | `winter-talk.js` | 140 | offen | Winterpausen-Gespräch mit dem Vorstand (Phase 22.9): nach der Hinrunde (Spieltag 18-20, |  |
 | `media-department.js` | 243 | offen | Medienabteilung: aktive Pressearbeit auf dem einen echten Medienimage |  |
-| `campus-staff.js` | 694 | offen | Liga-Skalierung: dieselbe steile Kurve wie bei Stadion-Ausbauten - realistische |  |
+| `campus-staff.js` | 694 | teilweise | Personal | Wirkung von Co-Trainer, Analyst, Greenkeeper, Ernährungsberater, Athletiktrainer, Physio auf Stärke und Kondition (aus dem Browser-Spielstand). Offen: Einstellen, Ausbau, Verträge, übriges Personal |
 | `crest.js` | 273 | offen | Vereins-Wappen-EDITOR |  |
 | `freischaltungen.js` | 364 | offen | Freischaltungen (Board-Karte „Freischaltungssystem“): Bereiche, die erst mit einem gewachs |  |
 | `achievements.js` | 56 | teilweise | Erfolge | 13 Erfolge (Runde A), Liste angepasst |
 | `hall-of-fame.js` | 37 | offen | Hall of Fame |  |
 | `history.js` | 133 | teilweise | Vereinsgeschichte | Laufbahn, Rekorde, Legenden |
 | `career.js` | 395 | teilweise | Manager-Laufbahn | Laufbahn-Liste (Statistiken offen) |
-| `manager-rpg.js` | 225 | offen | MANAGER RPG & TALENTBAUM ENGINE |  |
+| `manager-rpg.js` | 225 | teilweise | Manager-Talente | Perks Taktiker und Fitness-Guru wirken (aus dem Browser-Spielstand). Offen: Erfahrung, Talentbaum, übrige Perks |
 | `manager-analytics.js` | 60 | offen | Manager-Statistik |  |
 | `manager-tools.js` | 677 | offen | MANAGER-WERKZEUGE (Phase 26.4): Liquiditäts-Vorschau, Konto-Alarm, Spieler-Etiketten, |  |
 | `insights.js` | 778 | offen | STATISTIK UND INFORMATION (Phase 26.3): Serien-Tracker, Formkurve je Spieler, CSV-Export, |  |
@@ -197,7 +197,7 @@ Stand nach Runde B: **16 portiert, 28 teilweise, 90 offen, 11 entfallen** (von 1
 |---|---:|---|---|---|
 | `office.js` | 477 | offen | MANAGERBÜRO - POINT-AND-CLICK STARTBILDSCHIRM |  |
 | `office-events.js` | 420 | offen | BÜRO-EREIGNISSE: BESUCHER IM MANAGERBÜRO |  |
-| `private-life.js` | 242 | offen | Trainer-Privatleben: GEHALT, LIFESTYLE, HOBBYS, EINKOMMENSQUELLEN |  |
+| `private-life.js` | 242 | teilweise | Privatleben | Trainerlizenz und Stress wirken auf die Teamstärke. Offen: alles andere |
 | `private-life-extra.js` | 289 | offen | PRIVATLEBEN, ERWEITERUNG (Phase 26.19): Sparkonto, Fortbildungen, Mentaltraining, Gehaltsv |  |
 
 ### Oberfläche und Rahmen
