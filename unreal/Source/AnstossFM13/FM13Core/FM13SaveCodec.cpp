@@ -179,6 +179,14 @@ namespace FM13Save
 		W.FieldBool(TEXT("winterActive"), S.bWinterWindowActive);
 		W.FieldBool(TEXT("winterUsed"), S.bWinterWindowUsed);
 		W.Field(TEXT("winterClose"), S.WinterWindowCloseMatchday);
+		W.FieldBool(TEXT("strategySet"), S.bStrategySet);
+		W.Field(TEXT("strategySeason"), S.Strategy.Season);
+		W.Field(TEXT("strategyChoice"), (int64)S.Strategy.Choice);
+		W.FieldBool(TEXT("strategyAuto"), S.Strategy.bAuto);
+		W.Field(TEXT("strategyOldGoal"), S.Strategy.OldGoal);
+		W.Field(TEXT("strategyGoal"), S.Strategy.Goal);
+		W.Field(TEXT("strategyDelta"), S.Strategy.BudgetDelta);
+		W.Field(TEXT("strategyResult"), S.Strategy.Result);
 		W.Field(TEXT("pokerActive"), S.Poker.bActive ? 1 : 0);
 		W.Field(TEXT("pokerPlayer"), S.Poker.PlayerId);
 		W.Field(TEXT("pokerOffer"), S.Poker.Offer);
@@ -785,6 +793,14 @@ namespace FM13Save
 		W.bWinterWindowActive = R.Bool(Root, TEXT("winterActive"), false);
 		W.bWinterWindowUsed = R.Bool(Root, TEXT("winterUsed"), false);
 		W.WinterWindowCloseMatchday = (int32)R.Int(Root, TEXT("winterClose"), 0);
+		W.bStrategySet = R.Bool(Root, TEXT("strategySet"), false);
+		W.Strategy.Season = (int32)R.Int(Root, TEXT("strategySeason"), 0);
+		W.Strategy.Choice = (FM13Transfers::EStrategie)R.Int(Root, TEXT("strategyChoice"), 3);
+		W.Strategy.bAuto = R.Bool(Root, TEXT("strategyAuto"), false);
+		W.Strategy.OldGoal = (int32)R.Int(Root, TEXT("strategyOldGoal"), 0);
+		W.Strategy.Goal = (int32)R.Int(Root, TEXT("strategyGoal"), 0);
+		W.Strategy.BudgetDelta = R.Int(Root, TEXT("strategyDelta"), 0);
+		W.Strategy.Result = (int32)R.Int(Root, TEXT("strategyResult"), 0);
 		for (int32 N : R.Items(Root, TEXT("buybackOptions")))
 		{
 			FFM13BuybackOption O;

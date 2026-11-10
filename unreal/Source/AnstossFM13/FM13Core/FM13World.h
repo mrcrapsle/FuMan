@@ -3,6 +3,7 @@
 #include "FM13Types.h"
 #include "FM13League.h"
 #include "FM13Cup.h"
+#include "FM13Transfers.h"
 
 // Der gesamte Spielzustand (entspricht dem globalen game-Objekt plus squad und leaguesData)
 // und alle Abläufe. Die Oberfläche ruft nur diese Funktionen auf; Render-Code ändert nie Geld.
@@ -304,6 +305,25 @@ public:
 	TArray<FFM13BuybackOption> BuybackOptions;
 	bool AcceptIncomingOfferWithBuyback(int32 Index, FString& OutReason);
 	void TickBuybackOptions();                        // zum Saisonende, vor Season++
+	// Transferstrategie mit dem Vorstand (js/transfer-strategy.js): eine Linie je Saison bis Spieltag 3
+	struct FFM13TransferStrategy
+	{
+		int32 Season = 0;
+		FM13Transfers::EStrategie Choice = FM13Transfers::EStrategie::Ausgewogen;
+		bool bAuto = false;      // nicht gewaehlt: ausgewogen gesetzt
+		int32 OldGoal = 0;
+		int32 Goal = 0;          // 0 = kein Ziel (Sofort-Erfolg ohne Tabellenziel)
+		int64 BudgetDelta = 0;
+		int32 Result = 0;        // 0 offen, 1 erreicht, 2 verfehlt
+	};
+	FFM13TransferStrategy Strategy;
+	bool bStrategySet = false;                        // fuer diese Saison gewaehlt oder automatisch gesetzt
+	bool IsTransferStrategyOpen() const { return Matchday <= 3 && !bStrategySet; }
+	bool ChooseTransferStrategy(FM13Transfers::EStrategie Choice, FString& OutReason);
+	void TickTransferStrategy();                      // nach jedem Spieltag: nichts gewaehlt -> ausgewogen
+	void ResolveTransferStrategy(int32 FinalRank);    // Saisonende, vor der Vorstandsversammlung
+	int32 CountYouthGraduates() const;                // Eigengewaechse mit 10 oder mehr Ligaspielen
+	int64 SeasonProfit() const;                       // Summe der Buchungen dieser Saison
 	bool ExerciseBuyback(int32 PlayerId, FString& OutReason);
 	bool DeclineIncomingOffer(int32 Index, FString& OutReason);
 	static FString AchievementLabel(const FString& Id);

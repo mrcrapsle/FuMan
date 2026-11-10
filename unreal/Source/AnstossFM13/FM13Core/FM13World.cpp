@@ -220,6 +220,7 @@ bool FFM13World::PlayMatchday()
 	TickYouthPathway();
 	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
+	TickTransferStrategy();
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
 	PrepareOppPlan();
@@ -602,6 +603,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	else if (Abstand >= -3) Wertung = -6;
 	else Wertung = -18;
 	BoardSat = FMath::Clamp(BoardSat + Wertung, 10, 100);
+	ResolveTransferStrategy(Rank);
 	if (Outcome == EFM13SeasonOutcome::Promoted) { BoardSat = FMath::Min(100, BoardSat + 15); Fans = FMath::Min(100, Fans + 10); }
 	if (Outcome == EFM13SeasonOutcome::Relegated) { BoardSat = FMath::Max(10, BoardSat - 15); Fans = FMath::Max(0, Fans - 10); }
 	if (Rank == 1) { BoardSat = FMath::Min(100, BoardSat + 5); Fans = FMath::Min(100, Fans + 5); }
@@ -621,6 +623,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	bWinterWindowActive = false;
 	bWinterWindowUsed = false;
 	WinterWindowCloseMatchday = 0;
+	bStrategySet = false;
 	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
 	DevelopPlayers(S);
 	YouthIntake(S);
@@ -3362,4 +3365,74 @@ bool FFM13World::ExerciseBuyback(int32 PlayerId, FString& OutReason)
 	Fans = FMath::Min(100, Fans + 2);
 	AddMessage(TEXT("Rueckkehr"), FString::Printf(TEXT("%s kehrt fuer %lld von %s zurueck (Staerke %d, Fans +2)."), *P.Name, (long long)Option.Price, *Option.Club, P.Strength));
 	return true;
+}
+
+// ---------- Transferstrategie (js/transfer-strategy.js) ----------
+
+bool FFM13World::ChooseTransferStrategy(FM13Transfers::EStrategie Choice, FString& OutReason)
+{
+	if (!IsTransferStrategyOpen())
+	{
+		OutReason = bStrategySet ? TEXT("Die Transferstrategie fuer diese Saison steht schon.") : TEXT("Die Transferstrategie wird bis Spieltag 3 festgelegt.");
+		return false;
+	}
+	const int32 Teams = FM13::TeamsPerLeague;
+	const int32 Alt = SeasonTarget;
+	const int32 Verschiebung = FM13Transfers::StrategieZielVerschiebung(Choice);
+	const int32 Ziel = FM13Transfers::StrategieZiel(Alt, Verschiebung, Teams);
+	if (Choice == FM13Transfers::EStrategie::Sofort && Alt == 1) { OutReason = TEXT("Platz 1 ist schon das Ziel - Sofort-Erfolg geht nicht hoeher."); return false; }
+	const int64 Delta = FM13Transfers::StrategieBudgetDelta(LeagueTransferBudget(LeagueLevel), Choice);
+	const int64 Vorher = TransferBudget;
+	TransferBudget = FMath::Max<int64>(0, TransferBudget + Delta);
+	SeasonTarget = Ziel;
+	Strategy.Season = Season;
+	Strategy.Choice = Choice;
+	Strategy.bAuto = false;
+	Strategy.OldGoal = Alt;
+	Strategy.Goal = Ziel;
+	Strategy.BudgetDelta = TransferBudget - Vorher;
+	Strategy.Result = 0;
+	bStrategySet = true;
+	AddMessage(TEXT("Transferstrategie"), FString::Printf(TEXT("Transferbudget %+lld. Saisonziel jetzt Platz %d."), (long long)(TransferBudget - Vorher), SeasonTarget));
+	return true;
+}
+
+// Jeden Spieltag nach dem Zaehler: wer bis Spieltag 3 nichts gewaehlt hat, bleibt ausgewogen.
+void FFM13World::TickTransferStrategy()
+{
+	if (Matchday > 3 && Matchday <= FM13::MatchdaysPerSeason && !bStrategySet)
+	{
+		Strategy = FFM13TransferStrategy();
+		Strategy.Season = Season;
+		Strategy.bAuto = true;
+		bStrategySet = true;
+	}
+}
+
+int32 FFM13World::CountYouthGraduates() const
+{
+	int32 N = 0;
+	for (const FFM13Player& P : Squad) if (P.bAcademyGraduate && P.Appearances >= FM13Transfers::StrategieJugendSpiele) N++;
+	return N;
+}
+
+int64 FFM13World::SeasonProfit() const
+{
+	int64 Summe = 0;
+	for (const FFM13Booking& B : Bookings) if (B.Season == Season) Summe += B.Amount;
+	return Summe;
+}
+
+// Saisonende: Abrechnung der Linie gegen das Saisonziel (der Vorstand bewertet, ob das Versprechen gehalten wurde).
+void FFM13World::ResolveTransferStrategy(int32 FinalRank)
+{
+	if (!bStrategySet || Strategy.Result != 0 || Strategy.bAuto || Strategy.Season != Season) return;
+	if (Strategy.Choice == FM13Transfers::EStrategie::Ausgewogen) return;
+	const int32 Eigen = CountYouthGraduates();
+	const FM13Transfers::FStrategieAbrechnung A = FM13Transfers::StrategieAbrechnung(Strategy.Choice, Eigen, FinalRank, Strategy.Goal, SeasonProfit());
+	BoardSat = FMath::Clamp(BoardSat + A.Vorstand, 10, 100);
+	if (A.Fans) Fans = FMath::Min(100, Fans + A.Fans);
+	Strategy.Result = A.bErfuellt ? 1 : 2;
+	AddMessage(FString::Printf(TEXT("Transferstrategie %s"), A.bErfuellt ? TEXT("erfuellt") : TEXT("verfehlt")),
+		FString::Printf(TEXT("Platz %d, Ziel Platz %d, Eigengewaechse %d, Saisonbilanz %lld. Vorstand %+d."), FinalRank, Strategy.Goal, Eigen, (long long)SeasonProfit(), A.Vorstand));
 }

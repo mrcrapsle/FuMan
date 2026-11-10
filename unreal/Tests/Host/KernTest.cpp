@@ -1435,6 +1435,67 @@ static void TestMedizincheck()
 	PRUEFE(bSpOk && Sp2Ld.BuybackOptions.Num() == 1 && Sp2Ld.BuybackOptions[0].Price == Sp2.BuybackOptions[0].Price && Sp2Ld.BuybackOptions[0].Club == TEXT("Speicherklub"), "Rueckkaufoption bleibt im Spielstand (%s)", *SpFehler);
 	PRUEFE(Sp2Ld.TransferBudget == Sp2.TransferBudget && Sp2Ld.BuybackOptions[0].Player.Age == Sp2.BuybackOptions[0].Player.Age, "Transferbudget und Spielerdaten bleiben im Spielstand");
 
+	// Transferstrategie (js/transfer-strategy.js): Wahl, Automatik, Abrechnung
+	FFM13World T;
+	T.NewGame(TEXT("Strategie"), 148, 0);
+	T.Matchday = 1;
+	T.SeasonTarget = 9;
+	T.TransferBudget = 10000000;
+	FString TGrund;
+	PRUEFE(T.ChooseTransferStrategy(FM13Transfers::EStrategie::Sofort, TGrund), "Strategie: Sofort-Erfolg am Saisonstart gewaehlt (%s)", *TGrund);
+	PRUEFE(T.TransferBudget == 20000000 && T.SeasonTarget == 7, "Sofort-Erfolg: Budget +40 %%, Ziel 2 Plaetze hoeher");
+	PRUEFE(!T.ChooseTransferStrategy(FM13Transfers::EStrategie::Sparen, TGrund) && TGrund.Contains(TEXT("steht schon")), "Strategie nur einmal je Saison");
+	FFM13World Auto;
+	Auto.NewGame(TEXT("Automatik"), 149, 0);
+	Auto.Matchday = 5;
+	Auto.TickTransferStrategy();
+	PRUEFE(Auto.Strategy.bAuto && Auto.Strategy.Choice == FM13Transfers::EStrategie::Ausgewogen, "Nach Spieltag 3 ohne Wahl: ausgewogen");
+	PRUEFE(!Auto.ChooseTransferStrategy(FM13Transfers::EStrategie::Jugend, TGrund), "Nach Spieltag 3 keine Wahl mehr");
+	// Abrechnung Sofort-Erfolg verfehlt: Platz 9 statt 7
+	T.BoardSat = 50;
+	T.ResolveTransferStrategy(9);
+	PRUEFE(T.BoardSat == 42 && T.Strategy.Result == 2, "Sofort-Erfolg verfehlt: Vorstand -8");
+	// Sofort-Erfolg erreicht
+	FFM13World Erfolg = T;
+	Erfolg.Strategy.Result = 0;
+	Erfolg.BoardSat = 50;
+	Erfolg.ResolveTransferStrategy(6);
+	PRUEFE(Erfolg.BoardSat == 55 && Erfolg.Strategy.Result == 1, "Sofort-Erfolg erreicht: Vorstand +5");
+	// Jugend: drei Eigengewaechse mit 10 Spielen
+	FFM13World Jugend;
+	Jugend.NewGame(TEXT("Jugend"), 150, 0);
+	Jugend.Matchday = 1;
+	FString JGrund;
+	Jugend.ChooseTransferStrategy(FM13Transfers::EStrategie::Jugend, JGrund);
+	for (int32 i = 0; i < 3; ++i) { Jugend.Squad[i].bAcademyGraduate = true; Jugend.Squad[i].Appearances = 10; }
+	Jugend.BoardSat = 50;
+	Jugend.Fans = 50;
+	Jugend.ResolveTransferStrategy(8);
+	PRUEFE(Jugend.BoardSat == 56 && Jugend.Fans == 53 && Jugend.Strategy.Result == 1, "Jugend erfuellt: Vorstand +6, Fans +3");
+	// Sparen mit Minus
+	FFM13World Spar;
+	Spar.NewGame(TEXT("Sparen"), 151, 0);
+	Spar.Matchday = 1;
+	Spar.ChooseTransferStrategy(FM13Transfers::EStrategie::Sparen, JGrund);
+	FFM13Booking Minus;
+	Minus.Label = TEXT("Verlust"); Minus.Amount = -5000; Minus.Season = Spar.Season;
+	Spar.Bookings.Add(Minus);
+	Spar.BoardSat = 50;
+	Spar.ResolveTransferStrategy(10);
+	PRUEFE(Spar.BoardSat == 44 && Spar.Strategy.Result == 2, "Sparen mit Minus: Vorstand -6");
+	// Strategie bleibt im Spielstand
+	FFM13World StSp = T;
+	FFM13World StLd;
+	FString StFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(StSp), StLd, StFehler) && StLd.bStrategySet && StLd.Strategy.Choice == FM13Transfers::EStrategie::Sofort && StLd.Strategy.Goal == StSp.Strategy.Goal, "Transferstrategie bleibt im Spielstand (%s)", *StFehler);
+	// Ausgewogen aendert nichts
+	FFM13World Aus;
+	Aus.NewGame(TEXT("Ausgewogen"), 152, 0);
+	Aus.Matchday = 1;
+	Aus.ChooseTransferStrategy(FM13Transfers::EStrategie::Ausgewogen, JGrund);
+	Aus.BoardSat = 50;
+	Aus.ResolveTransferStrategy(18);
+	PRUEFE(Aus.BoardSat == 50 && Aus.Strategy.Result == 0, "Ausgewogen: keine Veraenderung");
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);
