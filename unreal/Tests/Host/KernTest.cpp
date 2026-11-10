@@ -8,6 +8,7 @@
 #include "../../Source/AnstossFM13/FM13Core/FM13Strength.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Staff.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Locker.h"
+#include "../../Source/AnstossFM13/FM13Core/FM13Youth.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13Tactics.h"
 #include "ReferenzStaerke.h"
 #include "../../Source/AnstossFM13/FM13Core/FM13SaveCodec.h"
@@ -1131,6 +1132,68 @@ static void TestMannschaftsrat()
 	std::printf("\n");
 }
 
+// Jugend (js/youth-pathway.js, js/youth-academy-extended.js): Stufe, Spanne, Wachstum, Rangliste
+static void TestJugend()
+{
+	std::printf("Jugend: Potenzialstufe, Trainer, Wachstum, Talentwert\n");
+	PRUEFE(FM13Youth::Stufe(0.5) == 1 && FM13Youth::Stufe(0.7) == 2 && FM13Youth::Stufe(0.95) == 3, "Stufe: unter 0,6 / 0,9 / darueber");
+	int32 U = 0, O = 0;
+	FM13Youth::PotenzialSpanne(2, U, O);
+	PRUEFE(U == 67 && O == 78, "Spanne Stufe 2: 67 bis 78");
+	PRUEFE(std::fabs(FM13Youth::Trainerbonus(false, 9) - 1.0) < 1e-9, "Ohne Jugendtrainer: 1");
+	PRUEFE(std::fabs(FM13Youth::Trainerbonus(true, 0) - 1.15) < 1e-9 && std::fabs(FM13Youth::Trainerbonus(true, 5) - 1.25) < 1e-9 && std::fabs(FM13Youth::Trainerbonus(true, 40) - 1.5) < 1e-9,
+		"Trainer 1,15, je Ernennung 0,02 mehr, hoechstens 1,5");
+	// Gleichmaessig Zufall 1: 1,5 Zuwachs. Potenzial 60, Staerke 50 (Luecke 10): round(51,5) = 52
+	PRUEFE(FM13Youth::Wachstum(50, 60, 18, 1.0, false, false, 1.0) == 52, "Wachstum 50 nach 52 bei Zufall 1");
+	// Luecke unter 5: Zuwachs mal 0,3 -> 0,45 -> 57
+	PRUEFE(FM13Youth::Wachstum(57, 60, 18, 1.0, false, false, 1.0) == 57, "Kleine Luecke bremst (0,45)");
+	// Schwerpunkt 1,2 und Mentor 1,35: 1,5 x 1,62 = 2,43 -> round(52,43) = 52
+	PRUEFE(FM13Youth::Wachstum(50, 60, 18, 1.0, true, true, 1.0) == 52, "Schwerpunkt und Mentor: 2,43 -> 52");
+	// Alter 25: Daempfung 0,75 -> 1,125 -> 51
+	PRUEFE(FM13Youth::Wachstum(50, 60, 25, 1.0, false, false, 1.0) == 51, "Alter 25 daempft auf 0,75");
+	// Trainer 1,15 -> 1,725 -> round(51,725) = 52
+	PRUEFE(FM13Youth::Wachstum(50, 60, 18, 1.15, false, false, 1.0) == 52, "Trainer 1,15 bei Zufall 1");
+	// Nie ueber dem Potenzial
+	PRUEFE(FM13Youth::Wachstum(59, 60, 18, 1.5, true, true, 1.0) == 59, "Nahe am Potenzial bremst der Abstand den Zuwachs (59)");
+	PRUEFE(FM13Youth::Wachstum(59, 60, 18, 1.5, false, false, 1.0) <= 60, "Nie ueber dem Potenzial");
+	// Rangliste: Luecke 10, Alter 18 (Bonus 20), Trait 10, Mentor 8 -> 48
+	PRUEFE(FM13Youth::Talentwert(50, 60, 18, true, true) == 48 && FM13Youth::Talentwert(50, 60, 18, false, false) == 30, "Talentwert: Luecke + Alter + Trait + Mentor");
+
+	// Monatlicher Lauf im Spiel: Talente werden gestuft und wachsen, Trainer zaehlt
+	FFM13World W;
+	W.NewGame(TEXT("Jugend"), 111, 0);
+	W.YouthTalents.Reset();
+	for (int32 i = 0; i < 3; ++i)
+	{
+		FFM13Player T;
+		T.Id = 3000 + i; T.Name = TEXT("Talent"); T.Strength = 50; T.Potential = 70; T.Age = 17; T.Pos = EFM13Position::MIT;
+		W.YouthTalents.Add(T);
+	}
+	FString G;
+	W.Money = 100000;
+	PRUEFE(!W.AssignYouthCoach(12345, G) && W.AssignYouthCoach(W.Squad[0].Id, G) && W.YouthCoachId == W.Squad[0].Id && W.Money == 85000 && W.YouthCoachCount == 1,
+		"Jugendtrainer: 15000, nur ein bekannter Spieler");
+	W.TickYouthDevelopment();
+	bool bGewachsen = true;
+	for (const FFM13Player& T : W.YouthTalents) { if (T.Strength < 50 || T.Strength > 70 || T.PotentialTier == 0) bGewachsen = false; }
+	PRUEFE(bGewachsen, "Monatlich: Talente wachsen hoechstens bis zum Potenzial, Stufe gesetzt");
+
+	// Spielstand: Trainer, Stufe und Zufall bleiben erhalten
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Jugendspeicher"), 112, 0);
+	Sp.YouthTalents.Reset();
+	FFM13Player T;
+	T.Id = 4000; T.Name = TEXT("T"); T.Strength = 50; T.Potential = 70; T.Age = 17; T.PotentialTier = 2; T.YouthFocus = TEXT("technik"); T.MentorId = Sp.Squad[0].Id;
+	Sp.YouthTalents.Add(T);
+	Sp.YouthCoachId = Sp.Squad[1].Id; Sp.YouthCoachCount = 3;
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.YouthTalents.Num() == 1 && Ld.YouthTalents[0].PotentialTier == 2 && Ld.YouthTalents[0].YouthFocus == FString(TEXT("technik")) && Ld.YouthTalents[0].MentorId == Sp.Squad[0].Id
+		&& Ld.YouthCoachId == Sp.YouthCoachId && Ld.YouthCoachCount == 3, "Jugend bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
 // Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
 static void TestKonditionSaison()
 {
@@ -1381,6 +1444,7 @@ int main()
 	TestPersonal();
 	TestKabine();
 	TestMannschaftsrat();
+	TestJugend();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

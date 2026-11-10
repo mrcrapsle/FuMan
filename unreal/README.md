@@ -78,6 +78,7 @@ Die Stärke der eigenen Elf rechnet jetzt dieselbe Formel wie `calcTeamStrength(
 - **Personal im Verein:** Auf der Verein-Seite stellst du Co-Trainer, Athletiktrainer, Physio, Greenkeeper, Analyst und Ernährungsberater ein, wählst aus drei Bewerbern, bildest weiter, verlängerst Verträge und erhöhst Gehälter. Abwerbeversuche kommen vor, eine Bindungsprämie hält den Trainer.
 - **Kabine:** Spieler kommen aus Nationen und Altersgruppen. Gleiche bilden Cliquen. Eine rumorende Clique zieht den Rest herunter, ein Kapitän mit Autorität bremst das. Der Mannschaftsrat (Kapitän plus zwei Führungsspieler) stabilisiert oder schwächt die Stimmung. Gelegentlich werden Mitspieler beste Freunde.
 - **Mannschaftsrat:** Einmal im Monat meldet der Rat ein Anliegen, etwa eine schlechte Stimmung, einen übergangenen Spieler, harte Trainingsarbeit oder die Bitte um eine Prämie nach drei Siegen. Du antwortest auf der Kader-Seite. Unbeantwortet verfällt das Anliegen nach vier Spieltagen.
+- **Jugend:** Jeder Talent bekommt eine Potenzialstufe. Monatlich wächst er nach seiner Grenze, je nach Jugendtrainer (bis 1,5), Schwerpunkt, Mentor und Alter. Ein Jugendtrainer kostet 15 000 €.
 - **Verletzungen** entstehen wie im Browserspiel einmal je Spieltag in der Startelf. Wer schon oft verletzt war oder älter ist, fällt eher aus.
 - **Aufstiegseuphorie:** +3 Stärke bis Spieltag 10 nach einem Aufstieg, +1,5 bis Spieltag 17.
 
@@ -127,7 +128,7 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4658 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4670 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Teamstärke, Aufstellung, Noten, Wochenplan, Kraftverlust und Verletzungswurf gegen die Original-JS-Rechnung (`node unreal/Tests/Host/referenz-staerke.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.

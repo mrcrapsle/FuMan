@@ -7,6 +7,7 @@
 #include "FM13Fitness.h"
 #include "FM13Staff.h"
 #include "FM13Locker.h"
+#include "FM13Youth.h"
 #include <cmath>
 #include "FM13Strength.h"
 
@@ -70,6 +71,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	*this = FFM13World();
 	Rng.Initialize(Seed);
 	RngKabine.Initialize(Seed * 7919 + 13);
+	RngJugend.Initialize(Seed * 104729 + 29);
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
@@ -210,7 +212,7 @@ bool FFM13World::PlayMatchday()
 	TickIncomingOffers();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
-	if (Matchday % 4 == 0) { TickTeamCouncil(); TickLockerRoom(); }
+	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
@@ -775,13 +777,43 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 		AddMessage(TEXT("Notverpflichtung"), P.Name + TEXT(" kommt ablosefrei, damit der Kader reicht."));
 	}
 
-	// Talente reifen weiter
+	// Talente werden ein Jahr aelter (ageYouthAtSeasonEnd); ihr Wachstum kommt monatlich aus TickYouthDevelopment()
 	for (FFM13Player& T : YouthTalents)
 	{
 		T.Age++;
-		T.Strength = FMath::Min(T.Potential, T.Strength + Rng.RandRange(2, 5));
 		T.MarketValue = FM13Economy::MarketValue(T.Strength, nullptr);
 	}
+}
+
+// tickYouthDevelopment(): monatlich. Jeder Talent wächst nach seiner Potenzialgrenze, Jugendtrainer, Schwerpunkt, Mentor und Alter.
+void FFM13World::TickYouthDevelopment()
+{
+	const double Trainer = FM13Youth::Trainerbonus(YouthCoachId != 0, YouthCoachCount);
+	for (FFM13Player& T : YouthTalents)
+	{
+		if (T.PotentialTier == 0) T.PotentialTier = FM13Youth::Stufe(RngJugend.FRand());
+		const bool bSchwerpunkt = T.YouthFocus != TEXT("allgemein");
+		const bool bMentor = T.MentorId != 0 && FindPlayer(T.MentorId) != nullptr;
+		const double Zufall = RngJugend.RandRange(0, 999999) / 1000000.0;
+		T.Strength = FM13Youth::Wachstum(T.Strength, T.Potential, T.Age, Trainer, bSchwerpunkt, bMentor, Zufall);
+		T.MarketValue = FM13Economy::MarketValue(T.Strength, nullptr);
+	}
+}
+
+bool FFM13World::AssignYouthCoach(int32 PlayerId, FString& OutReason)
+{
+	FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht gefunden."); return false; }
+	if (Money < 15000) { OutReason = TEXT("Nicht genug Geld! Benoetigt: 15000"); return false; }
+	Book(TEXT("Jugendtrainer"), -15000);
+	YouthCoachId = PlayerId;
+	YouthCoachCount++;
+	return true;
+}
+
+void FFM13World::RemoveYouthCoach()
+{
+	YouthCoachId = 0;
 }
 
 void FFM13World::YouthIntake(FFM13SeasonSummary& S)
@@ -792,6 +824,9 @@ void FFM13World::YouthIntake(FFM13SeasonSummary& S)
 	{
 		FFM13Player T = CreatePlayer((EFM13Position)Rng.RandRange(0, 3), Basis - 14 + YouthAcademyLevel * 2, Basis - 6 + YouthAcademyLevel * 2, 16, 17);
 		T.Potential = FMath::Min(99, T.Strength + Rng.RandRange(8, 15 + YouthAcademyLevel * 4));
+		// Potenzialstufe: Zufall, Akademie (0,04 je Stufe ueber der ersten) - assignYouthPotentialTier()
+		T.PotentialTier = FM13Youth::Stufe(RngJugend.FRand() + (YouthAcademyLevel - 1) * 0.04);
+		T.bPotentialRevealed = false;
 		T.Wage = 0;
 		T.ContractYears = 0;
 		YouthTalents.Add(T);
@@ -1138,8 +1173,6 @@ void FFM13World::TrainPlayers()
 		if (P.Age <= 27 && P.Strength < P.Potential && Rng.FRand() < Chance) P.Strength++;
 		else if (P.Age >= 31 && Rng.FRand() < 0.03f) P.Strength = FMath::Max(1, P.Strength - 1);
 	}
-	for (FFM13Player& T : YouthTalents)
-		if (T.Strength < T.Potential && Rng.FRand() < Chance) T.Strength++;
 }
 
 int64 FFM13World::TrainingUpgradeCost() const

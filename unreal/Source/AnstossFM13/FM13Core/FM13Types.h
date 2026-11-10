@@ -69,6 +69,10 @@ struct FFM13Player
 	uint8 Nation = 0;           // Herkunft (FM13Locker::Nation), bestimmt die Cliquen
 	int32 FriendId = 0;         // Kabinen-Freund (0 = keiner)
 	int32 SquadTenure = 0;      // Spieltage im Kader (ab 20 kann man Freund werden)
+	uint8 PotentialTier = 0;    // Jugend: Potenzialstufe 1 bis 3, 0 = noch nicht bestimmt
+	bool bPotentialRevealed = false; // Jugend: Potenzial gesichtet
+	FString YouthFocus = TEXT("allgemein"); // Jugend: Ausbildungsschwerpunkt
+	int32 MentorId = 0;         // Jugend: Mentor aus dem Profikader (0 = keiner)
 	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }

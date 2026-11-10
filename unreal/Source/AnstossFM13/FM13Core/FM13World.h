@@ -61,6 +61,12 @@ public:
 	int32 CampusTrainingGround = 0;                 // Campus: Trainingsgelände mit Flutlicht, +1 je Stufe
 	FString TackleHardness = TEXT("normal");        // Zweikampfhärte: hart, normal, vorsichtig
 	int32 CaptainId = 0;                            // Kapitän (0 = keiner)
+	int32 YouthCoachId = 0;                        // Jugendtrainer aus dem Profikader (0 = keiner)
+	int32 YouthCoachCount = 0;                     // Ernennungen insgesamt (Erfahrung, 0,02 je Stufe)
+	FRandomStream RngJugend;                       // eigener Zufall fuer die Jugend, damit andere Systeme gleich bleiben
+	void TickYouthDevelopment();                   // monatlich: tickYouthDevelopment()
+	bool AssignYouthCoach(int32 PlayerId, FString& OutReason);
+	void RemoveYouthCoach();
 	TArray<int32> CouncilIds;                       // Mannschaftsrat: Kapitän und zwei Führungsspieler
 	double CouncilStabilizer() const;               // getCouncilMoraleStabilizer()
 	double CliqueModifier() const;                  // getCliqueChemistryModifier()

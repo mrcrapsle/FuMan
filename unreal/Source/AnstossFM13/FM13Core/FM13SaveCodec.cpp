@@ -1,5 +1,6 @@
 #include "FM13SaveCodec.h"
 #include "FM13Fitness.h"
+#include "FM13Youth.h"
 #include "FM13Staff.h"
 #include "FM13Json.h"
 
@@ -71,6 +72,10 @@ namespace
 		W.Field(TEXT("appsTotal"), P.AppearancesTotal);
 		W.Field(TEXT("timesInjured"), P.TimesInjured);
 		W.Field(TEXT("nation"), (int64)P.Nation);
+		W.Field(TEXT("potentialTier"), (int64)P.PotentialTier);
+		W.FieldBool(TEXT("potentialRevealed"), P.bPotentialRevealed);
+		W.Field(TEXT("youthFocus"), P.YouthFocus);
+		W.Field(TEXT("mentorId"), P.MentorId);
 		W.Field(TEXT("friendId"), P.FriendId);
 		W.Field(TEXT("tenure"), P.SquadTenure);
 		W.FieldBool(TEXT("chronic"), P.bChronic);
@@ -179,6 +184,9 @@ namespace FM13Save
 		W.Field(TEXT("campusTrainingGround"), S.CampusTrainingGround);
 		W.Field(TEXT("tackleHardness"), S.TackleHardness);
 		W.Field(TEXT("captain"), S.CaptainId);
+		W.Field(TEXT("youthCoachId"), S.YouthCoachId);
+		W.Field(TEXT("youthCoachCount"), S.YouthCoachCount);
+		W.Field(TEXT("rngJugendSeed"), (int64)S.RngJugend.GetCurrentSeed());
 		W.FieldBool(TEXT("ratAktiv"), S.Anliegen.bAktiv);
 		W.Field(TEXT("ratTyp"), S.Anliegen.Typ);
 		W.Field(TEXT("ratTitel"), S.Anliegen.Titel);
@@ -428,6 +436,10 @@ namespace
 		P.AppearancesTotal = FMath::Max(0, (int32)R.Int(Obj, TEXT("appsTotal"), 0));
 		P.TimesInjured = FMath::Max(0, (int32)R.Int(Obj, TEXT("timesInjured"), 0));
 		P.Nation = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("nation"), 0), 0, 5);
+		P.PotentialTier = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("potentialTier"), 0), 0, 3);
+		P.bPotentialRevealed = R.Bool(Obj, TEXT("potentialRevealed"), false);
+		P.YouthFocus = R.Str(Obj, TEXT("youthFocus"), TEXT("allgemein"));
+		P.MentorId = (int32)R.Int(Obj, TEXT("mentorId"), 0);
 		P.FriendId = (int32)R.Int(Obj, TEXT("friendId"), 0);
 		P.SquadTenure = FMath::Max(0, (int32)R.Int(Obj, TEXT("tenure"), 0));
 		P.bChronic = R.Bool(Obj, TEXT("chronic"), false);
@@ -538,6 +550,9 @@ namespace FM13Save
 		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(Root, TEXT("campusTrainingGround"), 0), 0, 5);
 		W.TackleHardness = R.Str(Root, TEXT("tackleHardness"), TEXT("normal"));
 		W.CaptainId = (int32)R.Int(Root, TEXT("captain"), 0);
+		W.YouthCoachId = (int32)R.Int(Root, TEXT("youthCoachId"), 0);
+		W.YouthCoachCount = (int32)R.Int(Root, TEXT("youthCoachCount"), 0);
+		W.RngJugend.Initialize((int32)R.Int(Root, TEXT("rngJugendSeed"), 1));
 		W.Anliegen.bAktiv = R.Bool(Root, TEXT("ratAktiv"), false);
 		W.Anliegen.Typ = R.Str(Root, TEXT("ratTyp"), TEXT(""));
 		W.Anliegen.Titel = R.Str(Root, TEXT("ratTitel"), TEXT(""));
