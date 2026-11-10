@@ -73,6 +73,11 @@ namespace
 		W.Field(TEXT("timesInjured"), P.TimesInjured);
 		W.Field(TEXT("nation"), (int64)P.Nation);
 		W.Field(TEXT("potentialTier"), (int64)P.PotentialTier);
+		W.Field(TEXT("proDecisionLeft"), P.ProDecisionLeft);
+		W.FieldBool(TEXT("academyGraduate"), P.bAcademyGraduate);
+		W.Field(TEXT("meilensteinDebut"), P.MeilensteinDebut);
+		W.Field(TEXT("meilensteinTor"), P.MeilensteinTor);
+		W.Field(TEXT("meilensteinElf"), P.MeilensteinElf);
 		W.FieldBool(TEXT("potentialRevealed"), P.bPotentialRevealed);
 		W.Field(TEXT("youthFocus"), P.YouthFocus);
 		W.Field(TEXT("mentorId"), P.MentorId);
@@ -321,6 +326,29 @@ namespace FM13Save
 		W.ArrayKey(TEXT("youth"));
 		for (const FFM13Player& P : S.YouthTalents) WritePlayer(W, P);
 		W.EndArray();
+		W.ArrayKey(TEXT("youthLoans"));
+		for (const FFM13World::FFM13YouthLoan& L : S.YouthLoans)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, L.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("club"), L.Club);
+			W.Field(TEXT("clubLevel"), L.ClubLevel);
+			W.Field(TEXT("clubStrength"), L.ClubStrength);
+			W.Field(TEXT("duration"), L.Duration);
+			W.Field(TEXT("originalStrength"), L.OriginalStrength);
+			W.Field(TEXT("apps"), L.Apps);
+			W.Field(TEXT("goals"), L.Goals);
+			W.FieldReal(TEXT("devProgress"), L.DevProgress);
+			W.EndObject();
+		}
+		W.EndArray();
+		WriteStrings(W, TEXT("youthMoments"), S.YouthMoments);
 		W.ArrayKey(TEXT("market"));
 		for (const FFM13MarketOffer& O : S.Market)
 		{
@@ -437,6 +465,11 @@ namespace
 		P.TimesInjured = FMath::Max(0, (int32)R.Int(Obj, TEXT("timesInjured"), 0));
 		P.Nation = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("nation"), 0), 0, 5);
 		P.PotentialTier = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("potentialTier"), 0), 0, 3);
+		P.ProDecisionLeft = (int32)R.Int(Obj, TEXT("proDecisionLeft"), 0);
+		P.bAcademyGraduate = R.Bool(Obj, TEXT("academyGraduate"), false);
+		P.MeilensteinDebut = R.Str(Obj, TEXT("meilensteinDebut"), TEXT(""));
+		P.MeilensteinTor = R.Str(Obj, TEXT("meilensteinTor"), TEXT(""));
+		P.MeilensteinElf = R.Str(Obj, TEXT("meilensteinElf"), TEXT(""));
 		P.bPotentialRevealed = R.Bool(Obj, TEXT("potentialRevealed"), false);
 		P.YouthFocus = R.Str(Obj, TEXT("youthFocus"), TEXT("allgemein"));
 		P.MentorId = (int32)R.Int(Obj, TEXT("mentorId"), 0);
@@ -673,6 +706,21 @@ namespace FM13Save
 
 		for (int32 N : R.Items(Root, TEXT("squad"))) W.Squad.Add(ReadPlayer(R, N));
 		for (int32 N : R.Items(Root, TEXT("youth"))) W.YouthTalents.Add(ReadPlayer(R, N));
+		for (int32 N : R.Items(Root, TEXT("youthLoans")))
+		{
+			FFM13World::FFM13YouthLoan L;
+			L.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			L.Club = R.Str(N, TEXT("club"), TEXT(""));
+			L.ClubLevel = (int32)R.Int(N, TEXT("clubLevel"), 0);
+			L.ClubStrength = (int32)R.Int(N, TEXT("clubStrength"), 50);
+			L.Duration = (int32)R.Int(N, TEXT("duration"), 0);
+			L.OriginalStrength = (int32)R.Int(N, TEXT("originalStrength"), 0);
+			L.Apps = (int32)R.Int(N, TEXT("apps"), 0);
+			L.Goals = (int32)R.Int(N, TEXT("goals"), 0);
+			L.DevProgress = R.Real(N, TEXT("devProgress"), 0.0);
+			W.YouthLoans.Add(L);
+		}
+		for (int32 N : R.Items(Root, TEXT("youthMoments"))) W.YouthMoments.Add(P.Nodes[N].Text);
 		for (int32 N : R.Items(Root, TEXT("market")))
 		{
 			FFM13MarketOffer O;

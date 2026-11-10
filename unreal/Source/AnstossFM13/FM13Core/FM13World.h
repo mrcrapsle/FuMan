@@ -9,6 +9,8 @@
 class FFM13World
 {
 public:
+	TArray<int32> MatchGoals;   // Tore des letzten eigenen Spiels je Kaderindex (Meilensteine, Noten)
+	TArray<int32> MatchAssists; // Vorlagen des letzten eigenen Spiels je Kaderindex
 	// ---------- Zustand ----------
 	FString ClubName;
 	int32 Season = 1;
@@ -65,6 +67,29 @@ public:
 	int32 YouthCoachCount = 0;                     // Ernennungen insgesamt (Erfahrung, 0,02 je Stufe)
 	FRandomStream RngJugend;                       // eigener Zufall fuer die Jugend, damit andere Systeme gleich bleiben
 	void TickYouthDevelopment();                   // monatlich: tickYouthDevelopment()
+	// Jugend-Laufbahn (js/youth-pathway.js): Entscheidung mit 19, Leihe, Rueckkehr, Durchbrueche, Meilensteine
+	struct FFM13YouthLoan
+	{
+		FFM13Player Player;
+		FString Club;
+		int32 ClubLevel = 0;
+		int32 ClubStrength = 50;
+		int32 Duration = 0;
+		int32 OriginalStrength = 0;
+		int32 Apps = 0;
+		int32 Goals = 0;
+		double DevProgress = 0.0;
+	};
+	TArray<FFM13YouthLoan> YouthLoans;
+	TArray<FString> YouthMoments;                  // neueste zuerst, hoechstens 15
+	void AddYouthMoment(const FString& Text);
+	TArray<FFM13YouthLoan> YouthLoanClubs(const FFM13Player& P) const;   // getYouthLoanClubs(): Stammverein x2, Verein eine Liga hoeher x1
+	bool LoanYouth(int32 PlayerId, const FString& Verein, FString& OutReason);
+	void ReturnFromLoan(const FFM13YouthLoan& L);
+	void TickYouthPathway();                       // taeglich: Entscheidungen, Leihen
+	void TickYouthBreakthroughs();                 // monatlich
+	void CheckYouthMilestones(const TArray<int32>& Starter);  // Debuet, erstes Tor, erste Elf
+	void AgeYouthAtSeasonEnd();                    // ageYouthAtSeasonEnd()
 	bool AssignYouthCoach(int32 PlayerId, FString& OutReason);
 	void RemoveYouthCoach();
 	TArray<int32> CouncilIds;                       // Mannschaftsrat: Kapitän und zwei Führungsspieler
@@ -285,8 +310,6 @@ private:
 	void ApplyFitnessAfterMatchday(bool bHome);
 	void TickPairChemistry();
 	void EnsureCaptain();
-	TArray<int32> MatchGoals;   // Tore und Vorlagen des letzten eigenen Spiels je Kaderindex
-	TArray<int32> MatchAssists;
 	void PlayCupRound(FFM13Cup& Cup, bool bDfb);
 	void RollInjuries(FFM13OwnMatchReport& Report);
 	void FinishOwnReport(FFM13OwnMatchReport& Report, const FString& OppName, bool bHome, const TArray<FString>& Yellow, const TArray<FString>& Red);

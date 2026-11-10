@@ -133,7 +133,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
 | `youth.js` | 464 | teilweise | Jugendakademie | Akademie-Stufen, Jahrgänge, Hochziehen |
-| `youth-pathway.js` | 293 | teilweise | Jugend-Laufbahn: Potenzialspanne je Stufe (FM13Youth). Offen: Leihe, Profidebüt, Entscheidungsfrist, Durchbruch-Momente |
+| `youth-pathway.js` | 293 | teilweise | Jugend-Laufbahn: Profi-Entscheidung mit 19 (acht Spieltage Frist, Ausbildungsentschädigung), Leihe zu drei Vereinen, Rückkehr mit Bilanz, Durchbrüche, Meilensteine (Debüt, erstes Tor, Elf des Spieltags). Offen: Reserve-Wechsel, Anzeige im Menü |
 | `youth-academy-extended.js` | 248 | teilweise | Monatliche Entwicklung mit Jugendtrainer, Schwerpunkt, Mentor und Alter (FFM13World::TickYouthDevelopment), Potenzialstufen. Offen: Talentranking im Menü, Jugendtrainer-Auswahl im Menü, Akademie-Erweiterung |
 | `academy-ranking.js` | 138 | offen | Akademie-Rangliste |  |
 | `training.js` | 874 | teilweise | Training | Wochenplan mit sieben Tagen, Standardpläne, Intensität, Kondition und Tagesform (60 Wochenpläne und 80 Kraftverluste gegen das Browserspiel geprüft). Offen: Einzeltraining, Trainingslager, eigene Vorlagen, Extras |

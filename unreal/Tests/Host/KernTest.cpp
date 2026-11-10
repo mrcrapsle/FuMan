@@ -1194,6 +1194,72 @@ static void TestJugend()
 	std::printf("\n");
 }
 
+// Jugend-Laufbahn (js/youth-pathway.js): Entscheidung mit 19, Leihe, Rueckkehr, Durchbrueche, Meilensteine
+static void TestJugendLaufbahn()
+{
+	std::printf("Jugend-Laufbahn: Entscheidung, Leihe, Rueckkehr, Meilensteine\n");
+	FString G;
+	FFM13World W;
+	W.NewGame(TEXT("Laufbahn"), 121, 0);
+	W.Money = 500000;
+	W.YouthTalents.Reset();
+	FFM13Player T;
+	T.Id = 5000; T.Name = TEXT("Talent"); T.Strength = 50; T.Potential = 70; T.Age = 18; T.Pos = EFM13Position::ST; T.PotentialTier = 2;
+	W.YouthTalents.Add(T);
+	// Mit 19 wird die Entscheidung faellig: acht Spieltage Frist
+	W.AgeYouthAtSeasonEnd();
+	PRUEFE(W.YouthTalents[0].Age == 19 && W.YouthTalents[0].ProDecisionLeft == 8, "Mit 19 Jahren: acht Spieltage Frist");
+	// Ablauf ohne Angebot: das Talent verlaesst den Verein, Entschaedigung 10 % des Marktwerts
+	const int64 VorAblauf = W.Money;
+	const int64 MW = FM13Economy::MarketValue(50, nullptr);
+	for (int32 k = 0; k < 8; ++k) W.TickYouthPathway();
+	const int64 Entschaedigung = (int64)std::floor(MW * 0.1 / 100.0 + 0.5) * 100;
+	PRUEFE(W.YouthTalents.Num() == 0 && W.Money == VorAblauf + Entschaedigung, "Ablauf ohne Angebot: das Talent ist weg, der Verein erhaelt %lld", (long long)Entschaedigung);
+
+	// Leihe: Vereine nach Staerke, eine Liga tiefer zwei, eine hoeher einer
+	FFM13World L;
+	L.NewGame(TEXT("Leihe"), 122, 1);
+	L.YouthTalents.Reset();
+	FFM13Player Y;
+	Y.Id = 6000; Y.Name = TEXT("Leihgabe"); Y.Strength = 55; Y.Potential = 75; Y.Age = 17; Y.Pos = EFM13Position::MIT; Y.PotentialTier = 2;
+	L.YouthTalents.Add(Y);
+	const TArray<FFM13World::FFM13YouthLoan> Vereine = L.YouthLoanClubs(Y);
+	PRUEFE(Vereine.Num() == 3 && Vereine[0].ClubLevel == 2 && Vereine[2].ClubLevel == 1, "Leihe: zwei Stammvereine eine Liga tiefer, einer eine Liga hoeher");
+	PRUEFE(L.LoanYouth(Y.Id, Vereine[0].Club, G) && L.YouthTalents.Num() == 0 && L.YouthLoans.Num() == 1, "Verliehen");
+	PRUEFE(L.YouthLoans[0].Duration == 17, "Dauer am ersten Spieltag: 17 (max. 17)");
+	// Nach der Leihe kommt das Talent zurueck, mit Bilanz im Verlauf
+	for (int32 k = 0; k < 40 && L.YouthLoans.Num() > 0; ++k) L.TickYouthPathway();
+	PRUEFE(L.YouthLoans.Num() == 0 && L.YouthTalents.Num() == 1, "Nach der Leihe zurueck in der Akademie");
+	PRUEFE(L.YouthMoments.Num() >= 2, "Die Leihe steht im Verlauf der Jugend");
+	PRUEFE(!L.LoanYouth(Y.Id, TEXT("Unbekannt"), G), "Unbekannter Verein wird abgelehnt");
+
+	// Meilensteine: Absolvent in der Startelf, erstes Tor, erste Elf
+	FFM13World M;
+	M.NewGame(TEXT("Meilenstein"), 123, 0);
+	M.Squad[0].bAcademyGraduate = true;
+	M.MatchGoals.Reset(); M.MatchAssists.Reset();
+	for (int32 i = 0; i < M.Squad.Num(); ++i) { M.MatchGoals.Add(i == 0 ? 1 : 0); M.MatchAssists.Add(0); }
+	M.Squad[0].LastGrade = 12;
+	M.Season = 2; M.Matchday = 5;
+	M.CheckYouthMilestones({ 0 });
+	PRUEFE(M.Squad[0].MeilensteinDebut == FString(TEXT("S2/SpT 5")) && M.Squad[0].MeilensteinTor == M.Squad[0].MeilensteinDebut && M.Squad[0].MeilensteinElf == M.Squad[0].MeilensteinDebut,
+		"Debuet, Tor und Elf am selben Spieltag festgehalten");
+	PRUEFE(M.YouthMoments.Num() == 3, "Drei Momente im Verlauf");
+
+	// Spielstand: Entscheidung, Absolvent, Leihe und Verlauf bleiben erhalten
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Laufbahnspeicher"), 124, 0);
+	Sp.YouthTalents.Reset();
+	FFM13Player Q; Q.Id = 7000; Q.Name = TEXT("Q"); Q.Strength = 50; Q.Potential = 70; Q.Age = 19; Q.ProDecisionLeft = 4;
+	Sp.YouthTalents.Add(Q);
+	Sp.AddYouthMoment(TEXT("Test"));
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.YouthTalents.Num() == 1 && Ld.YouthTalents[0].ProDecisionLeft == 4 && Ld.YouthMoments.Num() == 1, "Jugend-Laufbahn bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
 // Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
 static void TestKonditionSaison()
 {
@@ -1445,6 +1511,7 @@ int main()
 	TestKabine();
 	TestMannschaftsrat();
 	TestJugend();
+	TestJugendLaufbahn();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

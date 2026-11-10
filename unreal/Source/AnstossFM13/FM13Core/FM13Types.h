@@ -73,6 +73,9 @@ struct FFM13Player
 	bool bPotentialRevealed = false; // Jugend: Potenzial gesichtet
 	FString YouthFocus = TEXT("allgemein"); // Jugend: Ausbildungsschwerpunkt
 	int32 MentorId = 0;         // Jugend: Mentor aus dem Profikader (0 = keiner)
+	int32 ProDecisionLeft = 0;  // Jugend: Spieltage bis zur Profi-Entscheidung ab 19 (0 = keine offen)
+	bool bAcademyGraduate = false; // Absolvent der Akademie (Meilensteine)
+	FString MeilensteinDebut, MeilensteinTor, MeilensteinElf; // Saison/Spieltag des ersten Profidebuets, Tores, Elf-Nominierung
 	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 
 	bool IsAvailable() const { return InjuredMatchdays <= 0 && SuspendedMatchdays <= 0; }

@@ -212,7 +212,8 @@ bool FFM13World::PlayMatchday()
 	TickIncomingOffers();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
-	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickTeamCouncil(); TickLockerRoom(); }
+	TickYouthPathway();
+	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
@@ -250,6 +251,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	for (int32 i : LineupIndices(Dummy)) { Squad[i].Appearances++; Squad[i].AppearancesTotal++; }
 	PickScorers(OwnGoals, LastReport.Scorers);
 	ApplyGrades(OwnGoals, OppGoals);
+	CheckYouthMilestones(LineupIndices(Dummy));
 	ApplyFitnessAfterMatchday(bHome);
 	TickPairChemistry();
 	TickStaff();
@@ -778,11 +780,23 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 	}
 
 	// Talente werden ein Jahr aelter (ageYouthAtSeasonEnd); ihr Wachstum kommt monatlich aus TickYouthDevelopment()
-	for (FFM13Player& T : YouthTalents)
+	AgeYouthAtSeasonEnd();
+	for (FFM13Player& T : YouthTalents) T.MarketValue = FM13Economy::MarketValue(T.Strength, nullptr);
+}
+
+// ageYouthAtSeasonEnd(): ein Jahr aelter, ab 19 offene Entscheidung mit acht Spieltagen Frist (auch in der Leihe)
+void FFM13World::AgeYouthAtSeasonEnd()
+{
+	auto Altern = [this](FFM13Player& T)
 	{
 		T.Age++;
-		T.MarketValue = FM13Economy::MarketValue(T.Strength, nullptr);
-	}
+		if (T.Age >= 19 && T.ProDecisionLeft == 0 && !T.bAcademyGraduate) T.ProDecisionLeft = 8;
+	};
+	for (FFM13Player& T : YouthTalents) Altern(T);
+	for (FFM13YouthLoan& L : YouthLoans) Altern(L.Player);
+	int32 Faellig = 0;
+	for (const FFM13Player& T : YouthTalents) if (T.ProDecisionLeft == 8) ++Faellig;
+	if (Faellig) AddMessage(TEXT("Profivertrag-Entscheidung"), FString::Printf(TEXT("%d Talent(e) sind der A-Jugend entwachsen. Entscheide innerhalb von 8 Spieltagen."), Faellig));
 }
 
 // tickYouthDevelopment(): monatlich. Jeder Talent wächst nach seiner Potenzialgrenze, Jugendtrainer, Schwerpunkt, Mentor und Alter.
@@ -1090,6 +1104,13 @@ bool FFM13World::PromoteYouth(int32 YouthIndex, FString& OutReason)
 	P.Wage = FM13Economy::Wage(P.MarketValue, P.Strength);
 	if (!FitsWageBudget(P.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
 	P.ContractYears = 3;
+	// signYouthProContract(): Gehalt mit der Stufe (1 x 0,8, 2 x 1, 3 x 1,3), auf 10 gerundet; Absolvent
+	{
+		const double Faktor = P.PotentialTier == 1 ? 0.8 : (P.PotentialTier == 3 ? 1.3 : 1.0);
+		P.Wage = (int32)(std::floor((double)P.Wage * Faktor / 10.0 + 0.5) * 10.0);
+	}
+	P.bAcademyGraduate = true;
+	P.ProDecisionLeft = 0;
 	Squad.Add(P);
 	IncomingOffers.RemoveAll([&P](const FFM13IncomingOffer& O) { return O.bYouth && O.PlayerId == P.Id; });
 	YouthTalents.RemoveAt(YouthIndex);
@@ -2761,4 +2782,166 @@ TArray<FFM13Player*> FFM13World::CouncilMembers()
 	TArray<FFM13Player*> Liste;
 	for (int32 Id : CouncilIds) if (FFM13Player* P = FindPlayer(Id)) Liste.Add(P);
 	return Liste;
+}
+
+// ---------- Jugend-Laufbahn (js/youth-pathway.js) ----------
+
+void FFM13World::AddYouthMoment(const FString& Text)
+{
+	YouthMoments.Insert(FString::Printf(TEXT("S%d/SpT %d: %s"), Season, Matchday, *Text), 0);
+	while (YouthMoments.Num() > 15) YouthMoments.RemoveAt(YouthMoments.Num() - 1);
+}
+
+// getYouthLoanClubs(): zwei Vereine der Liga darunter nach Staerke, dazu einer eine Liga hoeher (Aufschlag 6).
+// Ohne eigene Liga darunter kommen alle aus der eigenen Liga.
+TArray<FFM13World::FFM13YouthLoan> FFM13World::YouthLoanClubs(const FFM13Player& P) const
+{
+	TArray<FFM13YouthLoan> Ergebnis;
+	const int32 Stamm = FMath::Min(Leagues.Num() - 1, LeagueLevel + 1);
+	const int32 Hoch = FMath::Max(0, Stamm - 1);
+	auto Waehle = [this, &P](int32 Stufe, int32 Anzahl, int32 Aufschlag)
+	{
+		TArray<FFM13YouthLoan> Liste;
+		if (!Leagues.IsValidIndex(Stufe)) return Liste;
+		for (const FFM13Club& C : Leagues[Stufe].Clubs)
+		{
+			if (C.bOwn) continue;
+			FFM13YouthLoan L; L.Club = C.Name; L.ClubLevel = Stufe; L.ClubStrength = C.Strength;
+			Liste.Add(L);
+		}
+		// stabile Sortierung nach Abstand der Staerke (wie Array.sort in JS)
+		for (int32 i = 1; i < Liste.Num(); ++i)
+			for (int32 j = i; j > 0; --j)
+			{
+				const int32 A = FMath::Abs(Liste[j - 1].ClubStrength - P.Strength - Aufschlag);
+				const int32 B = FMath::Abs(Liste[j].ClubStrength - P.Strength - Aufschlag);
+				if (B < A) Swap(Liste[j - 1], Liste[j]); else break;
+			}
+		TArray<FFM13YouthLoan> Oben;
+		for (int32 k = 0; k < Liste.Num() && k < Anzahl; ++k) Oben.Add(Liste[k]);
+		return Oben;
+	};
+	const TArray<FFM13YouthLoan> StammVereine = Waehle(Stamm, 2, 0);
+	Ergebnis = StammVereine;
+	for (const FFM13YouthLoan& C : Waehle(Hoch, 3, 6))
+	{
+		bool bSchon = false;
+		for (const FFM13YouthLoan& V : StammVereine) if (V.Club == C.Club) bSchon = true;
+		if (!bSchon) { Ergebnis.Add(C); break; }
+	}
+	return Ergebnis;
+}
+
+bool FFM13World::LoanYouth(int32 PlayerId, const FString& Verein, FString& OutReason)
+{
+	int32 Index = -1;
+	for (int32 i = 0; i < YouthTalents.Num(); ++i) if (YouthTalents[i].Id == PlayerId) Index = i;
+	if (Index < 0) { OutReason = TEXT("Dieses Talent gibt es nicht."); return false; }
+	FFM13Player P = YouthTalents[Index];
+	if (P.Age < 17) { OutReason = TEXT("Leihen sind erst ab 17 Jahren moeglich."); return false; }
+	bool bGefunden = false;
+	FFM13YouthLoan Gewaehlt;
+	for (const FFM13YouthLoan& C : YouthLoanClubs(P)) if (C.Club == Verein) { Gewaehlt = C; bGefunden = true; }
+	if (!bGefunden) { OutReason = TEXT("Dieser Verein steht nicht zur Wahl."); return false; }
+	YouthTalents.RemoveAt(Index);
+	P.ProDecisionLeft = 0;
+	Gewaehlt.Player = P;
+	Gewaehlt.Duration = FMath::Max(8, FMath::Min(17, 34 - Matchday));
+	Gewaehlt.OriginalStrength = P.Strength;
+	YouthLoans.Add(Gewaehlt);
+	AddYouthMoment(FString::Printf(TEXT("%s geht fuer %d Spieltage zu %s"), *P.Name, Gewaehlt.Duration, *Verein));
+	return true;
+}
+
+// returnYouthFromLoan(): zurueck in die Akademie, mit der Bilanz der Leihe
+void FFM13World::ReturnFromLoan(const FFM13YouthLoan& L)
+{
+	FFM13Player P = L.Player;
+	YouthTalents.Add(P);
+	if (P.Age >= 19 && P.ProDecisionLeft == 0 && !P.bAcademyGraduate) P.ProDecisionLeft = 8;
+	const int32 Plus = P.Strength - L.OriginalStrength;
+	AddYouthMoment(FString::Printf(TEXT("%s zurueck von %s: %d Einsaetze, %d Tore, %+d Staerke"), *P.Name, *L.Club, L.Apps, L.Goals, Plus));
+	AddMessage(FString::Printf(TEXT("%s zurueck von der Leihe"), *P.Name), FString::Printf(TEXT("Bilanz bei %s: %d Einsaetze, %d Tore."), *L.Club, L.Apps, L.Goals));
+}
+
+// tickYouthProDecisions() und tickLoanedPlayers() fuer die Jugend: taeglich
+void FFM13World::TickYouthPathway()
+{
+	// Entscheidungsfrist laeuft ab: nach acht Spieltagen ohne Angebot wechselt das Talent ablosefrei
+	for (int32 i = YouthTalents.Num() - 1; i >= 0; --i)
+	{
+		FFM13Player& P = YouthTalents[i];
+		if (P.ProDecisionLeft == 0) continue;
+		P.ProDecisionLeft--;
+		if (P.ProDecisionLeft == 3) AddMessage(FString::Printf(TEXT("%s wartet auf ein Angebot"), *P.Name), TEXT("Noch 3 Spieltage: ohne Profivertrag, Leihe oder Reserve verlaesst das Talent den Verein."));
+		if (P.ProDecisionLeft <= 0)
+		{
+			const int64 Entschaedigung = (int64)std::floor(FM13Economy::MarketValue(P.Strength, nullptr) * 0.1 / 100.0 + 0.5) * 100;
+			Book(TEXT("Ausbildungsentschaedigung"), Entschaedigung);
+			AddYouthMoment(FString::Printf(TEXT("%s (%d) wechselt ohne Profivertrag"), *P.Name, P.Strength));
+			AddMessage(FString::Printf(TEXT("%s ist weg"), *P.Name), FString::Printf(TEXT("Ohne Angebot hat %s den Verein verlassen. Ausbildungsentschaedigung: %lld."), *P.Name, (long long)Entschaedigung));
+			YouthTalents.RemoveAt(i);
+		}
+	}
+	// Leihen: je Spieltag ein Einsatz mit Wahrscheinlichkeit, Entwicklung nach Niveau
+	for (int32 i = YouthLoans.Num() - 1; i >= 0; --i)
+	{
+		FFM13YouthLoan& L = YouthLoans[i];
+		L.Duration--;
+		FFM13Player& P = L.Player;
+		const double Spielzeit = FMath::Max(0.15, FMath::Min(0.95, 0.55 + (P.Strength - L.ClubStrength) * 0.04));
+		const double Stufe = P.PotentialTier == 1 ? 0.8 : (P.PotentialTier == 3 ? 1.3 : 1.0);
+		if (RngJugend.FRand() < Spielzeit)
+		{
+			L.Apps++;
+			const double Tor = P.Pos == EFM13Position::ST ? 0.3 : (P.Pos == EFM13Position::MIT ? 0.12 : (P.Pos == EFM13Position::ABW ? 0.04 : 0.0));
+			if (RngJugend.FRand() < Tor) L.Goals++;
+			L.DevProgress += (0.25 + FMath::Max(0, L.ClubStrength - P.Strength) * 0.015) * Stufe;
+		}
+		else L.DevProgress += 0.03;
+		if (L.DevProgress >= 1.0 && P.Strength < P.Potential) { L.DevProgress -= 1.0; P.Strength++; }
+		if (L.Duration <= 0)
+		{
+			ReturnFromLoan(L);
+			YouthLoans.RemoveAt(i);
+		}
+	}
+}
+
+// tickYouthBreakthroughs(): ein Talent mit Luft nach oben kann einen Sprung machen (4 % je Monat, nach Stufe)
+void FFM13World::TickYouthBreakthroughs()
+{
+	for (FFM13Player& P : YouthTalents)
+	{
+		const int32 Luft = P.Potential - P.Strength;
+		const double Stufe = P.PotentialTier == 1 ? 0.5 : (P.PotentialTier == 3 ? 1.8 : 1.0);
+		if (Luft < 6 || RngJugend.FRand() > 0.04 * Stufe) continue;
+		const int32 Sprung = FMath::Min(Luft - 2, 3 + (int32)std::floor(RngJugend.FRand() * 3.0));
+		P.Strength += Sprung;
+		AddYouthMoment(FString::Printf(TEXT("Durchbruch: %s (%d J.) legt einen Leistungssprung hin, +%d auf %d"), *P.Name, P.Age, Sprung, P.Strength));
+		AddMessage(FString::Printf(TEXT("Durchbruch in der Akademie: %s"), *P.Name), FString::Printf(TEXT("%s hat im Training den Knoten platzen lassen: Staerke +%d, jetzt %d."), *P.Name, Sprung, P.Strength));
+	}
+}
+
+// checkYouthMilestones(): der erste Einsatz, das erste Tor und die erste Elf des Spieltags eigener Absolventen
+void FFM13World::CheckYouthMilestones(const TArray<int32>& Starter)
+{
+	const FString Wann = FString::Printf(TEXT("S%d/SpT %d"), Season, Matchday);
+	for (int32 i : Starter)
+	{
+		FFM13Player& P = Squad[i];
+		if (!P.bAcademyGraduate) continue;
+		if (P.MeilensteinDebut.IsEmpty()) { P.MeilensteinDebut = Wann; AddYouthMoment(FString::Printf(TEXT("Profidebuet: %s (%d J.) steht erstmals in der Startelf"), *P.Name, P.Age)); }
+		if (P.MeilensteinTor.IsEmpty() && i < MatchGoals.Num() && MatchGoals[i] > 0)
+		{
+			P.MeilensteinTor = Wann;
+			AddYouthMoment(FString::Printf(TEXT("Erstes Profitor: %s trifft fuer %s"), *P.Name, *ClubName));
+			P.Morale = FMath::Min(100, P.Morale + 5);
+		}
+		if (P.MeilensteinElf.IsEmpty() && P.LastGrade > 0 && P.LastGrade <= 15)
+		{
+			P.MeilensteinElf = Wann;
+			AddYouthMoment(FString::Printf(TEXT("%s zum ersten Mal in der Elf des Spieltags"), *P.Name));
+		}
+	}
 }
