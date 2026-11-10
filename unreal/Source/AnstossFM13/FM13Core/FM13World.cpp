@@ -75,6 +75,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	RngKabine.Initialize(Seed * 7919 + 13);
 	RngJugend.Initialize(Seed * 104729 + 29);
 	RngTransfer.Initialize(Seed * 31337 + 7);
+	TransferBudget = LeagueTransferBudget(StartLevel);
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
@@ -213,6 +214,7 @@ bool FFM13World::PlayMatchday()
 		if (P.SuspendedMatchdays > 0) P.SuspendedMatchdays--;
 	}
 	TickIncomingOffers();
+	TickTransferWindows();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
 	TickYouthPathway();
@@ -613,6 +615,12 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	if (bEuropeNextSeason) AddMessage(TEXT("Europapokal!"), TEXT("Der Verein spielt naechste Saison im Champions Cup."));
 	SeasonAwards(S, Rank, Outcome);
 	AdvanceLeagues(Rank, Outcome);
+	// Transferbudget der neuen Saison: Liga-Budget x Platzierungsfaktor (season-end.js)
+	const double Platzfaktor = Rank <= 4 ? 1.3 : (Rank <= 10 ? 1.0 : 0.8);
+	TransferBudget = FM13Transfers::JsRunden((double)LeagueTransferBudget(LeagueLevel) * Platzfaktor / 1000.0) * 1000;
+	bWinterWindowActive = false;
+	bWinterWindowUsed = false;
+	WinterWindowCloseMatchday = 0;
 	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
 	DevelopPlayers(S);
 	YouthIntake(S);
@@ -1057,10 +1065,13 @@ bool FFM13World::BuyPlayer(int32 MarketIndex, FString& OutReason)
 	if (!Market.IsValidIndex(MarketIndex)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
 	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
 	const FFM13MarketOffer O = Market[MarketIndex];
+	if (!TransferWindowGate(OutReason)) return false;
 	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
 	if (Money < O.Price) { OutReason = TEXT("Nicht genug Geld auf dem Konto."); return false; }
+	if (TransferBudget < O.Price) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)O.Price, (long long)TransferBudget); return false; }
 	if (!FitsWageBudget(O.Player.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
 	Book(FString(TEXT("Transfer: ")) + O.Player.Name, -O.Price);
+	TransferBudget -= O.Price;
 	Squad.Add(O.Player);
 	Market.RemoveAt(MarketIndex);
 	AddMessage(TEXT("Neuzugang"), O.Player.Name + TEXT(" unterschreibt fuer drei Jahre."));
@@ -3134,14 +3145,17 @@ bool FFM13World::SignPokerDeal(FString& OutReason)
 {
 	const int32 Idx = MarketIndexOf(Poker.PlayerId);
 	if (!Poker.bActive || Idx < 0 || !Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist noch nicht vereinbart."); return false; }
+	if (!TransferWindowGate(OutReason)) return false;
 	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
 	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
 	if (Money < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Poker.AgreedFee); return false; }
+	if (TransferBudget < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)Poker.AgreedFee, (long long)TransferBudget); return false; }
 	if (!FitsWageBudget(Poker.WageDemand)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
 	const FFM13MedBefund Befund = EnsureMedical(Market[Idx]);
 	FFM13Player P = Market[Idx].Player;
 	P.Wage = (int32)Poker.WageDemand;
 	Book(FString(TEXT("Spielerkauf: ")) + P.Name, -Poker.AgreedFee);
+	TransferBudget -= Poker.AgreedFee;
 	Squad.Add(P);
 	ApplyMedicalOnArrival(Squad.Last(), Befund);
 	Market.RemoveAt(Idx);
@@ -3227,4 +3241,42 @@ void FFM13World::ApplyMedicalOnArrival(FFM13Player& P, const FFM13MedBefund& B)
 	}
 	if (FM13Transfers::MedizinAuffaellig(B.Issue) && !B.bChecked)
 		AddMessage(FString::Printf(TEXT("Boese Ueberraschung: %s"), *P.Name), FString::Printf(TEXT("Ohne Medizincheck verpflichtet - jetzt stellt die Vereinsaerztin fest: %s."), *BefundText(B)));
+}
+
+// ---------- Transferbudget und Wechselfenster (js/transfermarket.js, js/squad.js) ----------
+
+namespace
+{
+	constexpr int32 WinterWindowOpenMatchday = 17;   // openWinterWindow() am Spieltag 17
+	constexpr int32 WinterWindowMatchdays = 3;        // WINTER_WINDOW_MATCHDAYS
+}
+
+int64 FFM13World::LeagueTransferBudget(int32 Level)
+{
+	static const int64 Budgets[] = { 25000000, 3000000, 900000, 250000, 60000, 40000 };   // LEAGUE_TRANSFER_BUDGET
+	return Budgets[FMath::Clamp(Level, 0, 5)];
+}
+
+bool FFM13World::TransferWindowGate(FString& OutReason) const
+{
+	if (IsTransferWindowOpen()) return true;
+	OutReason = TEXT("Transfers gehen nur im Wechselfenster (Spieltag 1 bis 3 oder Winterfenster).");
+	return false;
+}
+
+// tickTransferWindows(): wird nach jedem gespielten Spieltag aufgerufen, Matchday ist dabei noch der gespielte.
+void FFM13World::TickTransferWindows()
+{
+	if (Matchday == WinterWindowOpenMatchday && !bWinterWindowUsed)
+	{
+		RefreshMarket();
+		bWinterWindowActive = true;
+		bWinterWindowUsed = true;
+		WinterWindowCloseMatchday = Matchday + WinterWindowMatchdays;
+		AddMessage(TEXT("Winter-Transferfenster geoeffnet"), FString::Printf(TEXT("Bis einschliesslich Spieltag %d treffen deutlich mehr Angebote ein."), WinterWindowCloseMatchday));
+		return;
+	}
+	if (!bWinterWindowActive) return;
+	if (WinterWindowCloseMatchday <= 0) WinterWindowCloseMatchday = Matchday + 1;
+	if (Matchday >= WinterWindowCloseMatchday) bWinterWindowActive = false;   // Deadline-Day: noch nicht portiert
 }

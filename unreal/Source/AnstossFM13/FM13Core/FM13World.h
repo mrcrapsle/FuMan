@@ -223,6 +223,16 @@ public:
 	void RefreshMarket();
 	void SetMarketTerms(FFM13MarketOffer& O);          // ensureTransferTerms(): Verkaeufer, Schmerzgrenze, Forderung
 	FRandomStream RngTransfer;                         // eigener Zufall fuer Transfers, damit der Rest gleich bleibt
+	// Transferbudget und Wechselfenster (js/transfermarket.js, js/season-end.js)
+	int64 TransferBudget = 0;                          // game.transferBudget: Budget der Saison
+	bool bWinterWindowActive = false;                  // Winterfenster offen (game.winterWindowActive)
+	bool bWinterWindowUsed = false;                    // in dieser Saison schon geoeffnet
+	int32 WinterWindowCloseMatchday = 0;               // letzter Spieltag des Winterfensters
+	static int64 LeagueTransferBudget(int32 Level);    // getLeagueTransferBudget(): 25 Mio. bis 40.000
+	bool IsSummerWindowOpen() const { return Matchday <= 3; }
+	bool IsTransferWindowOpen() const { return IsSummerWindowOpen() || bWinterWindowActive; }
+	bool TransferWindowGate(FString& OutReason) const;  // Meldung, wenn kein Fenster offen ist
+	void TickTransferWindows();                        // nach jedem Spieltag: Winterfenster auf und zu
 
 	// Transferpoker (js/transfer-poker.js)
 	struct FFM13PokerState

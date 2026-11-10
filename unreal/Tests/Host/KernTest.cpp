@@ -1325,6 +1325,7 @@ static void TestMedizincheck()
 	FFM13World A;
 	A.NewGame(TEXT("Blind"), 142, 0);
 	A.Money = 50000000;
+	A.TransferBudget = 100000000;
 	const int32 IdA = A.Market[0].Player.Id;
 	A.OpenPoker(IdA, G);
 	A.Poker.Offer = A.Market[0].AskingPrice;
@@ -1338,6 +1339,38 @@ static void TestMedizincheck()
 	for (const FFM13Player& P : A.Squad) if (P.Id == IdA) bVerletzt = P.InjuredMatchdays == 4;
 	PRUEFE(bVerletzt, "Verletzter Befund fehlt nach der Unterschrift");
 	PRUEFE(A.Messages.Num() == Nachrichten + 2 && A.Messages[A.Messages.Num() - 2].Title.Contains(TEXT("Boese Ueberraschung")), "Ohne Check gibt es eine Meldung");
+
+	// Wechselfenster (tickTransferWindows): Sommer bis Spieltag 3, Winter 17 bis 20
+	FFM13World F;
+	F.NewGame(TEXT("Fenster"), 144, 0);
+	F.Money = 500000000;
+	F.TransferBudget = 500000000;
+	PRUEFE(F.IsTransferWindowOpen() && F.TransferBudget == 500000000, "Fenster: am Saisonstart offen");
+	F.Matchday = 5;
+	PRUEFE(!F.IsTransferWindowOpen(), "Fenster: nach Spieltag 3 zu");
+	F.Matchday = 17;
+	F.TickTransferWindows();
+	PRUEFE(F.bWinterWindowActive && F.IsTransferWindowOpen() && F.WinterWindowCloseMatchday == 20, "Winterfenster oeffnet am Spieltag 17 bis 20");
+	F.Matchday = 19;
+	F.TickTransferWindows();
+	PRUEFE(F.bWinterWindowActive, "Winterfenster bleibt am Spieltag 19 offen");
+	F.Matchday = 20;
+	F.TickTransferWindows();
+	PRUEFE(!F.bWinterWindowActive && !F.IsTransferWindowOpen(), "Winterfenster schliesst am Spieltag 20");
+	F.Matchday = 5;
+	FString GrundF;
+	PRUEFE(F.Market.Num() > 0 && !F.BuyPlayer(0, GrundF) && GrundF.Contains(TEXT("Wechselfenster")), "Kauf ausserhalb des Fensters abgelehnt");
+	F.Matchday = 2;
+	const int64 BudgetVor = F.TransferBudget;
+	const int64 Preis = F.Market[0].Price;
+	PRUEFE(F.BuyPlayer(0, GrundF) && F.TransferBudget == BudgetVor - Preis, "Kauf im Fenster kostet das Transferbudget");
+	FFM13World Knapp;
+	Knapp.NewGame(TEXT("Budget"), 145, 0);
+	Knapp.Money = 500000000;
+	Knapp.TransferBudget = 1000;
+	FString GrundK;
+	PRUEFE(!Knapp.BuyPlayer(0, GrundK) && GrundK.Contains(TEXT("Transferbudget")), "Zu kleines Transferbudget: Kauf abgelehnt");
+	PRUEFE(FFM13World::LeagueTransferBudget(0) == 25000000 && FFM13World::LeagueTransferBudget(5) == 40000 && FFM13World::LeagueTransferBudget(9) == 40000, "Liga-Transferbudget je Stufe, begrenzt");
 
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
