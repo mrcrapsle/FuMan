@@ -1050,6 +1050,87 @@ static void TestKabine()
 	std::printf("\n");
 }
 
+// Mannschaftsrat (js/team-council.js): Anliegen, Antworten, Verfall, Kosten nach der Liga
+static void TestMannschaftsrat()
+{
+	std::printf("Mannschaftsrat: Anliegen, Antworten, Verfall\n");
+	FString G;
+	FFM13World W;
+	W.NewGame(TEXT("Rat"), 101, 0);
+	W.Money = 500000;
+	PRUEFE(W.CouncilCost(40000) == 40000 && W.CouncilCost(60000) == 60000, "Liga 1: Faktor 1");
+	W.LeagueLevel = 2;
+	PRUEFE(W.CouncilCost(40000) == 18000, "Liga 3: 40000 x 0,45 = 18000");
+	W.LeagueLevel = 0;
+
+	for (FFM13Player& P : W.Squad) P.Morale = 40;
+	FFM13World::FAnliegen A;
+	PRUEFE(W.FindCouncilConcern(A) && A.Typ == FString(TEXT("stimmung")) && A.Kosten == 40000, "Stimmung unter 45: Mannschaftsabend fuer 40000");
+	W.Anliegen = A; W.Anliegen.bAktiv = true;
+	const int64 VorAbend = W.Money;
+	PRUEFE(W.AnswerConcern(0, G) && W.Money == VorAbend - 40000 && W.Squad[0].Morale == 46 && !W.Anliegen.bAktiv, "Antwort Mannschaftsabend: Geld, Moral +6, erledigt");
+	PRUEFE(W.RatVerlauf.Num() == 1, "Die Entscheidung steht im Verlauf");
+
+	FFM13World Arm;
+	Arm.NewGame(TEXT("Arm"), 102);
+	Arm.Money = 1000;
+	for (FFM13Player& P : Arm.Squad) P.Morale = 40;
+	FFM13World::FAnliegen B;
+	Arm.FindCouncilConcern(B);
+	Arm.Anliegen = B; Arm.Anliegen.bAktiv = true;
+	PRUEFE(!Arm.AnswerConcern(0, G) && Arm.Anliegen.bAktiv, "Ohne Geld bleibt das Anliegen offen");
+	PRUEFE(Arm.AnswerConcern(1, G) && !Arm.Anliegen.bAktiv, "Ablehnen kostet nichts");
+
+	FFM13World E;
+	E.NewGame(TEXT("Einsatz"), 103);
+	E.Money = 500000;
+	for (FFM13Player& P : E.Squad) { P.Morale = 80; P.Appearances = 3; }
+	E.Squad[4].Appearances = 0; E.Squad[4].Strength = 90;
+	E.Matchday = 9;
+	FFM13World::FAnliegen C;
+	PRUEFE(E.FindCouncilConcern(C) && C.Typ == FString(TEXT("einsatzzeit")) && C.Spieler == E.Squad[4].Id, "Einsatzzeit: der starke Spieler ohne Einsatz");
+	E.Anliegen = C; E.Anliegen.bAktiv = true;
+	const int32 VorGespraech = E.Squad[4].Morale;
+	PRUEFE(E.AnswerConcern(0, G) && E.Squad[4].Morale == VorGespraech + 10, "Gespraech: +10 fuer den Spieler");
+
+	FFM13World S;
+	S.NewGame(TEXT("Serie"), 104, 0);
+	S.Money = 500000;
+	for (FFM13Player& P : S.Squad) P.Morale = 80;
+	S.OwnSeasonGoals = { 2, 0, 3, 1, 1, 0 };
+	FFM13World::FAnliegen D;
+	PRUEFE(S.FindCouncilConcern(D) && D.Typ == FString(TEXT("praemie")) && D.Kosten == 60000, "Drei Siege: Praemie 60000");
+
+	FFM13World V;
+	V.NewGame(TEXT("Verfall"), 105);
+	V.Money = 500000;
+	for (FFM13Player& P : V.Squad) P.Morale = 40;
+	V.Matchday = 2;
+	V.TickTeamCouncil();
+	PRUEFE(V.Anliegen.bAktiv, "Anliegen gemeldet");
+	V.Matchday = 5;
+	V.TickTeamCouncil();
+	PRUEFE(V.Anliegen.bAktiv, "Nach drei Spieltagen noch offen");
+	V.Matchday = 6;
+	V.TickTeamCouncil();
+	PRUEFE(V.RatVerlauf.Num() > 0 && V.RatVerlauf[0].Contains(TEXT("verfallen")), "Nach vier Spieltagen verfallen");
+
+	FFM13World Sp;
+	Sp.NewGame(TEXT("Ratspeicher"), 106);
+	Sp.Money = 500000;
+	for (FFM13Player& P : Sp.Squad) P.Morale = 40;
+	Sp.OwnSeasonGoals = { 1, 0, 2, 2 };
+	FFM13World::FAnliegen F;
+	Sp.FindCouncilConcern(F);
+	Sp.Anliegen = F; Sp.Anliegen.bAktiv = true;
+	FFM13World Ld;
+	FString Fehler;
+	const bool bOk = FM13Save::Decode(FM13Save::Encode(Sp), Ld, Fehler);
+	PRUEFE(bOk && Ld.Anliegen.bAktiv && Ld.Anliegen.Typ == Sp.Anliegen.Typ && Ld.OwnSeasonGoals.Num() == 4 && Ld.Anliegen.Kosten == Sp.Anliegen.Kosten,
+		"Mannschaftsrat bleibt im Spielstand (%s)", *Fehler);
+	std::printf("\n");
+}
+
 // Ueber eine ganze Saison: Kondition und Tagesform bleiben in ihren Grenzen, Sommerpause setzt Kondition auf 100
 static void TestKonditionSaison()
 {
@@ -1299,6 +1380,7 @@ int main()
 	TestTrainingReferenz();
 	TestPersonal();
 	TestKabine();
+	TestMannschaftsrat();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

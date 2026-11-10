@@ -67,6 +67,31 @@ public:
 	void ElectCouncil();                            // electTeamCouncil()
 	bool ChangeCaptain(int32 NewId, bool bViaCouncil, FString& OutFolge);  // handleCaptainChange()
 	void TickLockerRoom();                          // monatlich nach dem Rat
+	// Mannschaftsrat: monatliches Anliegen und die Antwort darauf (js/team-council.js)
+	struct FAnliegen
+	{
+		bool bAktiv = false;
+		FString Typ;                // stimmung, einsatzzeit, training, clique, kapitaen, praemie
+		FString Titel;
+		FString Text;
+		int64 Kosten = 0;
+		int32 Spieler = 0;          // Spieler-Id (Einsatzzeit)
+		int32 Wortfuehrer = 0;      // Clique: Spieler-Id des Sprechers
+		int32 Kapitaen = 0;         // Kapitaenfrage
+		int32 Nachfolger = 0;
+		int32 Clique = -1;          // Clique als Index in der Liste der Kabine, nur fuer den Zug
+		int32 Saison = 0;
+		int32 Spieltag = 0;
+	};
+	FAnliegen Anliegen;
+	TArray<FString> RatVerlauf;     // letzte sechs Entscheidungen des Rates
+	TArray<int32> OwnSeasonGoals;   // Tore fuer und gegen in den Ligaspielen dieser Saison, paarweise
+	int64 CouncilCost(int64 Basis) const;          // councilCost()
+	bool FindCouncilConcern(FAnliegen& Out) const;  // findCouncilConcern()
+	bool AnswerConcern(int32 Option, FString& OutReason);  // answerCouncilConcern()
+	void TickTeamCouncil();                         // monatlich vor der Kabine
+	int32 CouncilOptionCount(const FString& Typ) const;
+	TArray<FFM13Player*> CouncilMembers();
 	void TickFriendships();                         // jeder Spieltag
 	int32 UnhappyVisitor() const;                   // pickUnhappyVisitor(), 0 = keiner
 	TArray<int32> PairA, PairB, PairValue;          // Eingespieltheit je Spielerpaar (PairA < PairB), höchstens 30

@@ -318,6 +318,21 @@ TSharedRef<SWidget> SFM13Menu::BuildSquad()
 	const int32 Auswahl = Controller.IsValid() ? Controller->Selection : -1;
 	const TArray<float> B = { 60.f, 230.f, 60.f, 50.f, 50.f, 50.f, 50.f, 60.f, 60.f, 60.f, 60.f, 210.f, 130.f, 100.f, 60.f };
 	Box->AddSlot().AutoHeight()[BuildOffers(false)];
+	// Mannschaftsrat: Mitglieder, offenes Anliegen mit Antworten, letzte Entscheidungen
+	const FFM13CouncilView Rat = G->GetCouncil();
+	Box->AddSlot().AutoHeight()[Ueberschrift(TEXT("Mannschaftsrat"))];
+	for (const FString& M : Rat.Members) Box->AddSlot().AutoHeight()[Txt(M, CText, 12)];
+	if (Rat.bConcern)
+	{
+		Box->AddSlot().AutoHeight()[Txt(Rat.Title, CAkzent, 13, true)];
+		Box->AddSlot().AutoHeight()[Txt(Rat.Text, CText, 12)];
+		TSharedRef<SHorizontalBox> Antworten = SNew(SHorizontalBox);
+		for (int32 k = 0; k < Rat.OptionLabels.Num(); ++k)
+			Antworten->AddSlot().AutoWidth().Padding(FMargin(0.f, 0.f, 4.f, 0.f))[Knopf(Rat.OptionLabels[k], FOnClicked::CreateSP(this, &SFM13Menu::OnCouncilAnswer, k), k == 0 ? CKnopfAktiv : CKnopf, 11)];
+		Box->AddSlot().AutoHeight()[Antworten];
+	}
+	else Box->AddSlot().AutoHeight()[Txt(TEXT("Keine offenen Anliegen. Der Rat meldet sich einmal im Monat."), CGedimmt, 11)];
+	for (int32 k = 0; k < Rat.History.Num() && k < 3; ++k) Box->AddSlot().AutoHeight()[Txt(Rat.History[k], CGedimmt, 11)];
 	const FFM13TacticsView Taktik = G->GetTactics();
 	Box->AddSlot().AutoHeight()
 	[
@@ -1093,6 +1108,13 @@ FReply SFM13Menu::OnStaffInterim(int32 Slot)
 FReply SFM13Menu::OnStaffMeeting()
 {
 	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->StaffMeeting(Grund) ? TEXT("Jahres-Meeting abgehalten.") : Grund); }
+	Refresh();
+	return FReply::Handled();
+}
+
+FReply SFM13Menu::OnCouncilAnswer(int32 Option)
+{
+	if (UFM13GameInstance* G = Game.Get()) { FString Grund; Status(G->AnswerCouncil(Option, Grund) ? TEXT("Der Rat ist informiert.") : Grund); }
 	Refresh();
 	return FReply::Handled();
 }

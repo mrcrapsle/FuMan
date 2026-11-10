@@ -244,6 +244,20 @@ struct FFM13TrainingView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 BenchRecovery = 0;      // Erholung der Bank
 };
 
+// Mannschaftsrat: Mitglieder, offenes Anliegen mit Antworten, letzte Entscheidungen
+USTRUCT(BlueprintType)
+struct FFM13CouncilView
+{
+	GENERATED_BODY()
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Members;     // Name, Moral, Kapitaen
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") bool bConcern = false;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Title;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Text;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> OptionLabels;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<int64> OptionCosts;   // 0 = kostenlos
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> History;
+};
+
 // Personal im Campus: je Stelle Stand, Kosten der Aktionen und Ausfall
 USTRUCT(BlueprintType)
 struct FFM13StaffRoleView

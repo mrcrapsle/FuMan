@@ -555,6 +555,40 @@ bool UFM13GameInstance::StaffMeeting(FString& OutReason) { const bool b = Kern.S
 bool UFM13GameInstance::StaffSetWageCap(int64 Cap, FString& OutReason) { const bool b = Kern.StaffSetWageCap(Cap, OutReason); if (b) Changed(); return b; }
 bool UFM13GameInstance::StaffResolvePoach(bool bPay, FString& OutReason) { const bool b = Kern.StaffResolvePoach(bPay, OutReason); if (b) Changed(); return b; }
 
+bool UFM13GameInstance::AnswerCouncil(int32 Option, FString& OutReason) { const bool b = Kern.AnswerConcern(Option, OutReason); if (b) Changed(); return b; }
+
+// Antworten des Mannschaftsrates mit Beschriftung und Kosten (answerCouncilConcern, COUNCIL_OPTIONS)
+FFM13CouncilView UFM13GameInstance::GetCouncil() const
+{
+	FFM13CouncilView V;
+	for (const FFM13Player* P : const_cast<FFM13World&>(Kern).CouncilMembers())
+		V.Members.Add(FString::Printf(TEXT("%s%s, Moral %d"), P->Id == Kern.CaptainId ? TEXT("(C) ") : TEXT(""), *P->Name, FMath::RoundToInt((float)P->Morale)));
+	const FFM13World::FAnliegen& A = Kern.Anliegen;
+	V.bConcern = A.bAktiv;
+	if (A.bAktiv)
+	{
+		V.Title = A.Titel;
+		V.Text = A.Text;
+		auto Name = [this](int32 Id) { const FFM13Player* P = const_cast<FFM13World&>(Kern).FindPlayer(Id); return P ? P->Name : FString(TEXT("der Vorschlag")); };
+		const int32 Anzahl = Kern.CouncilOptionCount(A.Typ);
+		for (int32 k = 0; k < Anzahl; ++k)
+		{
+			FString Label;
+			int64 Kosten = 0;
+			if (A.Typ == TEXT("stimmung")) { Label = k == 0 ? FString::Printf(TEXT("Mannschaftsabend (%lld)"), (long long)A.Kosten) : TEXT("Ablehnen"); Kosten = k == 0 ? A.Kosten : 0; }
+			else if (A.Typ == TEXT("einsatzzeit")) Label = k == 0 ? TEXT("Gespraech fuehren") : TEXT("Kein Kommentar");
+			else if (A.Typ == TEXT("training")) Label = k == 0 ? TEXT("Training auf normal senken") : TEXT("Haerte beibehalten");
+			else if (A.Typ == TEXT("clique")) Label = k == 0 ? FString::Printf(TEXT("%s anhoeren"), *Name(A.Wortfuehrer)) : TEXT("Klare Ansage an die Gruppe");
+			else if (A.Typ == TEXT("kapitaen")) Label = k == 0 ? TEXT("Kapitaen staerken") : FString::Printf(TEXT("Binde an %s"), *Name(A.Nachfolger));
+			else if (A.Typ == TEXT("praemie")) { Label = k == 0 ? FString::Printf(TEXT("Praemie zahlen (%lld)"), (long long)A.Kosten) : TEXT("Ablehnen"); Kosten = k == 0 ? A.Kosten : 0; }
+			V.OptionLabels.Add(Label);
+			V.OptionCosts.Add(Kosten);
+		}
+	}
+	for (const FString& Z : Kern.RatVerlauf) V.History.Add(Z);
+	return V;
+}
+
 FFM13StaffView UFM13GameInstance::GetStaff() const
 {
 	FFM13StaffView V;

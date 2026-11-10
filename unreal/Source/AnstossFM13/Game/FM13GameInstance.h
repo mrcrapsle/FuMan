@@ -63,6 +63,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13EuropeView GetEurope() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13TrainingView GetTraining() const;
 	UFUNCTION(BlueprintPure, Category = "FM13") FFM13StaffView GetStaff() const;
+	UFUNCTION(BlueprintPure, Category = "FM13") FFM13CouncilView GetCouncil() const;
+	UFUNCTION(BlueprintCallable, Category = "FM13") bool AnswerCouncil(int32 Option, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffHire(int32 Slot, int32 Candidate, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffFire(int32 Slot, FString& OutReason);
 	UFUNCTION(BlueprintCallable, Category = "FM13") bool StaffUpgrade(int32 Slot, FString& OutReason);

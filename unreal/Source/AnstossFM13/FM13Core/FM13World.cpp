@@ -210,7 +210,7 @@ bool FFM13World::PlayMatchday()
 	TickIncomingOffers();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
-	if (Matchday % 4 == 0) TickLockerRoom();
+	if (Matchday % 4 == 0) { TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
@@ -241,6 +241,8 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 
 	const int32 OwnGoals = bHome ? HG : AG;
 	const int32 OppGoals = bHome ? AG : HG;
+	OwnSeasonGoals.Add(OwnGoals);
+	OwnSeasonGoals.Add(OppGoals);
 
 	int32 Dummy = 0;
 	for (int32 i : LineupIndices(Dummy)) { Squad[i].Appearances++; Squad[i].AppearancesTotal++; }
@@ -610,6 +612,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 
 	++Season;
 	Matchday = 1;
+	OwnSeasonGoals.Reset();
 	Stress = (int32)FMath::RoundToInt((float)Stress / 2.f + 0.001f); // Sommerpause halbiert den Stress
 	if (Outcome == EFM13SeasonOutcome::Promoted) { PromotionBoostLevel = LeagueLevel; PromotionBoostSeason = Season; } // js/promotion-boost.js
 	for (FFM13League& L : Leagues)
@@ -2478,4 +2481,251 @@ int32 FFM13World::UnhappyVisitor() const
 		if (!Bester || P.Morale < Bester->Morale) Bester = &P;
 	}
 	return Bester ? Bester->Id : 0;
+}
+
+// ---------- Mannschaftsrat (js/team-council.js) ----------
+
+namespace
+{
+	// adjustMorale(): Moral in 10 bis 100
+	void MoralEl(FFM13Player& P, int32 D) { P.Morale = FMath::Clamp(P.Morale + D, 10, 100); }
+	void MoralEl(FFM13Player* P, int32 D) { if (P) MoralEl(*P, D); }
+	template <typename C> void AdjustMorale(C&& Liste, int32 D) { for (auto&& E : Liste) MoralEl(E, D); }
+	void Moral(FFM13Player* P, int32 D) { if (P) MoralEl(*P, D); }
+
+	// COUNCIL_LEAGUE_COST_FACTOR: je tiefer die Liga, desto guenstiger die Wuensche des Rates
+	const double RatKostenFaktor[6] = { 1.0, 0.7, 0.45, 0.3, 0.2, 0.12 };
+	const int32 RatFrist = 4; // Spieltage, bis ein unbeantwortetes Anliegen verfaellt
+}
+
+int64 FFM13World::CouncilCost(int64 Basis) const
+{
+	const double F = RatKostenFaktor[FMath::Clamp(LeagueLevel, 0, 5)];
+	return (int64)std::floor((double)Basis * F / 500.0 + 0.5) * 500;
+}
+
+int32 FFM13World::CouncilOptionCount(const FString& Typ) const
+{
+	if (Typ == TEXT("stimmung") || Typ == TEXT("training") || Typ == TEXT("clique") || Typ == TEXT("kapitaen") || Typ == TEXT("praemie")) return 2;
+	if (Typ == TEXT("einsatzzeit")) return 2;
+	return 0;
+}
+
+// findCouncilConcern(): zuerst die Stimmung, dann die Kabine, dann Einsatzzeit, Training und Siegesserie
+bool FFM13World::FindCouncilConcern(FAnliegen& Out) const
+{
+	if (Squad.Num() == 0) return false;
+	int64 Summe = 0;
+	for (const FFM13Player& P : Squad) Summe += P.Morale;
+	const double Schnitt = (double)Summe / Squad.Num();
+	if (Schnitt < 45)
+	{
+		Out.Typ = TEXT("stimmung");
+		Out.Titel = TEXT("Die Stimmung in der Kabine ist im Keller");
+		Out.Text = FString::Printf(TEXT("Die durchschnittliche Moral liegt bei %d. Der Rat schlaegt einen gemeinsamen Mannschaftsabend vor."), (int32)std::floor(Schnitt + 0.5));
+		Out.Kosten = CouncilCost(40000);
+		return true;
+	}
+
+	// Kabine: rumorende Clique oder die Kapitaensfrage
+	const TArray<FKabineClique> C = Cliquen(Squad);
+	int32 Unruhig = -1;
+	for (int32 k = 0; k < C.Num(); ++k)
+		if (C[k].Stimmung < FM13Locker::UnruheMoral && (Unruhig < 0 || C[k].Stimmung < C[Unruhig].Stimmung)) Unruhig = k;
+	if (Unruhig >= 0 && C[Unruhig].Fuehrer > 0)
+	{
+		const FKabineClique& K = C[Unruhig];
+		const FFM13Player* Fuehrer = nullptr;
+		for (const FFM13Player& P : Squad) if (P.Id == K.Fuehrer) Fuehrer = &P;
+		Out.Typ = TEXT("clique");
+		Out.Titel = FString::Printf(TEXT("Die Gruppe %s %s rumort"), FM13Locker::Nation(K.Nation), FM13Locker::AltersgruppeName(K.Alter));
+		Out.Text = FString::Printf(TEXT("%s spricht fuer %d Spieler (Stimmung %d). Die schlechte Laune faerbt auf die Kabine ab und kostet Teamstaerke."),
+			Fuehrer ? *Fuehrer->Name : TEXT("Der Wortfuehrer"), K.Mitglieder.Num(), K.Stimmung);
+		Out.Wortfuehrer = K.Fuehrer;
+		Out.Clique = Unruhig;
+		return true;
+	}
+	if (const FFM13Player* Kap = CaptainId ? FindPlayer(CaptainId) : nullptr)
+	{
+		const bool bOhneEinsatz = Matchday >= 10 && Kap->Appearances < Matchday * 0.4;
+		if (Kap->Morale < 35 || bOhneEinsatz)
+		{
+			const FFM13Player* Nach = nullptr;
+			double BesteF = -1e9;
+			for (int32 Id : CouncilIds)
+			{
+				if (Id == Kap->Id) continue;
+				for (const FFM13Player& P : Squad) if (P.Id == Id)
+				{
+					const double F = FM13Locker::Fuehrung(P.Trait == 4, P.Age, P.AppearancesTotal, P.Morale);
+					if (!Nach || F > BesteF) { Nach = &P; BesteF = F; }
+				}
+			}
+			if (Nach)
+			{
+				Out.Typ = TEXT("kapitaen");
+				Out.Titel = TEXT("Die Kapitaensfrage");
+				Out.Text = bOhneEinsatz
+					? FString::Printf(TEXT("%s traegt die Binde, spielt aber kaum (%d Einsaetze). Der Rat schlaegt %s vor."), *Kap->Name, Kap->Appearances, *Nach->Name)
+					: FString::Printf(TEXT("%s wirkt als Kapitaen ausgebrannt (Moral %d). Der Rat schlaegt %s vor."), *Kap->Name, (int32)std::floor(Kap->Morale + 0.5), *Nach->Name);
+				Out.Kapitaen = Kap->Id;
+				Out.Nachfolger = Nach->Id;
+				return true;
+			}
+		}
+	}
+
+	// Einsatzzeit: ein starker Spieler ohne Einsatz in dieser Saison (ab Spieltag 8)
+	TArray<int32> Staerken;
+	for (const FFM13Player& P : Squad) Staerken.Add(P.Strength);
+	Staerken.Sort([](int32 A, int32 B) { return A < B; });
+	const int32 Median = Staerken[Squad.Num() / 2];
+	const FFM13Player* Vergessen = nullptr;
+	if (Matchday >= 8)
+		for (const FFM13Player& P : Squad)
+			if (P.Appearances == 0 && P.Strength >= Median && P.InjuredMatchdays <= 0 && (!Vergessen || P.Strength > Vergessen->Strength)) Vergessen = &P;
+	if (Vergessen)
+	{
+		Out.Typ = TEXT("einsatzzeit");
+		Out.Titel = FString::Printf(TEXT("%s fuehlt sich uebergangen"), *Vergessen->Name);
+		Out.Text = FString::Printf(TEXT("%s (Staerke %d) hat diese Saison noch kein Spiel gemacht. Der Rat bittet um ein klaerendes Gespraech."), *Vergessen->Name, Vergessen->Strength);
+		Out.Spieler = Vergessen->Id;
+		return true;
+	}
+
+	if (TrainingIntensity == TEXT("hart"))
+	{
+		Out.Typ = TEXT("training");
+		Out.Titel = TEXT("Die Trainingsbelastung ist zu hoch");
+		Out.Text = TEXT("Die Fuehrungsspieler melden muede Beine und wachsenden Unmut ueber das harte Training.");
+		return true;
+	}
+
+	// Siegesserie: die letzten drei Ligaspiele gewonnen
+	const int32 Spiele = OwnSeasonGoals.Num() / 2;
+	if (Spiele >= 3)
+	{
+		bool bSerie = true;
+		for (int32 k = Spiele - 3; k < Spiele; ++k) if (!(OwnSeasonGoals[2 * k] > OwnSeasonGoals[2 * k + 1])) bSerie = false;
+		if (bSerie)
+		{
+			Out.Typ = TEXT("praemie");
+			Out.Titel = TEXT("Die Mannschaft moechte eine Praemie fuer die Siegesserie");
+			Out.Text = TEXT("Drei Siege in Folge - der Rat bittet um eine Sonderpraemie fuer die Mannschaft.");
+			Out.Kosten = CouncilCost(60000);
+			return true;
+		}
+	}
+	return false;
+}
+
+// answerCouncilConcern(): die Antwort wirkt auf Moral und Kasse, das Anliegen ist danach erledigt
+bool FFM13World::AnswerConcern(int32 Option, FString& OutReason)
+{
+	if (!Anliegen.bAktiv) { OutReason = TEXT("Kein offenes Anliegen."); return false; }
+	if (Option < 0 || Option >= CouncilOptionCount(Anliegen.Typ)) { OutReason = TEXT("Unbekannte Antwort."); return false; }
+	const FAnliegen A = Anliegen;
+	const TArray<FFM13Player*> Rat = CouncilMembers();
+	const bool bKostet = (A.Typ == TEXT("stimmung") || A.Typ == TEXT("praemie")) && Option == 0;
+	if (bKostet && Money < A.Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld (%lld)."), (long long)A.Kosten); return false; }
+	if (bKostet) Book(TEXT("Mannschaftsrat"), -A.Kosten);
+
+	FString Ergebnis;
+	if (A.Typ == TEXT("stimmung"))
+	{
+		if (Option == 0) { AdjustMorale(Squad, 6); Ergebnis = TEXT("Mannschaftsabend organisiert, Moral +6"); }
+		else { AdjustMorale(Rat, -5); Ergebnis = TEXT("Abgelehnt, der Rat ist verstimmt"); }
+	}
+	else if (A.Typ == TEXT("einsatzzeit"))
+	{
+		FFM13Player* P = FindPlayer(A.Spieler);
+		if (Option == 0) { Moral(P, 10); Ergebnis = TEXT("Gespraech gefuehrt, Spieler beruhigt"); }
+		else { Moral(P, -10); AdjustMorale(Rat, -2); Ergebnis = TEXT("Abgewiesen, der Spieler ist enttaeuscht"); }
+	}
+	else if (A.Typ == TEXT("training"))
+	{
+		if (Option == 0) { TrainingIntensity = TEXT("normal"); AdjustMorale(Squad, 4); Ergebnis = TEXT("Training entschaerft, Moral +4"); }
+		else { AdjustMorale(Squad, -4); Ergebnis = TEXT("Haerte beibehalten, Moral -4"); }
+	}
+	else if (A.Typ == TEXT("clique"))
+	{
+		const TArray<FKabineClique> C = Cliquen(Squad);
+		const FKabineClique* K = (A.Clique >= 0 && A.Clique < C.Num()) ? &C[A.Clique] : nullptr;
+		if (Option == 0)
+		{
+			if (K) for (int32 Id : K->Mitglieder) Moral(FindPlayer(Id), 8);
+			for (FFM13Player* P : Rat) if (!K || !K->Mitglieder.Contains(P->Id)) Moral(P, -2);
+			Ergebnis = TEXT("Gruppe angehoert: ihre Stimmung steigt (+8), der Rat sieht eine Bevorzugung (-2)");
+		}
+		else
+		{
+			if (K) for (FFM13Player& P : Squad) { if (K->Mitglieder.Contains(P.Id)) MoralEl(P, -3); else MoralEl(P, 2); }
+			Moral(FindPlayer(A.Wortfuehrer), -6);
+			Ergebnis = TEXT("Klare Linie: die Gruppe murrt (-3, Wortfuehrer -6), der Rest der Kabine zieht mit (+2)");
+		}
+	}
+	else if (A.Typ == TEXT("kapitaen"))
+	{
+		if (Option == 0)
+		{
+			Moral(FindPlayer(A.Kapitaen), 10);
+			for (FFM13Player* P : Rat) if (P->Id != A.Kapitaen) Moral(P, -2);
+			Ergebnis = TEXT("Kapitaen gestaerkt (+10), der Rat ist skeptisch (-2)");
+		}
+		else
+		{
+			FString Folge;
+			ChangeCaptain(A.Nachfolger, true, Folge);
+			Ergebnis = TEXT("Kapitaenswechsel mit Rueckendeckung des Rats");
+		}
+	}
+	else if (A.Typ == TEXT("praemie"))
+	{
+		if (Option == 0) { AdjustMorale(Squad, 5); Ergebnis = TEXT("Praemie gezahlt, Moral +5"); }
+		else { AdjustMorale(Squad, -3); Ergebnis = TEXT("Praemie abgelehnt, Moral -3"); }
+	}
+
+	RatVerlauf.Insert(FString::Printf(TEXT("S%d/ST%d: %s - %s"), Season, Matchday, *A.Titel, *Ergebnis), 0);
+	while (RatVerlauf.Num() > 6) RatVerlauf.RemoveAt(RatVerlauf.Num() - 1);
+	Anliegen = FAnliegen();
+	return true;
+}
+
+// tickTeamCouncil(): alle vier Spieltage. Ein unbeantwortetes Anliegen verfaellt nach vier Spieltagen,
+// der Rat ist dann verstimmt (-3). Ist der Rat gut gelaunt, hebt sich die Kabine (+1), sonst sinkt sie (-1).
+void FFM13World::TickTeamCouncil()
+{
+	if (Anliegen.bAktiv)
+	{
+		const int32 Alter = (Matchday - Anliegen.Spieltag) + (Season > Anliegen.Saison ? 34 : 0);
+		if (Alter < RatFrist) return;
+		for (FFM13Player* P : CouncilMembers()) Moral(P, -3);
+		RatVerlauf.Insert(FString::Printf(TEXT("S%d/ST%d: %s - Unbeantwortet verfallen, der Rat ist verstimmt"), Season, Matchday, *Anliegen.Titel), 0);
+		while (RatVerlauf.Num() > 6) RatVerlauf.RemoveAt(RatVerlauf.Num() - 1);
+		Anliegen = FAnliegen();
+	}
+	ElectCouncil();
+	const TArray<FFM13Player*> Rat = CouncilMembers();
+	int64 Summe = 0;
+	for (const FFM13Player* P : Rat) Summe += P->Morale;
+	const double RatSchnitt = Rat.Num() ? (double)Summe / Rat.Num() : 0.0;
+	for (FFM13Player& P : Squad) if (!CouncilIds.Contains(P.Id)) { if (RatSchnitt >= 70) MoralEl(P, 1); else if (RatSchnitt < 35) MoralEl(P, -1); }
+
+	FAnliegen Neu;
+	if (FindCouncilConcern(Neu))
+	{
+		Neu.bAktiv = true;
+		Neu.Saison = Season;
+		Neu.Spieltag = Matchday;
+		Anliegen = Neu;
+		AddMessage(FString::Printf(TEXT("Mannschaftsrat: %s"), *Neu.Titel), FString::Printf(TEXT("%s Antworte im Kader-Bereich beim Mannschaftsrat."), *Neu.Text));
+	}
+}
+
+// Mitglieder des Rates als Zeiger (getCouncilMembers)
+TArray<FFM13Player*> FFM13World::CouncilMembers()
+{
+	TArray<FFM13Player*> Liste;
+	for (int32 Id : CouncilIds) if (FFM13Player* P = FindPlayer(Id)) Liste.Add(P);
+	return Liste;
 }
