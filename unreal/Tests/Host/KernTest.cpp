@@ -1372,6 +1372,69 @@ static void TestMedizincheck()
 	PRUEFE(!Knapp.BuyPlayer(0, GrundK) && GrundK.Contains(TEXT("Transferbudget")), "Zu kleines Transferbudget: Kauf abgelehnt");
 	PRUEFE(FFM13World::LeagueTransferBudget(0) == 25000000 && FFM13World::LeagueTransferBudget(5) == 40000 && FFM13World::LeagueTransferBudget(9) == 40000, "Liga-Transferbudget je Stufe, begrenzt");
 
+	// Rueckkauf (js/buyback.js): Verkauf mit Option, Alterung, Ausuebung im Fenster
+	FFM13World R;
+	R.NewGame(TEXT("Rueckkauf"), 146, 0);
+	R.Money = 500000000;
+	R.TransferBudget = 500000000;
+	R.Matchday = 2;
+	R.Squad[0].Age = 22;
+	const int32 RId = R.Squad[0].Id;
+	FFM13IncomingOffer RO;
+	RO.PlayerId = RId; RO.PlayerName = R.Squad[0].Name; RO.Club = TEXT("Testklub"); RO.Price = 1000000; RO.ExpiresMatchday = 9;
+	R.IncomingOffers.Add(RO);
+	FString RGrund;
+	const int64 RGeld = R.Money;
+	PRUEFE(R.AcceptIncomingOfferWithBuyback(0, RGrund) && R.BuybackOptions.Num() == 1, "Rueckkauf-Verkauf: Option angelegt (%s)", *RGrund);
+	PRUEFE(R.Money == RGeld + 900000 && R.BuybackOptions[0].Price == 1400000 && R.BuybackOptions[0].UntilSeason == R.Season + 2, "Verkauf zu 90 %%, Rueckkauf zu 140 %%, Laufzeit 2 Saisons");
+	R.Squad[0].Age = 30;
+	R.IncomingOffers.Add(RO);
+	PRUEFE(!R.AcceptIncomingOfferWithBuyback(0, RGrund) && RGrund.Contains(TEXT("bis 25")), "Ueber 25 Jahre keine Rueckkaufoption");
+	// Alterung zum Saisonende: der Spieler ist jetzt 23
+	FFM13World Gealtert = R;
+	Gealtert.Squad.Reset();
+	FFM13Player Verkauft = Gealtert.BuybackOptions[0].Player;
+	Gealtert.TickBuybackOptions();
+	PRUEFE(Gealtert.BuybackOptions[0].Player.Age == Verkauft.Age + 1, "Saisonende: Spieler altert um ein Jahr");
+	PRUEFE(Gealtert.BuybackOptions[0].Player.Strength >= 20 && Gealtert.BuybackOptions[0].Player.Strength <= 99, "Saisonende: Staerke bleibt in 20 bis 99");
+	// Option laeuft ab, wenn die Saison erreicht ist
+	FFM13World Ende = R;
+	Ende.Season = Ende.BuybackOptions[0].UntilSeason;
+	Ende.TickBuybackOptions();
+	PRUEFE(Ende.BuybackOptions.Num() == 0, "Option verfaellt nach der Laufzeit");
+	// Ausuebung im Fenster: Spieler kehrt zurueck, Option verschwindet
+	FFM13World Ruck = R;
+	const int64 RuckGeld = Ruck.Money;
+	const int64 RuckBudget = Ruck.TransferBudget;
+	const int32 RuckKader = Ruck.Squad.Num();
+	const int32 RuckFans = Ruck.Fans;
+	FString RuckGrund;
+	PRUEFE(Ruck.ExerciseBuyback(RId, RuckGrund) && Ruck.Squad.Num() == RuckKader + 1 && Ruck.BuybackOptions.Num() == 0, "Rueckkauf im Fenster: Spieler zurueck (%s)", *RuckGrund);
+	PRUEFE(Ruck.Money == RuckGeld - 1400000 && Ruck.TransferBudget == RuckBudget - 1400000 && Ruck.Fans == FMath::Min(100, RuckFans + 2), "Rueckkauf kostet 140 %%, Fans +2");
+	Ruck.Matchday = 10;
+	FFM13World Spaet = R;
+	Spaet.Matchday = 10;
+	FString SpaetGrund;
+	PRUEFE(!Spaet.ExerciseBuyback(RId, SpaetGrund) && SpaetGrund.Contains(TEXT("Wechselfenster")), "Rueckkauf ausserhalb des Fensters abgelehnt");
+
+	// Rueckkauf und Budget bleiben im Spielstand
+	FFM13World Sp2;
+	Sp2.NewGame(TEXT("RueckkaufSpeicher"), 147, 0);
+	Sp2.Money = 500000000;
+	Sp2.TransferBudget = 77000000;
+	Sp2.Matchday = 2;
+	Sp2.Squad[0].Age = 21;
+	FFM13IncomingOffer SO;
+	SO.PlayerId = Sp2.Squad[0].Id; SO.PlayerName = Sp2.Squad[0].Name; SO.Club = TEXT("Speicherklub"); SO.Price = 2000000; SO.ExpiresMatchday = 9;
+	Sp2.IncomingOffers.Add(SO);
+	FString SpGrund;
+	Sp2.AcceptIncomingOfferWithBuyback(0, SpGrund);
+	FFM13World Sp2Ld;
+	FString SpFehler;
+	const bool bSpOk = FM13Save::Decode(FM13Save::Encode(Sp2), Sp2Ld, SpFehler);
+	PRUEFE(bSpOk && Sp2Ld.BuybackOptions.Num() == 1 && Sp2Ld.BuybackOptions[0].Price == Sp2.BuybackOptions[0].Price && Sp2Ld.BuybackOptions[0].Club == TEXT("Speicherklub"), "Rueckkaufoption bleibt im Spielstand (%s)", *SpFehler);
+	PRUEFE(Sp2Ld.TransferBudget == Sp2.TransferBudget && Sp2Ld.BuybackOptions[0].Player.Age == Sp2.BuybackOptions[0].Player.Age, "Transferbudget und Spielerdaten bleiben im Spielstand");
+
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

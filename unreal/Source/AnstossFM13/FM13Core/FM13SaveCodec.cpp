@@ -175,6 +175,10 @@ namespace FM13Save
 		W.Field(TEXT("rngSeed"), (int64)S.Rng.GetCurrentSeed());
 		W.Field(TEXT("rngKabineSeed"), (int64)S.RngKabine.GetCurrentSeed());
 		W.Field(TEXT("rngTransferSeed"), (int64)S.RngTransfer.GetCurrentSeed());
+		W.Field(TEXT("transferBudget"), S.TransferBudget);
+		W.FieldBool(TEXT("winterActive"), S.bWinterWindowActive);
+		W.FieldBool(TEXT("winterUsed"), S.bWinterWindowUsed);
+		W.Field(TEXT("winterClose"), S.WinterWindowCloseMatchday);
 		W.Field(TEXT("pokerActive"), S.Poker.bActive ? 1 : 0);
 		W.Field(TEXT("pokerPlayer"), S.Poker.PlayerId);
 		W.Field(TEXT("pokerOffer"), S.Poker.Offer);
@@ -384,6 +388,26 @@ namespace FM13Save
 				W.Out += Inner.Out;
 			}
 			W.bFirst = false;
+			W.EndObject();
+		}
+		W.EndArray();
+
+		W.ArrayKey(TEXT("buybackOptions"));
+		for (const FFM13BuybackOption& O : S.BuybackOptions)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, O.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("club"), O.Club);
+			W.Field(TEXT("price"), O.Price);
+			W.Field(TEXT("untilSeason"), O.UntilSeason);
+			W.Field(TEXT("saleStrength"), O.SaleStrength);
+			W.Field(TEXT("season"), O.Season);
 			W.EndObject();
 		}
 		W.EndArray();
@@ -756,6 +780,21 @@ namespace FM13Save
 			L.Goals = (int32)R.Int(N, TEXT("goals"), 0);
 			L.DevProgress = R.Real(N, TEXT("devProgress"), 0.0);
 			W.YouthLoans.Add(L);
+		}
+		W.TransferBudget = R.Int(Root, TEXT("transferBudget"), 0);
+		W.bWinterWindowActive = R.Bool(Root, TEXT("winterActive"), false);
+		W.bWinterWindowUsed = R.Bool(Root, TEXT("winterUsed"), false);
+		W.WinterWindowCloseMatchday = (int32)R.Int(Root, TEXT("winterClose"), 0);
+		for (int32 N : R.Items(Root, TEXT("buybackOptions")))
+		{
+			FFM13BuybackOption O;
+			O.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			O.Club = R.Str(N, TEXT("club"), TEXT(""));
+			O.Price = R.Int(N, TEXT("price"), 0);
+			O.UntilSeason = (int32)R.Int(N, TEXT("untilSeason"), 0);
+			O.SaleStrength = (int32)R.Int(N, TEXT("saleStrength"), 0);
+			O.Season = (int32)R.Int(N, TEXT("season"), 0);
+			W.BuybackOptions.Add(O);
 		}
 		for (int32 N : R.Items(Root, TEXT("youthMoments"))) W.YouthMoments.Add(P.Nodes[N].Text);
 		for (int32 N : R.Items(Root, TEXT("market")))

@@ -625,6 +625,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	DevelopPlayers(S);
 	YouthIntake(S);
 
+	TickBuybackOptions();
 	++Season;
 	Matchday = 1;
 	OwnSeasonGoals.Reset();
@@ -3279,4 +3280,86 @@ void FFM13World::TickTransferWindows()
 	if (!bWinterWindowActive) return;
 	if (WinterWindowCloseMatchday <= 0) WinterWindowCloseMatchday = Matchday + 1;
 	if (Matchday >= WinterWindowCloseMatchday) bWinterWindowActive = false;   // Deadline-Day: noch nicht portiert
+}
+
+// ---------- Rueckkauf (js/buyback.js) ----------
+
+bool FFM13World::AcceptIncomingOfferWithBuyback(int32 Index, FString& OutReason)
+{
+	if (!IncomingOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	const FFM13IncomingOffer O = IncomingOffers[Index];
+	const FFM13Player* P = O.bYouth ? nullptr : FindPlayer(O.PlayerId);
+	if (!P || !FM13Transfers::RueckkaufMoeglich(P->Age)) { OutReason = TEXT("Eine Rueckkaufoption gibt es nur fuer Spieler bis 25 Jahre."); return false; }
+	const FFM13Player Kopie = *P;
+	// Der Kaeufer zahlt 10 % weniger sofort; die Option kostet ihn den Preis, den er bezahlt hat
+	const int64 Sofort = FM13Transfers::RueckkaufSofort(O.Price);
+	const int64 Preis = FM13Transfers::RueckkaufPreis(O.Price);
+	IncomingOffers[Index].Price = Sofort;
+	if (!AcceptIncomingOffer(Index, OutReason))
+	{
+		IncomingOffers[Index].Price = O.Price;
+		return false;
+	}
+	FFM13BuybackOption Option;
+	Option.Player = Kopie;
+	Option.Club = O.Club;
+	Option.Price = Preis;
+	Option.UntilSeason = Season + FM13Transfers::BuybackSeasons;
+	Option.SaleStrength = Kopie.Strength;
+	Option.Season = Season;
+	BuybackOptions.Add(Option);
+	AddMessage(TEXT("Rueckkaufoption"), FString::Printf(TEXT("%s wechselt fuer %lld zu %s - Rueckkauf bis Saison %d fuer %lld moeglich."),
+		*Kopie.Name, (long long)Sofort, *O.Club, Option.UntilSeason, (long long)Preis));
+	return true;
+}
+
+// tickBuybackOptions(): Saisonende, Season ist noch die alte Saison.
+void FFM13World::TickBuybackOptions()
+{
+	for (int32 i = BuybackOptions.Num() - 1; i >= 0; --i)
+	{
+		FFM13BuybackOption& Option = BuybackOptions[i];
+		if (Season >= Option.UntilSeason)
+		{
+			AddMessage(TEXT("Rueckkaufoption verfallen"), FString::Printf(TEXT("Die Option, %s von %s zurueckzuholen, ist abgelaufen."), *Option.Player.Name, *Option.Club));
+			BuybackOptions.RemoveAt(i);
+			continue;
+		}
+		FFM13Player& P = Option.Player;
+		P.Age += 1;
+		const double Zufall = RngTransfer.FRand();
+		P.Strength = FMath::Clamp(P.Strength + FM13Transfers::RueckkaufEntwicklung(P.Age, Zufall), 20, 99);
+		P.MarketValue = FM13Economy::MarketValue(P.Strength, nullptr);
+		AddMessage(FString::Printf(TEXT("%s bei %s"), *P.Name, *Option.Club),
+			FString::Printf(TEXT("%s (%d J.) steht jetzt bei Staerke %d (beim Verkauf %d). Rueckkauf fuer %lld bis Saison %d - nur im Transferfenster."),
+				*P.Name, P.Age, P.Strength, Option.SaleStrength, (long long)Option.Price, Option.UntilSeason));
+	}
+}
+
+bool FFM13World::ExerciseBuyback(int32 PlayerId, FString& OutReason)
+{
+	const int32 Idx = BuybackOptions.IndexOfByPredicate([PlayerId](const FFM13BuybackOption& O) { return O.Player.Id == PlayerId; });
+	if (Idx < 0) { OutReason = TEXT("Diese Rueckkaufoption gibt es nicht mehr."); return false; }
+	if (!TransferWindowGate(OutReason)) return false;
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
+	const FFM13BuybackOption Option = BuybackOptions[Idx];
+	if (Money < Option.Price) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Option.Price); return false; }
+	if (TransferBudget < Option.Price) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)Option.Price, (long long)TransferBudget); return false; }
+	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
+	FFM13Player P = Option.Player;
+	const int32 Gehalt = FMath::Max(P.Wage, FM13Economy::Wage(P.MarketValue, P.Strength));
+	if (!FitsWageBudget(Gehalt)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	P.Wage = Gehalt;
+	Book(FString(TEXT("Rueckkauf: ")) + P.Name, -Option.Price);
+	TransferBudget -= Option.Price;
+	P.ContractYears = 3;
+	P.Fitness = 100;
+	P.Morale = 80;
+	P.InjuredMatchdays = 0;
+	P.SuspendedMatchdays = 0;
+	Squad.Add(P);
+	BuybackOptions.RemoveAt(Idx);
+	Fans = FMath::Min(100, Fans + 2);
+	AddMessage(TEXT("Rueckkehr"), FString::Printf(TEXT("%s kehrt fuer %lld von %s zurueck (Staerke %d, Fans +2)."), *P.Name, (long long)Option.Price, *Option.Club, P.Strength));
+	return true;
 }

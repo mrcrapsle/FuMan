@@ -300,6 +300,11 @@ public:
 	// ---------- Angebote ----------
 	bool AcceptSponsorOffer(int32 Index, FString& OutReason);
 	bool AcceptIncomingOffer(int32 Index, FString& OutReason);
+	// Rueckkauf (js/buyback.js): Verkauf mit Option, Entwicklung beim neuen Verein, Ausuebung im Fenster
+	TArray<FFM13BuybackOption> BuybackOptions;
+	bool AcceptIncomingOfferWithBuyback(int32 Index, FString& OutReason);
+	void TickBuybackOptions();                        // zum Saisonende, vor Season++
+	bool ExerciseBuyback(int32 PlayerId, FString& OutReason);
 	bool DeclineIncomingOffer(int32 Index, FString& OutReason);
 	static FString AchievementLabel(const FString& Id);
 	static int32 AchievementCount();

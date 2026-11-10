@@ -119,6 +119,17 @@ struct FFM13IncomingOffer
 	int32 ExpiresMatchday = 0; // gilt bis einschließlich dieses Spieltags
 };
 
+// Rueckkaufoption beim Verkauf (js/buyback.js): bis 25 Jahre, Rueckkauf zu 140 % des Angebots
+struct FFM13BuybackOption
+{
+	FFM13Player Player;
+	FString Club;            // Verein, der ihn gekauft hat
+	int64 Price = 0;         // Rueckkaufpreis
+	int32 UntilSeason = 0;   // gilt bis Saisonende dieser Saison
+	int32 SaleStrength = 0;  // Staerke beim Verkauf
+	int32 Season = 0;
+};
+
 struct FFM13ClubRecords
 {
 	int32 BiggestWinFor = 0, BiggestWinAgainst = 0;
