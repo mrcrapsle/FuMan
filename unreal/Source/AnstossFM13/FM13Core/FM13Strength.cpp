@@ -23,6 +23,34 @@ namespace FM13Strength
 		return JsRound(Prozent / 100.0 * 3.0);
 	}
 
+	int32 Grade(int32 OwnGoals, int32 OppGoals, int32 DailyForm, int32 Tore, int32 Vorlagen, EFM13Position Pos, double Zufall)
+	{
+		double Note = 3.5 - FMath::Max(-0.75, FMath::Min(0.75, (OwnGoals - OppGoals) * 0.3));
+		Note -= (DailyForm - 50) / 100.0;
+		Note -= Tore * 0.75;
+		Note -= Vorlagen * 0.4;
+		if (Pos == EFM13Position::TW || Pos == EFM13Position::ABW)
+		{
+			if (OppGoals == 0) Note -= 0.5;
+			else if (OppGoals >= 3) Note += 0.4;
+		}
+		Note += Zufall - 0.5;
+		const int32 Halbe = FMath::Max(2, FMath::Min(12, JsRound(Note * 2.0))); // 1,0 bis 6,0 in halben Noten
+		return Halbe * 5;
+	}
+
+	int32 ScorerWeight(EFM13Position Pos, uint8 Trait)
+	{
+		static const int32 Gewicht[4] = { 2, 10, 30, 50 }; // TW 0,15 -> Math.round(1,5) = 2
+		return Gewicht[(int32)Pos] + (Trait == Eisenfuss ? 30 : 0);
+	}
+
+	int32 AssistWeight(EFM13Position Pos)
+	{
+		static const int32 Gewicht[4] = { 1, 15, 40, 20 };
+		return Gewicht[(int32)Pos];
+	}
+
 	int32 Team(const FEingabe& E)
 	{
 		const int32 N = E.Elf.Num();

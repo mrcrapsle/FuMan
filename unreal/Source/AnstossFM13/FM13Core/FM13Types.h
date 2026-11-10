@@ -60,6 +60,7 @@ struct FFM13Player
 	int32 GradeSum = 0;         // Summe der Ligennoten in Zehnteln (1,0 bis 6,0 = 10 bis 60)
 	int32 GradeGames = 0;       // Ligaspiele mit Note in der Saison
 	int32 LastGrade = 0;        // letzte Note in Zehnteln (0 = noch keine)
+	int32 TeamOfMatchday = 0;   // Nominierungen fuer die Elf des Spieltags in der Saison (Note 1,5 oder besser)
 	int32 Fitness = 100;        // Kondition 10 bis 100
 	int32 DailyForm = 50;       // Tagesform 5 bis 95, jeder Spieltag neu
 	uint8 Trait = 0;            // FM13Strength::ETrait, 0 = keiner
@@ -244,6 +245,9 @@ struct FFM13OwnMatchReport
 	int64 Expenses = 0;
 	int32 BoardShift = 0;
 	TArray<FString> Scorers;
+	FString BestPlayer;       // Spieler des Spiels (beste Note), nur Liga
+	int32 BestGrade = 0;      // in Zehnteln
+	TArray<FString> TeamOfMatchday; // Elf des Spieltags: Note 1,5 oder besser
 	TArray<FString> Ticker;     // Spielverlauf Minute für Minute
 	FString Weather;
 	FString Referee;

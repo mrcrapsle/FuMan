@@ -58,4 +58,9 @@ namespace FM13Strength
 
 	int32 Team(const FEingabe& E);
 	int32 ChemistryBonus(int32 SummeDerPaare, int32 AnzahlPaare); // getLineupChemistryStats(): 0 bis 3
+
+	// computePlayerGrade() aus js/player-stats.js: Note in Zehnteln (10 bis 60, halbe Noten). Zufall in [0, 1).
+	int32 Grade(int32 OwnGoals, int32 OppGoals, int32 DailyForm, int32 Tore, int32 Vorlagen, EFM13Position Pos, double Zufall);
+	int32 ScorerWeight(EFM13Position Pos, uint8 Trait);   // pickWeightedScorer(): ST 50, MIT 30, ABW 10, TW 2, Eisenfuss +30
+	int32 AssistWeight(EFM13Position Pos);                // pickAssistant(): MIT 40, ST 20, ABW 15, TW 1
 }

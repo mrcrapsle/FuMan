@@ -237,6 +237,8 @@ TSharedRef<SWidget> SFM13Menu::BuildOverview()
 		Box->AddSlot().AutoHeight()[Txt(FString::Printf(TEXT("%s %s   %d:%d%s"), R.bHome ? TEXT("Heim gegen") : TEXT("Auswaerts bei"), *R.Opponent, R.OwnGoals, R.OppGoals,
 			R.bPenalties ? TEXT(" (Elfmeterschiessen)") : TEXT("")), Farbe, 15, true)];
 		if (R.Scorers.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Tore: ") + FString::Join(R.Scorers, TEXT(", ")))];
+		if (!R.BestPlayer.IsEmpty()) Box->AddSlot().AutoHeight()[Txt(TEXT("Spieler des Spiels: ") + R.BestPlayer, CAkzent)];
+		if (R.TeamOfMatchday.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Elf des Spieltags: ") + FString::Join(R.TeamOfMatchday, TEXT(", ")), CGut)];
 		if (R.Injuries.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Verletzt: ") + FString::Join(R.Injuries, TEXT(", ")), CSchlecht)];
 		if (R.Cards.Num()) Box->AddSlot().AutoHeight()[Txt(TEXT("Karten: ") + FString::Join(R.Cards, TEXT(", ")), CAkzent)];
 		if (!R.Weather.IsEmpty() && R.Competition == TEXT("Liga"))

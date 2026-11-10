@@ -61,6 +61,7 @@ namespace
 		W.Field(TEXT("gradeSum"), P.GradeSum);
 		W.Field(TEXT("gradeGames"), P.GradeGames);
 		W.Field(TEXT("lastGrade"), P.LastGrade);
+		W.Field(TEXT("elf"), P.TeamOfMatchday);
 		W.Field(TEXT("fitness"), P.Fitness);
 		W.Field(TEXT("dailyForm"), P.DailyForm);
 		W.Field(TEXT("trait"), (int64)P.Trait);
@@ -376,6 +377,7 @@ namespace
 		P.GradeSum = (int32)R.Int(Obj, TEXT("gradeSum"), 0);
 		P.GradeGames = (int32)R.Int(Obj, TEXT("gradeGames"), 0);
 		P.LastGrade = (int32)R.Int(Obj, TEXT("lastGrade"), 0);
+		P.TeamOfMatchday = FMath::Max(0, (int32)R.Int(Obj, TEXT("elf"), 0));
 		P.Fitness = FMath::Clamp((int32)R.Int(Obj, TEXT("fitness"), 100), 10, 100);
 		P.DailyForm = FMath::Clamp((int32)R.Int(Obj, TEXT("dailyForm"), 50), 5, 95);
 		P.Trait = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("trait"), 0), 0, 8);

@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach Runde B und der Stärkeformel: **16 portiert, 34 teilweise, 84 offen, 11 entfallen** (von 145 Modulen in `js/`).
+Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen, 11 entfallen** (von 145 Modulen in `js/`).
 
 ## Ordner
 
@@ -96,7 +96,7 @@ Stand nach Runde B und der Stärkeformel: **16 portiert, 34 teilweise, 84 offen,
 |---|---:|---|---|---|
 | `player-development.js` | 117 | portiert | Entwicklungstypen | FM13Development (Runde A) |
 | `player-retirement.js` | 112 | teilweise | Karriereende, Legenden | Ruhestand, Legenden (Runde A) |
-| `player-stats.js` | 119 | teilweise | Spielerstatistik & Noten: Tore UND Vorlagen in Live- und simulierten Spielen, eine | Vorlagen und Noten nach jedem Ligaspiel mit Tagesform und Kondition (noch vereinfacht: Tore/Vorlagen-Gewichte, Elf des Spieltags offen) |
+| `player-stats.js` | 119 | portiert | Spielerstatistik und Noten | Tore, Vorlagen, Noten (120 Vergleichsfälle gegen computePlayerGrade), Spieler des Spiels, Elf des Spieltags mit Moralschub |
 | `player-profile.js` | 101 | offen | Spieler-Karriereprofil (Phase 22.10): im Spieler-Popup statt der kurzen Karrierezeile ein |  |
 | `playerdetail.js` | 309 | offen | SPIELER-DETAIL-POPUP: wiederverwendbares Modal für Kader, Transfermarkt, Scouting & |  |
 | `player-compare.js` | 93 | offen | SPIELER-VERGLEICH (Phase 26.6): zwei Spieler nebeneinander, aus dem Spielerdetail geöffnet |  |

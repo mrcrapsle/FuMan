@@ -133,6 +133,8 @@ FFM13MatchReportView UFM13GameInstance::MakeReportView(const FFM13OwnMatchReport
 	V.bPlayed = R.bPlayed; V.bHome = R.bHome; V.Opponent = R.Opponent;
 	V.OwnGoals = R.OwnGoals; V.OppGoals = R.OppGoals; V.OwnStrength = R.OwnStrength; V.OppStrength = R.OppStrength;
 	V.Attendance = R.Attendance; V.Income = R.Income; V.Expenses = R.Expenses; V.BoardShift = R.BoardShift;
+	if (!R.BestPlayer.IsEmpty()) V.BestPlayer = FString::Printf(TEXT("%s (Note %d,%d)"), *R.BestPlayer, R.BestGrade / 10, R.BestGrade % 10);
+	V.TeamOfMatchday = R.TeamOfMatchday;
 	V.Scorers = R.Scorers; V.Ticker = R.Ticker; V.Injuries = R.Injuries; V.Competition = R.Competition;
 	V.bPenalties = R.bPenalties; V.bAdvanced = R.bAdvanced;
 	V.Weather = R.Weather; V.Referee = R.Referee; V.OppArchetype = R.OppArchetype; V.TacticBonus = R.TacticBonus; V.Cards = R.Cards;

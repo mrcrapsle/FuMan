@@ -73,6 +73,7 @@ Die Stärke der eigenen Elf rechnet jetzt dieselbe Formel wie `calcTeamStrength(
 - **Heimvorteil:** +3 daheim, auch für die Gegner. Auswärts helfen die mitgereisten Fans.
 - **Kapitän, Fähigkeiten (Traits) und Eingespieltheit** geben Boni. Der Kader zeigt den Kapitän mit „(C)“.
 - **Personal, Lizenz, Perks und Stress** aus dem Browser-Spielstand wirken mit.
+- **Noten:** Die Note nach jedem Ligaspiel rechnet wie im Browserspiel (halbe Noten, Tagesform, Tore, Vorlagen, Zu-Null). Wer 1,5 oder besser bekommt, steht in der Elf des Spieltags und gewinnt 3 Moral.
 - **Aufstiegseuphorie:** +3 Stärke bis Spieltag 10 nach einem Aufstieg, +1,5 bis Spieltag 17.
 
 Was aus jedem Ordner und Modul des Browserspiels schon in Unreal steckt, steht in [PORTIERUNG.md](PORTIERUNG.md).
@@ -121,7 +122,7 @@ Die CI startet das Skript bei jedem Push (Job `unreal-host-tests` in `.github/wo
 
 Das Skript baut zwei Testprogramme mit g++:
 
-1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4266 Prüfungen:
+1. **Spielkern** gegen eine Nachbildung der UE-Grundtypen. 4374 Prüfungen:
    - Marktwert, Gehalt und TV-Geld gegen Referenzwerte aus den Original-JS-Funktionen (`node unreal/Tests/Host/referenz.js`).
    - Teamstärke und automatische Aufstellung gegen die Original-JS-Funktionen (`node unreal/Tests/Host/referenz-staerke.js`).
    - Spielplan, Tabelle, Finanzen, Auf- und Abstieg, Transfers, Verträge, Jugend, Stadion, Pokale, Verletzungen, Ticker, Entlassungsregeln.

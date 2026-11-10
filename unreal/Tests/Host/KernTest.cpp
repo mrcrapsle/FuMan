@@ -646,6 +646,19 @@ static void TestTeamstaerke()
 	}
 	std::printf("  %d von %d Aufstellungen gleich\n", ElfGleich, ElfFaelle);
 
+	// Noten: computePlayerGrade() des Browserspiels
+	int32 NotenGleich = 0, NotenFaelle = 0;
+	for (const auto& N : RefNoten)
+	{
+		const int32 Note = FM13Strength::Grade(N[0], N[1], N[2], N[3], N[4], (EFM13Position)N[5], N[6] / 1000.0);
+		++NotenFaelle;
+		if (Note == N[7]) ++NotenGleich;
+		PRUEFE(Note == N[7], "Note Fall %d: %d statt %d", NotenFaelle, Note, N[7]);
+	}
+	std::printf("  %d von %d Noten gleich\n", NotenGleich, NotenFaelle);
+	PRUEFE(FM13Strength::ScorerWeight(EFM13Position::ST, 0) == 50 && FM13Strength::ScorerWeight(EFM13Position::TW, 0) == 2
+		&& FM13Strength::ScorerWeight(EFM13Position::ABW, FM13Strength::Eisenfuss) == 40 && FM13Strength::AssistWeight(EFM13Position::MIT) == 40, "Gewichte fuer Torschuetzen und Vorlagen");
+
 	// Kapitaen, Eingespieltheit, Heimvorteil und Aufstiegseuphorie in der Spielwelt
 	FFM13World W;
 	W.NewGame(TEXT("Staerkeverein"), 33);

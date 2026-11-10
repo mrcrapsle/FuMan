@@ -56,9 +56,12 @@ namespace
 		{
 			P.Assists = FMath::Max(0, (int32)R.Int(St, TEXT("vorlagen"), 0));
 			P.GradeGames = FMath::Max(0, (int32)R.Int(St, TEXT("spiele"), 0));
+			P.TeamOfMatchday = FMath::Max(0, (int32)R.Int(St, TEXT("elf"), 0));
 			P.GradeSum = P.GradeGames > 0 ? FMath::Clamp((int32)FMath::RoundToInt(R.Real(St, TEXT("notenSumme"), 0.0) * 10.0), 0, P.GradeGames * 60) : 0;
 		}
-		P.AssistsCareer = (int32)R.Int(N, TEXT("assists"), P.Assists);
+		// p.assists zaehlt im Browserspiel die laufende Saison mit, hier kommt sie erst am Saisonende dazu
+		P.AssistsCareer = FMath::Max(0, (int32)R.Int(N, TEXT("assists"), P.Assists) - P.Assists);
+		P.LastGrade = FMath::Clamp(FMath::RoundToInt((float)R.Real(N, TEXT("lastGrade"), 0.0) * 10.f), 0, 60);
 		P.Appearances = (int32)R.Int(N, TEXT("appearancesSeason"), 0);
 		P.MarketValue = FMath::Max<int64>(10000, R.Int(N, TEXT("marketValue"), FM13Economy::MarketValue(P.Strength, nullptr)));
 		P.Wage = bYouth ? 0 : FMath::Max(0, (int32)R.Int(N, TEXT("wage"), FM13Economy::Wage(P.MarketValue, P.Strength)));

@@ -112,6 +112,8 @@ struct FFM13MatchReportView
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int64 Expenses = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") int32 BoardShift = 0;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Scorers;
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString BestPlayer;            // Spieler des Spiels mit Note, leer ohne Ligaspiel
+	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> TeamOfMatchday; // Elf des Spieltags (Note 1,5 oder besser)
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Ticker;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") TArray<FString> Injuries;
 	UPROPERTY(BlueprintReadOnly, Category = "FM13") FString Competition;

@@ -6,6 +6,7 @@ const lese = f => fs.readFileSync(f, 'utf8');
 const klammer = (src, i, auf, zu) => { let d = 0; for (let k = src.indexOf(auf, i); k < src.length; k++) { if (src[k] === auf) d++; if (src[k] === zu) { d--; if (d === 0) return k; } } throw new Error('Klammer'); };
 const fn = (src, name) => { const i = src.indexOf('function ' + name + '('); if (i < 0) throw new Error(name); const kopf = src.indexOf(')', i); return src.slice(i, klammer(src, kopf, '{', '}') + 1); };
 const konst = (src, name, auf, zu) => { const i = src.indexOf('const ' + name + ' = '); if (i < 0) throw new Error(name); return src.slice(i, klammer(src, i, auf, zu) + 1) + ';'; };
+const stats = lese('js/player-stats.js');
 const match = lese('js/match.js'), squadJs = lese('js/squad.js'), staff = lese('js/campus-staff.js'), state = lese('js/state.js'), weather = lese('js/weather.js');
 
 const code = `
@@ -19,6 +20,7 @@ let squad = [], lineup = [], game = {}, privateLife = {}, staffMembers = {}, sta
 function autoLineup() { lineup = pickBestLineupIds(); }
 ${['calcTeamStrength', 'getTacticStyleBonus', 'getFormationOffBonus', 'getTackleHardnessBonus', 'getLineupChemistryStats'].map(n => fn(match, n)).join('\n')}
 ${fn(squadJs, 'pickBestLineupIds')}
+${fn(stats, 'computePlayerGrade')}
 ${['getGreenkeeperEffekt', 'getAnalystEffekt', 'getNutritionistEffekt', 'getStaffLevelMultiplier', 'getStaffEffectivenessMultiplier', 'getActiveStaffSynergies'].map(n => fn(staff, n)).join('\n')}
 
 let saat = 12345;
@@ -76,7 +78,18 @@ for (let n = 0; n < 40; n++) {
     const ids = pickBestLineupIds().slice().sort((a, b) => a - b);
     elf.push({ f, spieler: squad.map(p => [p.strength, p.fitness, POS.indexOf(p.pos), p.injured, p.suspended]), ids });
 }
-JSON.stringify({ staerke, elf, stile: STILE, formationen: FORMATIONEN, training: TRAINING, haerte: HAERTE });`;
+let matchEvents = { tore: {}, vorlagen: {} };
+const noten = [];
+const echterZufall = Math.random;
+for (let n = 0; n < 120; n++) {
+    const p = { id: 1, pos: POS[zufall(4)], dailyForm: 5 + zufall(91) };
+    const eigene = zufall(6), gegner = zufall(6), tore = Math.min(eigene, zufall(4)), vorlagen = zufall(3), tausendstel = zufall(1000);
+    matchEvents = { tore: { 1: tore }, vorlagen: { 1: vorlagen } };
+    Math.random = () => tausendstel / 1000;
+    noten.push([eigene, gegner, p.dailyForm, tore, vorlagen, POS.indexOf(p.pos), tausendstel, Math.round(computePlayerGrade(p, eigene, gegner) * 10)]);
+}
+Math.random = echterZufall;
+JSON.stringify({ staerke, elf, noten, stile: STILE, formationen: FORMATIONEN, training: TRAINING, haerte: HAERTE });`;
 const r = JSON.parse(eval(code));
 const zeile = a => '{ ' + a.join(', ') + ' }';
 let h = "#pragma once\n// Erzeugt aus calcTeamStrength() (js/match.js) und pickBestLineupIds() (js/squad.js) des Browserspiels.\n// Neu erzeugen aus dem Repo-Stamm: node unreal/Tests/Host/referenz-staerke.js\n";
@@ -87,5 +100,7 @@ h += "struct FRefStaerke { int32 Spieler[11][7]; int32 Kapitaen; int32 X[28]; in
     + r.staerke.map(s => `\t{ { ${s.spieler.map(zeile).join(', ')} }, ${s.kap}, ${zeile(s.x)}, ${s.erwartet} },`).join('\n') + "\n};\n";
 h += "struct FRefElf { int32 Formation; int32 Anzahl; int32 Spieler[24][5]; int32 AnzahlElf; int32 Elf[11]; };\nstatic const FRefElf RefElf[] = {\n"
     + r.elf.map(e => `\t{ ${e.f}, ${e.spieler.length}, { ${e.spieler.map(zeile).join(', ')} }, ${e.ids.length}, ${zeile(e.ids)} },`).join('\n') + "\n};\n";
+h += "// Noten aus computePlayerGrade(): eigene Tore, Gegentore, Tagesform, Tore, Vorlagen, Position, Zufall in Tausendsteln, Note in Zehnteln\nstatic const int32 RefNoten[][8] = {\n"
+    + r.noten.map(n => '\t' + zeile(n) + ',').join('\n') + "\n};\n";
 fs.writeFileSync('unreal/Tests/Host/ReferenzStaerke.h', h);
 console.log('ReferenzStaerke.h geschrieben: ' + r.staerke.length + ' Staerken, ' + r.elf.length + ' Aufstellungen');
