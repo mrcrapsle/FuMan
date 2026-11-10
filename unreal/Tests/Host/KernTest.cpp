@@ -1544,6 +1544,85 @@ static void TestMedizincheck()
 	FString GwFehler;
 	const bool bGOk = FM13Save::Decode(FM13Save::Encode(GSp), GLd, GwFehler);
 	PRUEFE(bGOk && GLd.Rumors.Num() == GSp.Rumors.Num() && GLd.RumorHits[2] == GSp.RumorHits[2] && GLd.Rumors[0].Reaction == TEXT("dementieren"), "Geruechte bleiben im Spielstand (%s)", *GwFehler);
+	// Vorvertraege (js/pre-contracts.js): Pool, Angebot, Obergrenze, Frist, Verlaengerung, Zuzug
+	FFM13World VV;
+	VV.NewGame(TEXT("Vorvertraege"), 155, 0);
+	VV.Money = 500000000;
+	VV.WageBudget = 1000000000;
+	VV.Matchday = 17;
+	VV.EnsurePreContractPool();
+	PRUEFE(VV.PreContractPool.Num() == 0, "Vorvertraege: vor Spieltag 18 kein Pool");
+	VV.Matchday = 18;
+	VV.EnsurePreContractPool();
+	PRUEFE(VV.PreContractPool.Num() == 4, "Vorvertraege: vier Kandidaten ab Spieltag 18");
+	bool bVereinGesetzt = true;
+	for (const FFM13World::FFM13PreContractCandidate& C : VV.PreContractPool) if (C.SellerClub.IsEmpty()) bVereinGesetzt = false;
+	PRUEFE(bVereinGesetzt, "Vorvertraege: jeder Kandidat hat einen Verein");
+	// Angebot bis zur Entscheidung (Zusage oder Absage)
+	const int32 KandId = VV.PreContractPool[0].Player.Id;
+	const int64 VorGeld = VV.Money;
+	const int32 OrigWage = VV.PreContractPool[0].Player.Wage;
+	const int64 Handgeld = FM13Transfers::VorvertragHandgeld(FM13Transfers::VorvertragGehalt(OrigWage), true);
+	FString VGrund;
+	bool bZusage = false;
+	for (int32 k = 0; k < 8 && !bZusage; ++k)
+	{
+		if (VV.OfferPreContract(KandId, true, VGrund)) bZusage = true;
+		else if (VV.PreContractPool.ContainsByPredicate([KandId](const FFM13World::FFM13PreContractCandidate& C) { return C.Player.Id == KandId && C.bRefused; })) break;
+	}
+	if (bZusage)
+	{
+		PRUEFE(VV.PreContracts.Num() == 1 && VV.Money == VorGeld - Handgeld, "Zusage: Handgeld gebucht, Vorvertrag angelegt");
+		PRUEFE(VV.PreContracts[0].Player.Wage == FM13Transfers::VorvertragGehalt(OrigWage) && !VV.PreContractPool.ContainsByPredicate([KandId](const FFM13World::FFM13PreContractCandidate& C) { return C.Player.Id == KandId; }), "Zusage: Spieler aus dem Pool genommen");
+	}
+	else
+	{
+		PRUEFE(VV.Money == VorGeld, "Absage: kein Handgeld");
+	}
+	// Hoechstens drei offene Vorvertraege
+	FFM13World VM = VV;
+	VM.PreContracts.Reset();
+	for (int32 k = 0; k < 3; ++k)
+	{
+		FFM13World::FFM13PreContractDeal Platz;
+		Platz.Player = VM.Squad[k];
+		VM.PreContracts.Add(Platz);
+	}
+	FFM13World::FFM13PreContractCandidate Extra;
+	Extra.Player = VM.Squad[1];
+	Extra.Player.Id = 999999;
+	VM.PreContractPool.Add(Extra);
+	FString VMGrund;
+	PRUEFE(!VM.OfferPreContract(999999, false, VMGrund) && VMGrund.Contains(TEXT("Hoechstens")), "Vorvertraege: hoechstens drei offene");
+	// Frist verstrichen: der Spieler unterschreibt beim anderen Verein
+	FFM13World Frist = VV;
+	Frist.Matchday = 20;
+	Frist.Squad[0].PreOfferClub = TEXT("Testklub");
+	Frist.Squad[0].PreOfferDeadline = 20;
+	Frist.Squad[0].ContractYears = 1;
+	Frist.TickPreContracts();
+	PRUEFE(Frist.Squad[0].PreSignedClub == TEXT("Testklub") && Frist.Squad[0].PreOfferClub.IsEmpty(), "Frist verstrichen: Vorvertrag beim Verein unterschrieben");
+	// Verlaengerung vor der Frist: das Angebot ist vom Tisch
+	FFM13World Verl = VV;
+	Verl.Matchday = 20;
+	Verl.Squad[1].PreOfferClub = TEXT("Testklub");
+	Verl.Squad[1].PreOfferDeadline = 23;
+	Verl.Squad[1].ContractYears = 2;
+	Verl.TickPreContracts();
+	PRUEFE(Verl.Squad[1].PreOfferClub.IsEmpty() && Verl.Squad[1].PreSignedClub.IsEmpty(), "Verlaengert: Angebot vom Tisch");
+	// Saisonwechsel: Vorvertrag wird Spieler, Vertrag drei Jahre, Alter plus eins
+	FFM13World Zuzug = VV;
+	const int32 ZKader = Zuzug.Squad.Num();
+	FFM13World::FFM13PreContractDeal Deal;
+	Deal.Player = VV.Squad[2];
+	Deal.Player.Id = 888888;
+	Deal.Player.Age = 25;
+	Deal.From = TEXT("Altklub");
+	Zuzug.PreContracts.Add(Deal);
+	Zuzug.JoinPreContractPlayers();
+	bool bZugezogen = false;
+	for (const FFM13Player& P : Zuzug.Squad) if (P.Id == 888888 && P.Age == 26 && P.ContractYears == 3) bZugezogen = true;
+	PRUEFE(Zuzug.Squad.Num() == ZKader + 1 && bZugezogen && Zuzug.PreContracts.Num() == 0, "Zuzug: Spieler kommt mit Vertrag und Alter plus eins");
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

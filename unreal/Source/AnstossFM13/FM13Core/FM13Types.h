@@ -75,6 +75,9 @@ struct FFM13Player
 	int32 MentorId = 0;         // Jugend: Mentor aus dem Profikader (0 = keiner)
 	int32 ProDecisionLeft = 0;  // Jugend: Spieltage bis zur Profi-Entscheidung ab 19 (0 = keine offen)
 	bool bAcademyGraduate = false; // Absolvent der Akademie (Meilensteine)
+	FString PreOfferClub;       // Vorvertrags-Angebot eines anderen Vereins (leer = keins)
+	int32 PreOfferDeadline = 0; // Spieltag, bis zu dem verlaengert werden muss
+	FString PreSignedClub;      // bei diesem Verein unterschrieben: geht zum Saisonende
 	FString MeilensteinDebut, MeilensteinTor, MeilensteinElf; // Saison/Spieltag des ersten Profidebuets, Tores, Elf-Nominierung
 	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 

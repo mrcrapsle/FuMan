@@ -84,6 +84,9 @@ namespace
 		W.Field(TEXT("friendId"), P.FriendId);
 		W.Field(TEXT("tenure"), P.SquadTenure);
 		W.FieldBool(TEXT("chronic"), P.bChronic);
+		W.Field(TEXT("preOfferClub"), P.PreOfferClub);
+		W.Field(TEXT("preOfferDeadline"), P.PreOfferDeadline);
+		W.Field(TEXT("preSignedClub"), P.PreSignedClub);
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -427,6 +430,41 @@ namespace FM13Save
 		}
 		W.EndArray();
 
+		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
+		W.ArrayKey(TEXT("preContractPool"));
+		for (const FFM13World::FFM13PreContractCandidate& C : S.PreContractPool)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, C.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("sellerClub"), C.SellerClub);
+			W.FieldBool(TEXT("refused"), C.bRefused);
+			W.EndObject();
+		}
+		W.EndArray();
+
+		W.ArrayKey(TEXT("preContracts"));
+		for (const FFM13World::FFM13PreContractDeal& D : S.PreContracts)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, D.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("from"), D.From);
+			W.Field(TEXT("season"), D.Season);
+			W.EndObject();
+		}
+		W.EndArray();
+
 		W.ArrayKey(TEXT("buybackOptions"));
 		for (const FFM13BuybackOption& O : S.BuybackOptions)
 		{
@@ -558,6 +596,9 @@ namespace
 		P.FriendId = (int32)R.Int(Obj, TEXT("friendId"), 0);
 		P.SquadTenure = FMath::Max(0, (int32)R.Int(Obj, TEXT("tenure"), 0));
 		P.bChronic = R.Bool(Obj, TEXT("chronic"), false);
+		P.PreOfferClub = R.Str(Obj, TEXT("preOfferClub"), TEXT(""));
+		P.PreOfferDeadline = (int32)R.Int(Obj, TEXT("preOfferDeadline"), 0);
+		P.PreSignedClub = R.Str(Obj, TEXT("preSignedClub"), TEXT(""));
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
@@ -852,6 +893,23 @@ namespace FM13Save
 			G.bBackedOff = R.Bool(N, TEXT("backedOff"), false);
 			G.Outcome = R.Str(N, TEXT("outcome"), TEXT(""));
 			W.Rumors.Add(G);
+		}
+		W.PreContractPoolSeason = (int32)R.Int(Root, TEXT("preContractPoolSeason"), 0);
+		for (int32 N : R.Items(Root, TEXT("preContractPool")))
+		{
+			FFM13World::FFM13PreContractCandidate C;
+			C.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			C.SellerClub = R.Str(N, TEXT("sellerClub"), TEXT(""));
+			C.bRefused = R.Bool(N, TEXT("refused"), false);
+			W.PreContractPool.Add(C);
+		}
+		for (int32 N : R.Items(Root, TEXT("preContracts")))
+		{
+			FFM13World::FFM13PreContractDeal D;
+			D.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			D.From = R.Str(N, TEXT("from"), TEXT(""));
+			D.Season = (int32)R.Int(N, TEXT("season"), 0);
+			W.PreContracts.Add(D);
 		}
 		for (int32 N : R.Items(Root, TEXT("buybackOptions")))
 		{

@@ -350,6 +350,27 @@ public:
 	bool CreateRumor(FFM13Rumor& Out);
 	void TickRumors();                      // nach jedem Spieltag
 	void ResolveRumor(FFM13Rumor& R);
+	// Vorvertraege (js/pre-contracts.js): ablösefrei zur neuen Saison, ab Spieltag 18
+	struct FFM13PreContractCandidate
+	{
+		FFM13Player Player;
+		FString SellerClub;
+		bool bRefused = false;
+	};
+	struct FFM13PreContractDeal
+	{
+		FFM13Player Player;     // Gehalt steht schon fest
+		FString From;           // bisheriger Verein
+		int32 Season = 0;
+	};
+	TArray<FFM13PreContractCandidate> PreContractPool;
+	int32 PreContractPoolSeason = 0;
+	TArray<FFM13PreContractDeal> PreContracts;         // offene Vorvertraege, hoechstens drei
+	TArray<FString> PreContractClubs() const;          // eigene Liga und die darueber, ohne uns
+	void EnsurePreContractPool();
+	bool OfferPreContract(int32 CandidateId, bool bDoppelt, FString& OutReason);
+	void TickPreContracts();                           // nach jedem Spieltag
+	void JoinPreContractPlayers();                     // zum Saisonwechsel, vor Season++
 	bool ReactToRumor(const FString& Id, const FString& Art, FString& OutReason);
 	int32 CountYouthGraduates() const;                // Eigengewaechse mit 10 oder mehr Ligaspielen
 	int64 SeasonProfit() const;                       // Summe der Buchungen dieser Saison

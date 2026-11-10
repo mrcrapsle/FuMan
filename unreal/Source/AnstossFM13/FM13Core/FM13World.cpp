@@ -222,6 +222,7 @@ bool FFM13World::PlayMatchday()
 	++Matchday;
 	TickTransferStrategy();
 	TickRumors();
+	TickPreContracts();
 	CheckJobSecurity();
 	CheckAchievements(false, OwnRank(), EFM13SeasonOutcome::Stayed);
 	PrepareOppPlan();
@@ -630,6 +631,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	YouthIntake(S);
 
 	TickBuybackOptions();
+	JoinPreContractPlayers();
 	++Season;
 	Matchday = 1;
 	OwnSeasonGoals.Reset();
@@ -773,7 +775,7 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 			}
 			continue;
 		}
-		if (P.ContractYears <= 0) { S.Left.Add(P.Name + TEXT(" (Vertragsende)")); continue; }
+		if (P.ContractYears <= 0) { S.Left.Add(P.Name + (P.PreSignedClub.IsEmpty() ? TEXT(" (Vertragsende)") : FString::Printf(TEXT(" (Vorvertrag bei %s)"), *P.PreSignedClub))); continue; }
 		Bleiben.Add(P);
 	}
 	Squad = Bleiben;
@@ -3623,4 +3625,165 @@ bool FFM13World::ReactToRumor(const FString& Id, const FString& Art, FString& Ou
 		AddMessage(TEXT("Angeheizt"), FString::Printf(TEXT("Ein Angebot fiele hoeher aus - %s fuehlt sich weggeschoben (Moral -3)."), *P->Name));
 	}
 	return true;
+}
+
+// ---------- Vorvertraege (js/pre-contracts.js) ----------
+
+TArray<FString> FFM13World::PreContractClubs() const
+{
+	TArray<FString> Namen;
+	for (int32 L = FMath::Max(0, LeagueLevel - 1); L <= LeagueLevel && L < Leagues.Num(); ++L)
+		for (const FFM13Club& C : Leagues[L].Clubs) if (!C.bOwn) Namen.Add(C.Name);
+	return Namen;
+}
+
+// ensurePreContractPool(): ab Spieltag 18, vier Kandidaten je Saison. Der Pool wuerfelt mit dem
+// Transfer-Zufall, damit der Hauptzufall der Saison unberuehrt bleibt.
+void FFM13World::EnsurePreContractPool()
+{
+	if (Matchday < FM13Transfers::PreContractStartMatchday) return;
+	if (PreContractPoolSeason == Season && PreContractPool.Num() > 0) return;
+	PreContractPool.Reset();
+	PreContractPoolSeason = Season;
+	const int32 MinStaerke = 50 + (3 - LeagueLevel) * 9;
+	const TArray<FString> Vereine = PreContractClubs();
+	FRandomStream Haupt = Rng;
+	Rng = RngTransfer;
+	for (int32 i = 0; i < 4; ++i)
+	{
+		EFM13Position Pos = EFM13Position::ABW;
+		if (i == 0 && RngTransfer.FRand() < 0.3f) Pos = EFM13Position::TW;
+		else
+		{
+			const int32 W = RngTransfer.RandRange(0, 2);
+			Pos = W == 0 ? EFM13Position::ABW : (W == 1 ? EFM13Position::MIT : EFM13Position::ST);
+		}
+		FFM13PreContractCandidate C;
+		C.Player = CreatePlayer(Pos, MinStaerke, MinStaerke + 13, 22, 31);
+		C.Player.ContractYears = 0;
+		C.SellerClub = Vereine.Num() ? Vereine[RngTransfer.RandRange(0, Vereine.Num() - 1)] : TEXT("ein Ligakonkurrent");
+		PreContractPool.Add(C);
+	}
+	RngTransfer = Rng;
+	Rng = Haupt;
+}
+
+bool FFM13World::OfferPreContract(int32 CandidateId, bool bDoppelt, FString& OutReason)
+{
+	EnsurePreContractPool();
+	const int32 Idx = PreContractPool.IndexOfByPredicate([CandidateId](const FFM13PreContractCandidate& C) { return C.Player.Id == CandidateId; });
+	if (Idx < 0) { OutReason = TEXT("Dieser Spieler ist nicht mehr zu haben."); return false; }
+	FFM13PreContractCandidate& C = PreContractPool[Idx];
+	if (C.bRefused) { OutReason = FString::Printf(TEXT("%s hat schon abgesagt."), *C.Player.Name); return false; }
+	if (PreContracts.Num() >= FM13Transfers::PreContractMaxPending) { OutReason = FString::Printf(TEXT("Hoechstens %d Vorvertraege auf einmal - der Kader fuer die neue Saison braucht auch Platz."), FM13Transfers::PreContractMaxPending); return false; }
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre aktiv - auch keine Vorvertraege."); return false; }
+	const int64 Gehalt = FM13Transfers::VorvertragGehalt(C.Player.Wage);
+	const int64 Handgeld = FM13Transfers::VorvertragHandgeld(Gehalt, bDoppelt);
+	if (Money < Handgeld) { OutReason = FString::Printf(TEXT("Handgeld nicht gedeckt: %lld noetig."), (long long)Handgeld); return false; }
+	// Gehaltssumme der neuen Saison: wer bleibt, plus offene Vorvertraege, plus dieser Spieler
+	int64 Summe = Gehalt;
+	for (const FFM13Player& P : Squad) if (P.ContractYears > 1) Summe += P.Wage;
+	for (const FFM13PreContractDeal& D : PreContracts) Summe += D.Player.Wage;
+	if (Summe > WageBudget) { OutReason = FString::Printf(TEXT("Gehaltsbudget der neuen Saison reicht nicht (%lld > %lld)."), (long long)Summe, (long long)WageBudget); return false; }
+	// Zusagewahrscheinlichkeit nach Elfschnitt, Rang und Handgeld
+	const TArray<int32> Elf = StartingEleven();
+	double Schnitt = C.Player.Strength;
+	if (Elf.Num())
+	{
+		int64 Sum = 0; int32 N = 0;
+		for (int32 Id : Elf) if (const FFM13Player* P = FindPlayer(Id)) { Sum += P->Strength; N++; }
+		if (N) Schnitt = (double)Sum / N;
+	}
+	const double Chance = FM13Transfers::VorvertragChance((int32)Schnitt, C.Player.Strength, OwnRank(), bDoppelt);
+	if (RngTransfer.FRand() < Chance)
+	{
+		Book(FString(TEXT("Handgeld Vorvertrag: ")) + C.Player.Name, -Handgeld);
+		FFM13PreContractDeal D;
+		D.Player = C.Player;
+		D.Player.Wage = (int32)Gehalt;
+		D.From = C.SellerClub;
+		D.Season = Season;
+		PreContracts.Add(D);
+		PreContractPool.RemoveAt(Idx);
+		AddMessage(TEXT("Vorvertrag"), FString::Printf(TEXT("%s unterschreibt einen Vorvertrag: ablösefrei ab der neuen Saison (%lld Handgeld)."), *D.Player.Name, (long long)Handgeld));
+		return true;
+	}
+	C.bRefused = true;
+	OutReason = FString::Printf(TEXT("%s lehnt ab - er sieht seine Zukunft woanders."), *C.Player.Name);
+	return false;
+}
+
+// Jeden Spieltag: Konkurrenz um die Kandidaten, Angebote fuer eigene Spieler mit auslaufendem Vertrag.
+void FFM13World::TickPreContracts()
+{
+	if (Matchday < FM13Transfers::PreContractStartMatchday) return;
+	EnsurePreContractPool();
+	if (Matchday > FM13Transfers::PreContractStartMatchday)
+	{
+		for (int32 i = PreContractPool.Num() - 1; i >= 0; --i)
+		{
+			if (RngTransfer.FRand() >= 0.08f) continue;
+			AddMessage(FString::Printf(TEXT("Vorvertrag woanders: %s"), *PreContractPool[i].Player.Name),
+				FString::Printf(TEXT("%s wechselt zur neuen Saison ablösefrei von %s zu einem Konkurrenten."), *PreContractPool[i].Player.Name, *PreContractPool[i].SellerClub));
+			PreContractPool.RemoveAt(i);
+		}
+	}
+	// Median der Kaderstaerke
+	TArray<int32> Staerken;
+	for (const FFM13Player& P : Squad)
+	{
+		// Einfuegesortierung, damit das Ergebnis je Stand gleich bleibt
+		int32 Pos = Staerken.Num();
+		while (Pos > 0 && Staerken[Pos - 1] > P.Strength) --Pos;
+		Staerken.Insert(P.Strength, Pos);
+	}
+	const int32 Median = Staerken.Num() ? Staerken[Staerken.Num() / 2] : 0;
+	for (FFM13Player& P : Squad)
+	{
+		if (!P.PreOfferClub.IsEmpty() && P.ContractYears > 1)
+		{
+			AddMessage(FString::Printf(TEXT("%s bleibt"), *P.Name), FString::Printf(TEXT("Mit der Verlaengerung ist das Vorvertrags-Angebot von %s vom Tisch."), *P.PreOfferClub));
+			P.PreOfferClub = TEXT("");
+			continue;
+		}
+		if (!P.PreOfferClub.IsEmpty() && Matchday >= P.PreOfferDeadline)
+		{
+			P.PreSignedClub = P.PreOfferClub;
+			P.PreOfferClub = TEXT("");
+			AddMessage(FString::Printf(TEXT("%s unterschreibt bei %s"), *P.Name, *P.PreSignedClub), FString::Printf(TEXT("Die Frist ist verstrichen: %s verlaesst den Verein am Saisonende ablösefrei."), *P.Name));
+			continue;
+		}
+		if (P.ContractYears == 1 && P.PreOfferClub.IsEmpty() && P.PreSignedClub.IsEmpty() && P.Strength >= Median && Matchday <= 30 && RngTransfer.FRand() < 0.06f)
+		{
+			// Ein Verein, der ihn sich leisten kann: Staerke mindestens seine minus 5
+			TArray<FString> Interessenten;
+			for (const FString& Name : PreContractClubs())
+			{
+				EFM13Playstyle Stil;
+				if (ClubStrength(Name, Stil) >= P.Strength - 5) Interessenten.Add(Name);
+			}
+			if (Interessenten.Num() == 0) continue;
+			P.PreOfferClub = Interessenten[RngTransfer.RandRange(0, Interessenten.Num() - 1)];
+			P.PreOfferDeadline = Matchday + FM13Transfers::PreContractOfferDeadline;
+			AddMessage(FString::Printf(TEXT("Vorvertrags-Angebot fuer %s"), *P.Name), FString::Printf(TEXT("%s bietet %s einen Vorvertrag fuer die neue Saison. Verlaengere bis Spieltag %d, sonst unterschreibt er dort."), *P.PreOfferClub, *P.Name, P.PreOfferDeadline));
+		}
+	}
+}
+
+// Saisonwechsel: Vorvertraege werden Spieler; alle Spieler sind jetzt eine Saison aelter.
+void FFM13World::JoinPreContractPlayers()
+{
+	for (const FFM13PreContractDeal& D : PreContracts)
+	{
+		FFM13Player P = D.Player;
+		P.Age += 1;
+		P.ContractYears = 3;
+		P.Fitness = 100;
+		P.PreOfferClub = TEXT("");
+		P.PreSignedClub = TEXT("");
+		if (Squad.ContainsByPredicate([&P](const FFM13Player& X) { return X.Id == P.Id; })) P.Id = NextPlayerId++;
+		Squad.Add(P);
+		AddMessage(FString::Printf(TEXT("Neuzugang: %s"), *P.Name), FString::Printf(TEXT("%s (%s, Staerke %d) kommt wie vereinbart ablösefrei von %s."), *P.Name, FM13PositionName(P.Pos), P.Strength, *D.From));
+	}
+	PreContracts.Reset();
 }
