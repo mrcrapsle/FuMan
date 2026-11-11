@@ -81,6 +81,7 @@ struct FFM13Player
 	int32 TalksBlockedSeason = 0;   // Gespraeche abgebrochen: in dieser Saison keine neuen
 	int32 PlaytimeSeason = 0;       // Einsatzgarantie gilt fuer diese Saison (0 = keine)
 	int32 PlaytimeMinApps = 0;      // zugesagte Einsaetze
+	int64 ReleaseClause = 0;        // Ausstiegsklausel (0 = keine)
 	// Erfolgsbasierte Boni (js/bonusclauses.js): Typ 0 Tore, 1 Einsaetze, 2 Aufstieg
 	struct FFM13BonusKlausel
 	{

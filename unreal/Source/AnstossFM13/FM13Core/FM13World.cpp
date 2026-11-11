@@ -297,6 +297,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
+	CheckReleaseClauseTriggers();
 	TickFixedDeposit();
 	TickMoneyHistory();
 	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
@@ -1484,6 +1485,99 @@ void FFM13World::CheckPlaytimePromises()
 		}
 		P.PlaytimeSeason = 0;
 		P.PlaytimeMinApps = 0;
+	}
+}
+
+// ---------- Ausstiegsklauseln (js/contracts.js: setReleaseClause, removeReleaseClause, checkReleaseClauseTriggers) ----------
+
+namespace
+{
+	const TCHAR* const InternationalClubNames[] = {
+		TEXT("Real Madriz"),
+		TEXT("FC Barcalona"),
+		TEXT("Atletico Madriz"),
+		TEXT("FC Sevillia"),
+		TEXT("Valencia CFF"),
+		TEXT("Real Betiss"),
+		TEXT("Manchester Unitad"),
+		TEXT("Manchester Cyty"),
+		TEXT("Liverpol FC"),
+		TEXT("Chelsea FC London"),
+		TEXT("Arsenall London"),
+		TEXT("Tottenham Hotspurr"),
+		TEXT("Juwentus Turin"),
+		TEXT("AC Millan"),
+		TEXT("Inter Milano"),
+		TEXT("SSC Neapell"),
+		TEXT("AS Romm"),
+		TEXT("Lazio Romm"),
+		TEXT("Paris St. Germaine"),
+		TEXT("Olympique Marseile"),
+		TEXT("Olympique Lyonn"),
+		TEXT("AS Monakko"),
+		TEXT("Ajax Amsterdaam"),
+		TEXT("PSV Eindhofen"),
+		TEXT("Feyenoordt Rotterdam"),
+		TEXT("FC Porto Portugal"),
+		TEXT("Benfika Lissabon"),
+		TEXT("Sporting Lissabonn"),
+		TEXT("Club Bruggge"),
+		TEXT("Celtic Glasgoww"),
+		TEXT("Galatasaray Istanbull"),
+		TEXT("Fenerbahce Istanbull"),
+		TEXT("Roter Stern Belgratt"),
+		TEXT("Schachtar Donezkk"),
+		TEXT("Zenit St. Petersborg"),
+		TEXT("RB Salzborg"),
+		TEXT("Rapid Wienn"),
+		TEXT("FC Baselll"),
+		TEXT("Young Boys Bernn")
+	};
+	const int32 InternationalClubNameCount = 39;
+}
+
+// setReleaseClause(): mindestens 110 % des Marktwerts; bis 130 % freut sich der Spieler (Moral +6)
+bool FFM13World::SetReleaseClause(int32 PlayerId, int64 Amount, FString& OutReason)
+{
+	FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	const int64 Minimum = FM13Transfers::JsRunden((double)P->MarketValue * 1.1);
+	if (Amount < Minimum) { OutReason = FString::Printf(TEXT("Mindestbetrag: %lld (110 Prozent des Marktwerts)!"), (long long)Minimum); return false; }
+	P->ReleaseClause = Amount;
+	if ((double)Amount / (double)P->MarketValue <= 1.3) P->Morale = FMath::Min(100, P->Morale + 6);
+	OutReason = FString::Printf(TEXT("Ausstiegsklausel fuer %s auf %lld festgelegt."), *P->Name, (long long)Amount);
+	return true;
+}
+
+bool FFM13World::RemoveReleaseClause(int32 PlayerId, FString& OutReason)
+{
+	FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	P->ReleaseClause = 0;
+	OutReason = FString::Printf(TEXT("Ausstiegsklausel fuer %s entfernt."), *P->Name);
+	return true;
+}
+
+// checkReleaseClauseTriggers(): jeden Spieltag. Die Chance sinkt mit der Klausel, steigt mit der Staerke.
+// Der Wurf kommt aus Kennung und Spieltag (HashEinheit), damit kein eigener Zufallsstrom fuer diesen Schritt noetig ist.
+void FFM13World::CheckReleaseClauseTriggers()
+{
+	for (int32 i = Squad.Num() - 1; i >= 0; --i)
+	{
+		const FFM13Player P = Squad[i];
+		if (P.ReleaseClause <= 0) continue;
+		const double Basis = 0.008 * ((double)P.Strength / 60.0);
+		const double Verhaeltnis = (double)P.ReleaseClause / (double)P.MarketValue;
+		const double Chance = Basis / FMath::Max(1.0, Verhaeltnis - 0.8);
+		const uint32 Salz = (uint32)(Season * 1000 + Matchday);
+		if (FM13Transfers::HashEinheit(P.Id, Salz) >= Chance) continue;
+		const int32 Wahl = FMath::Min(InternationalClubNameCount - 1, (int32)(FM13Transfers::HashEinheit(P.Id, Salz + 500) * InternationalClubNameCount));
+		const FString Kaeufer = InternationalClubNames[Wahl];
+		Book(FString(TEXT("Ausstiegsklausel: ")) + P.Name, P.ReleaseClause);
+		Squad.RemoveAt(i);
+		ManualLineup.RemoveAll([&P](int32 Id) { return Id == P.Id; });
+		AddMessage(FString(TEXT("Ausstiegsklausel ausgeloest: ")) + P.Name,
+			Kaeufer + TEXT(" hat die Ausstiegsklausel von ") + P.Name + TEXT(" gezogen und sofort ") + FString::Printf(TEXT("%lld"), (long long)P.ReleaseClause) + TEXT(" ueberwiesen - der Spieler verlaesst den Verein augenblicklich."));
 	}
 }
 

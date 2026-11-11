@@ -350,6 +350,9 @@ public:
 	void ToggleContractTalkGuarantee();                                 // toggleContractTalkGuarantee()
 	void CancelContractTalk();                                          // cancelContractTalk()
 	bool CounterContractTalk(FString& OutReason);                       // counterContractTalk(): true = Spieler geht auf 10 % weniger ein
+	bool SetReleaseClause(int32 PlayerId, int64 Amount, FString& OutReason);   // setReleaseClause(): mindestens 110 %% des Marktwerts
+	bool RemoveReleaseClause(int32 PlayerId, FString& OutReason);                 // removeReleaseClause()
+	void CheckReleaseClauseTriggers();                                           // checkReleaseClauseTriggers(): jeden Spieltag
 	bool AcceptContractTalk(FString& OutReason);                        // acceptContractTalk()
 	void CheckPlaytimePromises();                                       // checkPlaytimePromises(): Saisonende
 	int32 RenewalWage(const FFM13Player& P) const;

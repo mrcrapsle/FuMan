@@ -1475,6 +1475,36 @@ static void TestAufstiegsbudget()
 	PRUEFE(W.PromotionTransferBonus() == 1500000, "2. Liga: 1,5 Mio. Aufstiegsbudget (%lld)", (long long)W.PromotionTransferBonus());
 }
 
+static void TestAusstiegsklausel()
+{
+	std::printf("Ausstiegsklausel: Mindestbetrag, Moral, Ausloesung\n");
+	FFM13World W;
+	W.NewGame(TEXT("Klausel"), 141, 0);
+	FString G;
+	const int32 Id = W.Squad[5].Id;
+	const int64 MV = W.Squad[5].MarketValue;
+	W.Squad[5].Morale = 50;
+	PRUEFE(!W.SetReleaseClause(Id, FM13Transfers::JsRunden((double)MV * 1.05), G) && G.Contains(TEXT("Mindestbetrag")), "Unter 110 Prozent wird abgelehnt");
+	const int64 Klausel = FM13Transfers::JsRunden((double)MV * 1.1);
+	PRUEFE(W.SetReleaseClause(Id, Klausel, G) && W.Squad[5].ReleaseClause == Klausel, "110 Prozent sind der Mindestbetrag");
+	PRUEFE(W.Squad[5].Morale == 56, "Niedrige Klausel (bis 130 Prozent) freut den Spieler (Moral +6, %d)", W.Squad[5].Morale);
+	PRUEFE(W.RemoveReleaseClause(Id, G) && W.Squad[5].ReleaseClause == 0, "Klausel laesst sich entfernen");
+
+	// Ausloesung: hohe Staerke und niedrige Klausel machen den Fall wahrscheinlich; der Wurf ist fest pro Spieltag
+	W.Squad[5].Strength = 99;
+	W.Squad[5].ReleaseClause = Klausel;
+	const int32 Vorher = W.Squad.Num();
+	const int64 Geld = W.Money;
+	for (int32 m = 1; m <= 3000 && W.Squad.Num() == Vorher; ++m)
+	{
+		W.Matchday = m;
+		W.CheckReleaseClauseTriggers();
+	}
+	PRUEFE(W.Squad.Num() == Vorher - 1, "Die Klausel loest irgendwann aus und der Spieler geht");
+	PRUEFE(W.Money == Geld + Klausel, "Die Klausel wird sofort bezahlt");
+	PRUEFE(W.Squad.Num() == Vorher - 1 && !W.FindPlayer(Id), "Der verkaufte Spieler ist weg");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2658,6 +2688,7 @@ int main()
 	TestFestgeld();
 	TestVertragsgespraech();
 	TestAufstiegsbudget();
+	TestAusstiegsklausel();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();
