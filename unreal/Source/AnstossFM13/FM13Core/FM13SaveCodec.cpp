@@ -419,6 +419,7 @@ namespace FM13Save
 			W.Field(TEXT("medWeeks"), O.Medical.Weeks);
 			W.FieldBool(TEXT("medChecked"), O.Medical.bChecked);
 			W.FieldBool(TEXT("medRolled"), O.bMedicalRolled);
+			W.FieldBool(TEXT("bargain"), O.bDeadlineBargain);
 			W.Key(TEXT("player")); W.bFirst = true; // WritePlayer setzt selbst das Komma
 			{
 				FWriter Inner;
@@ -431,6 +432,36 @@ namespace FM13Save
 		W.EndArray();
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
+		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.ArrayKey(TEXT("loanables"));
+		for (const FFM13Loanable& L : S.Loanables)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, L.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("parentClub"), L.ParentClub);
+			W.Field(TEXT("loanFee"), L.LoanFee);
+			W.Field(TEXT("buyOptionFee"), L.BuyOptionFee);
+			W.Field(TEXT("duration"), L.DurationMatchdays);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("incomingLoans"));
+		for (const FFM13IncomingLoan& L : S.IncomingLoans)
+		{
+			W.ElementObject();
+			W.Field(TEXT("playerId"), L.PlayerId);
+			W.Field(TEXT("parentClub"), L.ParentClub);
+			W.Field(TEXT("matchdaysLeft"), L.MatchdaysLeft);
+			W.Field(TEXT("buyOptionFee"), L.BuyOptionFee);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.ArrayKey(TEXT("preContractPool"));
 		for (const FFM13World::FFM13PreContractCandidate& C : S.PreContractPool)
 		{
@@ -895,6 +926,26 @@ namespace FM13Save
 			W.Rumors.Add(G);
 		}
 		W.PreContractPoolSeason = (int32)R.Int(Root, TEXT("preContractPoolSeason"), 0);
+		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		for (int32 N : R.Items(Root, TEXT("loanables")))
+		{
+			FFM13Loanable L;
+			L.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			L.ParentClub = R.Str(N, TEXT("parentClub"), TEXT(""));
+			L.LoanFee = R.Int(N, TEXT("loanFee"), 0);
+			L.BuyOptionFee = R.Int(N, TEXT("buyOptionFee"), 0);
+			L.DurationMatchdays = (int32)R.Int(N, TEXT("duration"), 34);
+			W.Loanables.Add(L);
+		}
+		for (int32 N : R.Items(Root, TEXT("incomingLoans")))
+		{
+			FFM13IncomingLoan L;
+			L.PlayerId = (int32)R.Int(N, TEXT("playerId"), 0);
+			L.ParentClub = R.Str(N, TEXT("parentClub"), TEXT(""));
+			L.MatchdaysLeft = (int32)R.Int(N, TEXT("matchdaysLeft"), 0);
+			L.BuyOptionFee = R.Int(N, TEXT("buyOptionFee"), 0);
+			W.IncomingLoans.Add(L);
+		}
 		for (int32 N : R.Items(Root, TEXT("preContractPool")))
 		{
 			FFM13World::FFM13PreContractCandidate C;
@@ -936,6 +987,7 @@ namespace FM13Save
 			O.Medical.Weeks = (int32)R.Int(N, TEXT("medWeeks"), 0);
 			O.Medical.bChecked = R.Bool(N, TEXT("medChecked"), false);
 			O.bMedicalRolled = R.Bool(N, TEXT("medRolled"), false);
+			O.bDeadlineBargain = R.Bool(N, TEXT("bargain"), false);
 			O.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
 			W.Market.Add(O);
 		}

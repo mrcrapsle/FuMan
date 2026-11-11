@@ -1543,7 +1543,7 @@ static void TestMedizincheck()
 	FFM13World GLd;
 	FString GwFehler;
 	const bool bGOk = FM13Save::Decode(FM13Save::Encode(GSp), GLd, GwFehler);
-	PRUEFE(bGOk && GLd.Rumors.Num() == GSp.Rumors.Num() && GLd.RumorHits[2] == GSp.RumorHits[2] && GLd.Rumors[0].Reaction == TEXT("dementieren"), "Geruechte bleiben im Spielstand (%s)", *GwFehler);
+	PRUEFE(bGOk && GLd.Rumors.Num() == GSp.Rumors.Num() && GLd.RumorHits[2] == GSp.RumorHits[2] && GLd.Rumors.ContainsByPredicate([](const FFM13World::FFM13Rumor& X) { return X.Id == TEXT("rum_t2") && X.Reaction == TEXT("dementieren"); }), "Geruechte bleiben im Spielstand (%s)", *GwFehler);
 	// Vorvertraege (js/pre-contracts.js): Pool, Angebot, Obergrenze, Frist, Verlaengerung, Zuzug
 	FFM13World VV;
 	VV.NewGame(TEXT("Vorvertraege"), 155, 0);
@@ -1618,11 +1618,76 @@ static void TestMedizincheck()
 	Deal.Player.Id = 888888;
 	Deal.Player.Age = 25;
 	Deal.From = TEXT("Altklub");
+	Zuzug.PreContracts.Reset();
 	Zuzug.PreContracts.Add(Deal);
 	Zuzug.JoinPreContractPlayers();
 	bool bZugezogen = false;
 	for (const FFM13Player& P : Zuzug.Squad) if (P.Id == 888888 && P.Age == 26 && P.ContractYears == 3) bZugezogen = true;
 	PRUEFE(Zuzug.Squad.Num() == ZKader + 1 && bZugezogen && Zuzug.PreContracts.Num() == 0, "Zuzug: Spieler kommt mit Vertrag und Alter plus eins");
+	// Leihspieler (js/transfermarket.js): Leihe, Kaufoption, Ablauf, Deadline-Day
+	FFM13World LW;
+	LW.NewGame(TEXT("Leihe"), 156, 0);
+	LW.Money = 500000000;
+	LW.TransferBudget = 500000000;
+	LW.Matchday = 2;
+	PRUEFE(LW.Loanables.Num() == 3, "Leihspieler: drei Angebote je Markt-Neuaufbau");
+	while (LW.Squad.Num() >= 21) LW.Squad.RemoveAt(LW.Squad.Num() - 1);
+	const int32 LKader = LW.Squad.Num();
+	const int64 LFee = LW.Loanables[0].LoanFee;
+	const int32 LId = LW.Loanables[0].Player.Id;
+	FString LGrund;
+	const int64 LGeld = LW.Money;
+	PRUEFE(LW.SignLoanPlayer(0, LGrund) && LW.Squad.Num() == LKader + 1 && LW.IncomingLoans.Num() == 1, "Leihe: Spieler kommt in den Kader (%s)", *LGrund);
+	PRUEFE(LW.Money == LGeld - LFee && LW.IncomingLoans[0].MatchdaysLeft == 34, "Leihe: Gebuehr gezahlt, 34 Spieltage");
+	// Kaufoption ziehen: Spieler bleibt dauerhaft
+	const int64 LOpt = LW.IncomingLoans[0].BuyOptionFee;
+	PRUEFE(LW.ExerciseLoanBuyOption(LId, LGrund) && LW.IncomingLoans.Num() == 0, "Kaufoption: Leihe endet");
+	bool LDauer = false;
+	for (const FFM13Player& P : LW.Squad) if (P.Id == LId && P.ContractYears == 3) LDauer = true;
+	PRUEFE(LDauer && LW.Money == LGeld - LFee - LOpt, "Kaufoption: Vertrag drei Jahre, Ablöse gezahlt");
+	// Ohne Kaufoption: die Leihe laeuft ab, der Spieler geht zurueck
+	FFM13World LAb = LW;
+	LAb.Loanables.Reset();
+	FFM13Loanable LAbLei;
+	LAbLei.Player = LAb.Squad[0];
+	LAbLei.Player.Id = 777001;
+	LAbLei.ParentClub = TEXT("Mutterklub");
+	LAbLei.LoanFee = 1000;
+	LAbLei.BuyOptionFee = 5000;
+	LAb.Loanables.Add(LAbLei);
+	FString LAbGrund;
+	LAb.SignLoanPlayer(0, LAbGrund);
+	LAb.IncomingLoans.Last().MatchdaysLeft = 1;
+	const int32 LVorAb = LAb.Squad.Num();
+	LAb.TickIncomingLoans();
+	PRUEFE(LAb.Squad.Num() == LVorAb - 1 && LAb.IncomingLoans.Num() == 0, "Leihe abgelaufen: Spieler kehrt zurueck");
+	// Leihe nur im Fenster
+	FFM13World LSp = LW;
+	LSp.Matchday = 10;
+	FString LSpGrund;
+	LSp.Loanables.Reset();
+	LSp.Loanables.Add(LAbLei);
+	PRUEFE(!LSp.SignLoanPlayer(0, LSpGrund) && LSpGrund.Contains(TEXT("Wechselfenster")), "Leihe ausserhalb des Fensters abgelehnt");
+	// Deadline-Day: einmal je Fenster, mit Schnaeppchen und Ticker
+	FFM13World DD;
+	DD.NewGame(TEXT("Deadline"), 157, 0);
+	DD.Matchday = 3;
+	auto DeadlineMeldungen = [](const FFM13World& Welt) { int32 N = 0; for (const FFM13Message& M : Welt.Messages) if (M.Title.Contains(TEXT("DEADLINE"))) N++; return N; };
+	DD.TickTransferWindows();
+	const int32 DMit = DeadlineMeldungen(DD);
+	DD.TickTransferWindows();
+	PRUEFE(DD.LastDeadlineKey == TEXT("1-sommer") && DMit == 1 && DeadlineMeldungen(DD) == 1, "Deadline-Day: einmal je Fenster");
+	int32 DBargain = 0;
+	for (const FFM13MarketOffer& O : DD.Market) if (O.bDeadlineBargain) DBargain++;
+	PRUEFE(DBargain == FMath::Min(2, DD.Market.Num()), "Deadline-Day: zwei Schnaeppchen");
+	// Spielstand: Leihen, Fenster-Schluessel und Schnaeppchen bleiben
+	FFM13World LSave = LW;
+	LSave.Loanables.Reset();
+	LSave.Loanables.Add(LAbLei);
+	LSave.LastDeadlineKey = TEXT("1-sommer");
+	FFM13World LSaveLd;
+	FString LSaveFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(LSave), LSaveLd, LSaveFehler) && LSaveLd.Loanables.Num() == 1 && LSaveLd.LastDeadlineKey == TEXT("1-sommer") && LSaveLd.Loanables[0].ParentClub == TEXT("Mutterklub"), "Leihen und Fenster-Schluessel bleiben im Spielstand (%s)", *LSaveFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

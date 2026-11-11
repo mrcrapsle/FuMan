@@ -234,6 +234,16 @@ public:
 	bool IsTransferWindowOpen() const { return IsSummerWindowOpen() || bWinterWindowActive; }
 	bool TransferWindowGate(FString& OutReason) const;  // Meldung, wenn kein Fenster offen ist
 	void TickTransferWindows();                        // nach jedem Spieltag: Winterfenster auf und zu
+	// Leihspieler (js/transfermarket.js): Leihe mit Kaufoption, Rueckkehr nach 34 Spieltagen
+	TArray<FFM13Loanable> Loanables;
+	TArray<FFM13IncomingLoan> IncomingLoans;
+	FString LastDeadlineKey;                           // "Saison-Fenster", Deadline-Day nur einmal
+	void RefreshLoanables();                           // beim Markt-Neuaufbau
+	bool SignLoanPlayer(int32 Index, FString& OutReason);
+	bool ExerciseLoanBuyOption(int32 PlayerId, FString& OutReason);
+	void TickIncomingLoans();                          // nach jedem Spieltag
+	void RunDeadlineDay(const FString& Fenster);       // "sommer" oder "winter", einmal je Fenster
+	bool TriggerRandomAIOffer();                       // Deadline-Day: zufaelliger Spieler, zufaelliger Klub
 
 	// Transferpoker (js/transfer-poker.js)
 	struct FFM13PokerState

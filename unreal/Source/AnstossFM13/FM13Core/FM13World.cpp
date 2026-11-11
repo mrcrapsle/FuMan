@@ -215,6 +215,7 @@ bool FFM13World::PlayMatchday()
 	}
 	TickIncomingOffers();
 	TickTransferWindows();
+	TickIncomingLoans();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
 	TickYouthPathway();
@@ -1065,6 +1066,7 @@ void FFM13World::RefreshMarket()
 		SetMarketTerms(O);
 		Market.Add(O);
 	}
+	RefreshLoanables();
 }
 
 bool FFM13World::BuyPlayer(int32 MarketIndex, FString& OutReason)
@@ -3283,9 +3285,16 @@ void FFM13World::TickTransferWindows()
 		AddMessage(TEXT("Winter-Transferfenster geoeffnet"), FString::Printf(TEXT("Bis einschliesslich Spieltag %d treffen deutlich mehr Angebote ein."), WinterWindowCloseMatchday));
 		return;
 	}
-	if (!bWinterWindowActive) return;
-	if (WinterWindowCloseMatchday <= 0) WinterWindowCloseMatchday = Matchday + 1;
-	if (Matchday >= WinterWindowCloseMatchday) bWinterWindowActive = false;   // Deadline-Day: noch nicht portiert
+	if (bWinterWindowActive)
+	{
+		if (WinterWindowCloseMatchday <= 0) WinterWindowCloseMatchday = Matchday + 1;
+		if (Matchday >= WinterWindowCloseMatchday)
+		{
+			bWinterWindowActive = false;
+			RunDeadlineDay(TEXT("winter"));
+		}
+	}
+	if (Matchday == 3) RunDeadlineDay(TEXT("sommer"));
 }
 
 // ---------- Rueckkauf (js/buyback.js) ----------
@@ -3786,4 +3795,160 @@ void FFM13World::JoinPreContractPlayers()
 		AddMessage(FString::Printf(TEXT("Neuzugang: %s"), *P.Name), FString::Printf(TEXT("%s (%s, Staerke %d) kommt wie vereinbart ablösefrei von %s."), *P.Name, FM13PositionName(P.Pos), P.Strength, *D.From));
 	}
 	PreContracts.Reset();
+}
+
+// ---------- Leihspieler (js/transfermarket.js) ----------
+
+// Drei eingehende Leihspieler je Markt-Neuaufbau. Sie wuerfeln mit dem Transfer-Zufall.
+void FFM13World::RefreshLoanables()
+{
+	Loanables.Reset();
+	const int32 MinStaerke = 50 + (3 - LeagueLevel) * 9;
+	const int32 MaxStaerke = MinStaerke + 9;
+	const TArray<FString> Stammvereine = { TEXT("FC Brueckenstadt"), TEXT("Sportfreunde Nordwind"), TEXT("SV Hafenbogen") };
+	FRandomStream Haupt = Rng;
+	Rng = RngTransfer;
+	for (int32 i = 0; i < 3; ++i)
+	{
+		FFM13Loanable L;
+		const int32 W = RngTransfer.RandRange(0, 3);
+		L.Player = CreatePlayer((EFM13Position)W, MinStaerke - 2, MaxStaerke + 4, 19, 31);
+		L.Player.ContractYears = 1;
+		L.ParentClub = Stammvereine[RngTransfer.RandRange(0, Stammvereine.Num() - 1)];
+		L.LoanFee = FMath::Max<int64>(1000, FM13Transfers::JsRunden((double)L.Player.MarketValue * 0.12));
+		L.BuyOptionFee = FM13Transfers::JsRunden((double)L.Player.MarketValue * 0.85);
+		Loanables.Add(L);
+	}
+	RngTransfer = Rng;
+	Rng = Haupt;
+}
+
+bool FFM13World::SignLoanPlayer(int32 Index, FString& OutReason)
+{
+	if (!Loanables.IsValidIndex(Index)) { OutReason = TEXT("Dieser Leihspieler ist nicht mehr da."); return false; }
+	if (!TransferWindowGate(OutReason)) return false;
+	const FFM13Loanable L = Loanables[Index];
+	if (Money < L.LoanFee) { OutReason = FString::Printf(TEXT("Leihgebuehr nicht gedeckt: %lld noetig."), (long long)L.LoanFee); return false; }
+	if (Squad.Num() >= 22) { OutReason = TEXT("Kader bereits voll (22 Spieler)."); return false; }
+	if (TransferBudget < L.LoanFee) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht fuer die Leihgebuehr: %lld noetig."), (long long)L.LoanFee); return false; }
+	if (!FitsWageBudget(L.Player.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	Book(FString(TEXT("Leihgebuehr: ")) + L.Player.Name, -L.LoanFee);
+	TransferBudget -= L.LoanFee;
+	FFM13Player P = L.Player;
+	P.ContractYears = 1;
+	Squad.Add(P);
+	FFM13IncomingLoan Leihe;
+	Leihe.PlayerId = P.Id;
+	Leihe.ParentClub = L.ParentClub;
+	Leihe.MatchdaysLeft = L.DurationMatchdays;
+	Leihe.BuyOptionFee = L.BuyOptionFee;
+	IncomingLoans.Add(Leihe);
+	Loanables.RemoveAt(Index);
+	AddMessage(FString::Printf(TEXT("%s ausgeliehen"), *P.Name), FString::Printf(TEXT("%s kommt fuer diese Saison von %s auf Leihbasis - Kaufoption: %lld."), *P.Name, *L.ParentClub, (long long)L.BuyOptionFee));
+	return true;
+}
+
+bool FFM13World::ExerciseLoanBuyOption(int32 PlayerId, FString& OutReason)
+{
+	const int32 Idx = IncomingLoans.IndexOfByPredicate([PlayerId](const FFM13IncomingLoan& L) { return L.PlayerId == PlayerId; });
+	if (Idx < 0) { OutReason = TEXT("Diese Leihe gibt es nicht mehr."); return false; }
+	const int32 PIdx = Squad.IndexOfByPredicate([PlayerId](const FFM13Player& P) { return P.Id == PlayerId; });
+	if (PIdx < 0) { OutReason = TEXT("Der Spieler ist nicht mehr im Kader."); return false; }
+	if (!TransferWindowGate(OutReason)) return false;
+	const FFM13IncomingLoan Leihe = IncomingLoans[Idx];
+	if (Money < Leihe.BuyOptionFee) { OutReason = FString::Printf(TEXT("Kaufoption nicht gedeckt: %lld noetig."), (long long)Leihe.BuyOptionFee); return false; }
+	if (TransferBudget < Leihe.BuyOptionFee) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig."), (long long)Leihe.BuyOptionFee); return false; }
+	Book(FString(TEXT("Kaufoption: ")) + Squad[PIdx].Name, -Leihe.BuyOptionFee);
+	TransferBudget -= Leihe.BuyOptionFee;
+	Squad[PIdx].ContractYears = 3;
+	IncomingLoans.RemoveAt(Idx);
+	AddMessage(FString::Printf(TEXT("%s dauerhaft verpflichtet"), *Squad[PIdx].Name), FString::Printf(TEXT("%s wechselt dauerhaft von %s zum Verein."), *Squad[PIdx].Name, *Leihe.ParentClub));
+	return true;
+}
+
+// tickIncomingLoans(): jeder Spieltag zaehlt herunter, abgelaufene Leihen kehren zurueck.
+void FFM13World::TickIncomingLoans()
+{
+	for (int32 i = IncomingLoans.Num() - 1; i >= 0; --i)
+	{
+		FFM13IncomingLoan& L = IncomingLoans[i];
+		L.MatchdaysLeft--;
+		if (L.MatchdaysLeft > 0) continue;
+		const int32 PIdx = Squad.IndexOfByPredicate([&L](const FFM13Player& P) { return P.Id == L.PlayerId; });
+		if (PIdx >= 0)
+		{
+			AddMessage(FString::Printf(TEXT("Leihe beendet: %s"), *Squad[PIdx].Name), FString::Printf(TEXT("%s kehrt wie vereinbart zu %s zurueck."), *Squad[PIdx].Name, *L.ParentClub));
+			Squad.RemoveAt(PIdx);
+		}
+		IncomingLoans.RemoveAt(i);
+	}
+}
+
+// ---------- Deadline-Day (js/transfermarket.js: runDeadlineDay) ----------
+
+bool FFM13World::TriggerRandomAIOffer()
+{
+	const int32 Schwelle = InterestThreshold();
+	TArray<int32> Ziele;
+	for (int32 i = 0; i < Squad.Num(); ++i)
+	{
+		const FFM13Player& P = Squad[i];
+		if (P.Strength >= Schwelle && !IncomingOffers.ContainsByPredicate([&P](const FFM13IncomingOffer& O) { return O.PlayerId == P.Id && !O.bYouth; })) Ziele.Add(i);
+	}
+	if (Ziele.Num() == 0) return false;
+	const FFM13Player& Ziel = Squad[Ziele[RngTransfer.RandRange(0, Ziele.Num() - 1)]];
+	const FString Verein = RandomOpposingClub(true);
+	const double Multiplikator = 0.85 + RngTransfer.FRand() * 0.35;
+	return TriggerAIOffer(Ziel.Id, Verein, Multiplikator);
+}
+
+void FFM13World::RunDeadlineDay(const FString& Fenster)
+{
+	const FString Schluessel = FString::Printf(TEXT("%d-%s"), Season, *Fenster);
+	if (LastDeadlineKey == Schluessel) return;
+	LastDeadlineKey = Schluessel;
+	TArray<FString> Ticker;
+
+	// Last-Minute-Angebote fuer eigene Spieler, nur bis zum naechsten Spieltag gueltig
+	const int32 Vorher = IncomingOffers.Num();
+	const int32 Anzahl = 3 + RngTransfer.RandRange(0, 2);
+	for (int32 i = 0; i < Anzahl; ++i) TriggerRandomAIOffer();
+	for (int32 i = Vorher; i < IncomingOffers.Num(); ++i)
+	{
+		IncomingOffers[i].ExpiresMatchday = Matchday + 1;
+		Ticker.Add(FString::Printf(TEXT("%s bietet in letzter Minute %lld fuer %s"), *IncomingOffers[i].Club, (long long)IncomingOffers[i].Price, *IncomingOffers[i].PlayerName));
+	}
+
+	// Drei Klubs der eigenen Liga holen kurz vor Schluss einen Neuzugang
+	TArray<int32> Klubs;
+	if (Leagues.IsValidIndex(LeagueLevel))
+		for (int32 i = 0; i < Leagues[LeagueLevel].Clubs.Num(); ++i) if (!Leagues[LeagueLevel].Clubs[i].bOwn) Klubs.Add(i);
+	for (int32 k = 0; k < 3 && Klubs.Num() > 0; ++k)
+	{
+		const int32 Wahl = RngTransfer.RandRange(0, Klubs.Num() - 1);
+		FFM13Club& C = Leagues[LeagueLevel].Clubs[Klubs[Wahl]];
+		Klubs.RemoveAt(Wahl);
+		const int32 Plus = 1 + RngTransfer.RandRange(0, 2);
+		C.Strength = FMath::Min(96, C.Strength + Plus);
+		Ticker.Add(FString::Printf(TEXT("%s holt kurz vor Schluss einen Neuzugang (Staerke +%d)"), *C.Name, Plus));
+	}
+
+	// Zwei Marktspieler werden zum Schnaeppchen: Marktwert minus 30 %, Forderung neu
+	TArray<int32> Markt;
+	for (int32 i = 0; i < Market.Num(); ++i) if (!Market[i].bDeadlineBargain) Markt.Add(i);
+	for (int32 k = 0; k < 2 && Markt.Num() > 0; ++k)
+	{
+		const int32 Wahl = RngTransfer.RandRange(0, Markt.Num() - 1);
+		FFM13MarketOffer& O = Market[Markt[Wahl]];
+		Markt.RemoveAt(Wahl);
+		O.Player.MarketValue = FMath::Max<int64>(5000, FM13Transfers::JsRunden((double)O.Player.MarketValue * 0.7 / 5000.0) * 5000);
+		O.bDeadlineBargain = true;
+		SetMarketTerms(O);
+		Ticker.Add(FString::Printf(TEXT("Schnaeppchen: %s (%s, Staerke %d) fuer nur %lld zu haben"), *O.Player.Name, FM13PositionName(O.Player.Pos), O.Player.Strength, (long long)O.AskingPrice));
+	}
+
+	FString Text;
+	for (const FString& Zeile : Ticker) Text += FString(TEXT("- ")) + Zeile + TEXT("\n");
+	AddMessage(FString::Printf(TEXT("DEADLINE-DAY (%s)"), Fenster == TEXT("winter") ? TEXT("Winter") : TEXT("Sommer")),
+		Text.Len() ? Text : FString(TEXT("Die Wechselperiode schliesst - ruhiger letzter Tag.")));
 }

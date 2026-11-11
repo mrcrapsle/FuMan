@@ -267,6 +267,25 @@ struct FFM13MarketOffer
 	bool bPokerBroken = false;   // Verein verhandelt nicht mehr, nur noch Sofortkauf
 	FFM13MedBefund Medical;      // erst gewuerfelt, wenn der Befund gebraucht wird
 	bool bMedicalRolled = false;
+	bool bDeadlineBargain = false; // Deadline-Day: Schnaeppchen, Marktwert um 30 % gesenkt
+};
+
+// Eingehende Leihspieler (js/transfermarket.js: loanablePlayers, incomingLoans)
+struct FFM13Loanable
+{
+	FFM13Player Player;
+	FString ParentClub;
+	int64 LoanFee = 0;
+	int64 BuyOptionFee = 0;
+	int32 DurationMatchdays = 34;
+};
+
+struct FFM13IncomingLoan
+{
+	int32 PlayerId = 0;
+	FString ParentClub;
+	int32 MatchdaysLeft = 0;
+	int64 BuyOptionFee = 0;
 };
 
 struct FFM13SeasonRecord
