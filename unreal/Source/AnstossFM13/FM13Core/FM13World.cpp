@@ -76,6 +76,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	RngJugend.Initialize(Seed * 104729 + 29);
 	RngTransfer.Initialize(Seed * 31337 + 7);
 	TransferBudget = LeagueTransferBudget(StartLevel);
+	ResetOekonomieGrunddaten();
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
@@ -232,6 +233,8 @@ bool FFM13World::PlayMatchday()
 	TickBoardRoom();
 	TickWinterTalk();
 	TickMemberAssembly();
+	TickCommodityMarket();
+	TickImmobilien();
 	TickFriendships();
 	TickYouthPathway();
 	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
@@ -4826,4 +4829,140 @@ void FFM13World::ResolveWinterTalk(int32 FinalRank)
 		BoardSat = FMath::Max(10, BoardSat - 10);
 		AddMessage(TEXT("Winterversprechen gebrochen"), FString::Printf(TEXT("Platz %d statt des im Winter versprochenen Platzes %d. Vorstand -10."), FinalRank, WinterTalk.Goal));
 	}
+}
+
+// ---------- Rohstoffboerse und Immobilien (js/commodities.js, js/real-estate.js) ----------
+
+namespace
+{
+	// STADIUM_COST_SCALE je Liga: Bauten und Immobilien werden in tieferen Ligen guenstiger
+	const double StadionKostenSkala[6] = { 1.0, 0.55, 0.28, 0.14, 0.07, 0.035 };
+	double KostenSkala(int32 Liga) { return (Liga >= 0 && Liga < 6) ? StadionKostenSkala[Liga] : 0.035; }
+	double Auf2(double X) { return std::round(X * 100.0) / 100.0; }   // toFixed(2)
+}
+
+void FFM13World::TickCommodityMarket()
+{
+	// Ereignisse: 22 % Wahrscheinlichkeit je Spieltag, sonst ruhiger Handel
+	const bool bEreignis = RngTransfer.FRand() < 0.22f;
+	if (bEreignis)
+	{
+		struct FEreignis { const TCHAR* Text; int32 Mat; double Faktor; };   // Mat -1: alle
+		const FEreignis Liste[5] = {
+			{ TEXT("Frachterblockade im Suezkanal: Baumwolle explodiert im Preis (+35 Prozent)!"), 0, 1.35 },
+			{ TEXT("Rekordschur in Neuseeland: Wolle schwemmt den Markt (-25 Prozent)!"), 1, 0.75 },
+			{ TEXT("Raffinerie-Ausfall: Kunststoff-Granulat deutlich teurer (+30 Prozent)!"), 3, 1.30 },
+			{ TEXT("Globale Ueberproduktion: Lederpreis gibt spuerbar nach (-20 Prozent)!"), 2, 0.80 },
+			{ TEXT("Weltweite Rohstoff-Rallye: Alle Maerkte ziehen kraeftig an (+15 Prozent)!"), -1, 1.15 },
+		};
+		const FEreignis& E = Liste[RngTransfer.RandRange(0, 4)];
+		RohstoffEreignis = E.Text;
+		for (int32 k = 0; k < 4; ++k)
+		{
+			if (E.Mat >= 0 && E.Mat != k) continue;
+			FFM13Rohstoff& R = Rohstoffe[k];
+			const double Alt = R.Preis;
+			double Neu = Auf2(R.Preis * E.Faktor);
+			if (E.Mat >= 0) Neu = FMath::Clamp(Neu, R.MinPreis, R.MaxPreis);
+			else Neu = FMath::Min(R.MaxPreis, Neu);
+			R.Preis = Neu;
+			R.Delta = Auf2(Neu - Alt);
+		}
+	}
+	else
+	{
+		RohstoffEreignis = TEXT("Ruhiger und stabiler Handel an den internationalen Rohstoffboersen.");
+		for (int32 k = 0; k < 4; ++k)
+		{
+			FFM13Rohstoff& R = Rohstoffe[k];
+			const double Veraenderung = (RngTransfer.FRand() - 0.48) * 0.45;
+			const double Alt = R.Preis;
+			R.Preis = FMath::Clamp(Auf2(R.Preis + Veraenderung), R.MinPreis, R.MaxPreis);
+			R.Delta = Auf2(R.Preis - Alt);
+		}
+	}
+}
+
+int64 FFM13World::ImmobilienKosten(int32 Objekt) const
+{
+	const FFM13Immobilie& I = Immobilien[Objekt];
+	return FMath::Max<int64>(200000, FM13Transfers::JsRunden((double)I.BasisKosten * (I.Stufe + 1) * KostenSkala(LeagueLevel)));
+}
+
+int64 FFM13World::ImmobilienMiete(int32 Objekt) const
+{
+	const FFM13Immobilie& I = Immobilien[Objekt];
+	if (!I.bBesitz) return 0;
+	// Stufe n kostet n-mal den Grundpreis, die Miete waechst im selben Verhaeltnis
+	int64 Miete = FM13Transfers::JsRunden((double)I.BasisMiete * I.Stufe * (I.Stufe + 1) / 2.0 * KostenSkala(LeagueLevel));
+	if (Objekt == 4) Miete = FM13Transfers::JsRunden((double)Miete * (1.0 + 50.0 / 200.0));   // Hotel: Medienimage 50 (ohne Medien-System im Kern)
+	return Miete;
+}
+
+bool FFM13World::KaufeOderAusbaueImmobilie(int32 Objekt, FString& OutReason)
+{
+	if (Objekt < 0 || Objekt > 5) { OutReason = TEXT("Dieses Objekt gibt es nicht."); return false; }
+	FFM13Immobilie& I = Immobilien[Objekt];
+	if (I.Stufe >= I.Max) { OutReason = TEXT("Objekt bereits voll ausgebaut!"); return false; }
+	if (ImmobilienBauten.ContainsByPredicate([Objekt](const FFM13Immobilienbau& B) { return B.Objekt == Objekt; }))
+	{ OutReason = TEXT("Fuer diese Anlage laeuft bereits eine Baustelle!"); return false; }
+	const int64 Kosten = ImmobilienKosten(Objekt);
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Baukosten nicht gedeckt: %lld noetig."), (long long)Kosten); return false; }
+	const int32 Tage = FMath::Max(10, (int32)FM13Transfers::JsRunden((double)Kosten / 400000.0));
+	Book(FString::Printf(TEXT("Bau: %s"), *I.Name), -Kosten);
+	FFM13Immobilienbau B;
+	B.Objekt = Objekt;
+	B.TageRest = Tage;
+	B.Summe = Kosten;
+	B.Label = FString::Printf(TEXT("%s (Stufe %d)"), *I.Name, I.Stufe + 1);
+	ImmobilienBauten.Add(B);
+	AddMessage(FString::Printf(TEXT("Bauprojekt gestartet: %s"), *B.Label), FString::Printf(TEXT("%lld wurden vollstaendig bezahlt. Fertigstellung in %d Spieltagen."), (long long)Kosten, Tage));
+	return true;
+}
+
+// Verkauf zu 55 % der gezahlten Kaufsummen (Marktabschlag)
+bool FFM13World::VerkaufeImmobilie(int32 Objekt, FString& OutReason)
+{
+	FFM13Immobilie& I = Immobilien[Objekt];
+	if (!I.bBesitz) { OutReason = TEXT("Dieses Objekt gehoert dem Verein nicht."); return false; }
+	const int64 Erloes = FM13Transfers::JsRunden((double)I.BasisKosten * I.Stufe * (I.Stufe + 1) / 2.0 * KostenSkala(LeagueLevel) * 0.55);
+	Book(FString::Printf(TEXT("Verkauf: %s"), *I.Name), Erloes);
+	I.bBesitz = false;
+	I.Stufe = 0;
+	AddMessage(TEXT("Immobilie verkauft"), FString::Printf(TEXT("%s verkauft (+%lld)."), *I.Name, (long long)Erloes));
+	return true;
+}
+
+// Jeden Spieltag: Mieten auf das Konto, Baustellen zaehlen herunter und werden fertig
+void FFM13World::TickImmobilien()
+{
+	int64 Summe = 0;
+	for (int32 k = 0; k < 6; ++k) Summe += ImmobilienMiete(k);
+	if (Summe > 0) Book(TEXT("Mieteinnahmen"), Summe);
+	for (int32 i = ImmobilienBauten.Num() - 1; i >= 0; --i)
+	{
+		FFM13Immobilienbau& B = ImmobilienBauten[i];
+		B.TageRest--;
+		if (B.TageRest > 0) continue;
+		FFM13Immobilie& I = Immobilien[B.Objekt];
+		I.bBesitz = true;
+		I.Stufe++;
+		AddMessage(FString::Printf(TEXT("Fertig: %s"), *B.Label), FString::Printf(TEXT("%s steht jetzt auf Stufe %d."), *I.Name, I.Stufe));
+		ImmobilienBauten.RemoveAt(i);
+	}
+}
+
+// Grunddaten aus js/state.js: Rohstoffe und Immobilien. Auch der Lader ruft das, damit Mindest- und Hoechstpreise stimmen.
+void FFM13World::ResetOekonomieGrunddaten()
+{
+	Rohstoffe[0] = FFM13Rohstoff{ TEXT("Baumwolle & Synthetik"), 600, 4.0, 4.10, 2.20, 7.50, 0.10 };
+	Rohstoffe[1] = FFM13Rohstoff{ TEXT("Wolle & Garn"), 400, 3.0, 2.90, 1.80, 5.50, -0.10 };
+	Rohstoffe[2] = FFM13Rohstoff{ TEXT("Leder & Kautschuk"), 250, 6.0, 6.30, 3.50, 10.50, 0.30 };
+	Rohstoffe[3] = FFM13Rohstoff{ TEXT("Kunststoff & Pigmente"), 500, 2.0, 1.95, 1.10, 4.20, -0.05 };
+	Immobilien[0] = FFM13Immobilie{ TEXT("Parkplatz-Gelaende"), false, 0, 3, 3200000, 12600 };
+	Immobilien[1] = FFM13Immobilie{ TEXT("Buerokomplex 'Vereins-Tower'"), false, 0, 3, 8500000, 27900 };
+	Immobilien[2] = FFM13Immobilie{ TEXT("Wohnanlage am Stadion"), false, 0, 3, 12000000, 33800 };
+	Immobilien[3] = FFM13Immobilie{ TEXT("Einkaufszentrum 'Fan-Meile'"), false, 0, 3, 18000000, 44100 };
+	Immobilien[4] = FFM13Immobilie{ TEXT("Hotel-Beteiligung"), false, 0, 3, 22000000, 51800 };
+	Immobilien[5] = FFM13Immobilie{ TEXT("Gewerbepark"), false, 0, 3, 15000000, 36900 };
 }

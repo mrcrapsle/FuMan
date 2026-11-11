@@ -439,6 +439,28 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.Field(TEXT("rohP0"), (int64)FMath::RoundToInt64(S.Rohstoffe[0].Preis * 1000000.0)); W.Field(TEXT("rohD0"), (int64)FMath::RoundToInt64(S.Rohstoffe[0].Delta * 1000000.0));
+		W.Field(TEXT("rohP1"), (int64)FMath::RoundToInt64(S.Rohstoffe[1].Preis * 1000000.0)); W.Field(TEXT("rohD1"), (int64)FMath::RoundToInt64(S.Rohstoffe[1].Delta * 1000000.0));
+		W.Field(TEXT("rohP2"), (int64)FMath::RoundToInt64(S.Rohstoffe[2].Preis * 1000000.0)); W.Field(TEXT("rohD2"), (int64)FMath::RoundToInt64(S.Rohstoffe[2].Delta * 1000000.0));
+		W.Field(TEXT("rohP3"), (int64)FMath::RoundToInt64(S.Rohstoffe[3].Preis * 1000000.0)); W.Field(TEXT("rohD3"), (int64)FMath::RoundToInt64(S.Rohstoffe[3].Delta * 1000000.0));
+		W.Field(TEXT("rohEvent"), S.RohstoffEreignis);
+		W.FieldBool(TEXT("immo0"), S.Immobilien[0].bBesitz); W.Field(TEXT("immoL0"), S.Immobilien[0].Stufe);
+		W.FieldBool(TEXT("immo1"), S.Immobilien[1].bBesitz); W.Field(TEXT("immoL1"), S.Immobilien[1].Stufe);
+		W.FieldBool(TEXT("immo2"), S.Immobilien[2].bBesitz); W.Field(TEXT("immoL2"), S.Immobilien[2].Stufe);
+		W.FieldBool(TEXT("immo3"), S.Immobilien[3].bBesitz); W.Field(TEXT("immoL3"), S.Immobilien[3].Stufe);
+		W.FieldBool(TEXT("immo4"), S.Immobilien[4].bBesitz); W.Field(TEXT("immoL4"), S.Immobilien[4].Stufe);
+		W.FieldBool(TEXT("immo5"), S.Immobilien[5].bBesitz); W.Field(TEXT("immoL5"), S.Immobilien[5].Stufe);
+		W.ArrayKey(TEXT("immoBauten"));
+		for (const FFM13World::FFM13Immobilienbau& B : S.ImmobilienBauten)
+		{
+			W.ElementObject();
+			W.Field(TEXT("objekt"), B.Objekt);
+			W.Field(TEXT("tage"), B.TageRest);
+			W.Field(TEXT("summe"), B.Summe);
+			W.Field(TEXT("label"), B.Label);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.FieldBool(TEXT("wtHas"), S.bHasWinterTalk);
 		W.Field(TEXT("wtSeason"), S.WinterTalk.Season);
 		W.Field(TEXT("wtWeg"), (int64)S.WinterTalk.Weg);
@@ -1073,7 +1095,29 @@ namespace FM13Save
 			F.SignOnFee = R.Int(N, TEXT("signOnFee"), 0);
 			W.FreeAgents.Add(F);
 		}
+		W.ResetOekonomieGrunddaten();
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		W.Rohstoffe[0].Preis = (double)R.Int(Root, TEXT("rohP0"), (int64)((W.Rohstoffe[0].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[0].Delta = (double)R.Int(Root, TEXT("rohD0"), (int64)((0.0) * 1000000.0)) / 1000000.0;
+		W.Rohstoffe[1].Preis = (double)R.Int(Root, TEXT("rohP1"), (int64)((W.Rohstoffe[1].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[1].Delta = (double)R.Int(Root, TEXT("rohD1"), (int64)((0.0) * 1000000.0)) / 1000000.0;
+		W.Rohstoffe[2].Preis = (double)R.Int(Root, TEXT("rohP2"), (int64)((W.Rohstoffe[2].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[2].Delta = (double)R.Int(Root, TEXT("rohD2"), (int64)((0.0) * 1000000.0)) / 1000000.0;
+		W.Rohstoffe[3].Preis = (double)R.Int(Root, TEXT("rohP3"), (int64)((W.Rohstoffe[3].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[3].Delta = (double)R.Int(Root, TEXT("rohD3"), (int64)((0.0) * 1000000.0)) / 1000000.0;
+		W.RohstoffEreignis = R.Str(Root, TEXT("rohEvent"), W.RohstoffEreignis);
+		for (int32 k = 0; k < 6; ++k)
+		{
+			const TCHAR* BesitzKeys[6] = { TEXT("immo0"), TEXT("immo1"), TEXT("immo2"), TEXT("immo3"), TEXT("immo4"), TEXT("immo5") };
+			const TCHAR* StufeKeys[6] = { TEXT("immoL0"), TEXT("immoL1"), TEXT("immoL2"), TEXT("immoL3"), TEXT("immoL4"), TEXT("immoL5") };
+			W.Immobilien[k].bBesitz = R.Bool(Root, BesitzKeys[k], false);
+			W.Immobilien[k].Stufe = (int32)R.Int(Root, StufeKeys[k], 0);
+		}
+		for (int32 N : R.Items(Root, TEXT("immoBauten")))
+		{
+			FFM13World::FFM13Immobilienbau B;
+			B.Objekt = (int32)R.Int(N, TEXT("objekt"), 0);
+			B.TageRest = (int32)R.Int(N, TEXT("tage"), 0);
+			B.Summe = R.Int(N, TEXT("summe"), 0);
+			B.Label = R.Str(N, TEXT("label"), TEXT(""));
+			W.ImmobilienBauten.Add(B);
+		}
 		W.bHasWinterTalk = R.Bool(Root, TEXT("wtHas"), false);
 		W.WinterTalk.Season = (int32)R.Int(Root, TEXT("wtSeason"), 0);
 		W.WinterTalk.Weg = (FFM13World::EWinterWeg)FMath::Clamp((int32)R.Int(Root, TEXT("wtWeg"), 0), 0, 5);

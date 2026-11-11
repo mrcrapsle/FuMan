@@ -506,6 +506,46 @@ public:
 	bool ChooseWinterTalk(EWinterWeg Weg, FString& OutReason);
 	void TickWinterTalk();                            // nach jedem Spieltag: verpasst
 	void ResolveWinterTalk(int32 FinalRank);          // Saisonende: hoch-Versprechen einloesen
+	// Rohstoffboerse (js/commodities.js, Grunddaten aus js/state.js): Baumwolle, Wolle, Leder, Kunststoff
+	struct FFM13Rohstoff
+	{
+		FString Name;
+		int32 Lager = 0;        // kg
+		double BasisPreis = 0;
+		double Preis = 0;
+		double MinPreis = 0;
+		double MaxPreis = 0;
+		double Delta = 0;
+	};
+	FFM13Rohstoff Rohstoffe[4];
+	FString RohstoffEreignis = TEXT("Stabile Weltmaerkte zu Saisonbeginn.");
+	void TickCommodityMarket();                       // jeden Spieltag, nach dem Spiel
+	void ResetOekonomieGrunddaten();                  // Rohstoffe und Immobilien auf den Startstand
+	// Immobilien-Portfolio (js/real-estate.js): sechs Objekte, je bis Stufe drei, Miete je Spieltag
+	struct FFM13Immobilie
+	{
+		FString Name;
+		bool bBesitz = false;
+		int32 Stufe = 0;
+		int32 Max = 3;
+		int64 BasisKosten = 0;
+		int64 BasisMiete = 0;
+	};
+	FFM13Immobilie Immobilien[6];
+	// Baustellen der Immobilien (Teil der Baustellen-Warteschlange in js/stadium.js): voll bezahlt beim Auftrag
+	struct FFM13Immobilienbau
+	{
+		int32 Objekt = 0;
+		int32 TageRest = 0;
+		int64 Summe = 0;
+		FString Label;
+	};
+	TArray<FFM13Immobilienbau> ImmobilienBauten;
+	int64 ImmobilienKosten(int32 Objekt) const;       // getRealEstateCost()
+	int64 ImmobilienMiete(int32 Objekt) const;        // getRealEstateIncome(), Hotel mit Medienfaktor 50
+	bool KaufeOderAusbaueImmobilie(int32 Objekt, FString& OutReason);
+	bool VerkaufeImmobilie(int32 Objekt, FString& OutReason);
+	void TickImmobilien();                            // jeden Spieltag: Mieten, Bauzeit
 	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
 	struct FFM13Rumor
 	{

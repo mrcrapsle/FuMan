@@ -2011,6 +2011,38 @@ static void TestMedizincheck()
 	FFM13World WLd;
 	FString WFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(WSave), WLd, WFehler) && WLd.bHasWinterTalk && WLd.WinterTalk.Goal == 7 && WLd.TransferBudget == 7500000, "Wintergespraech bleibt im Spielstand (%s)", *WFehler);
+	// Immobilien und Rohstoffboerse (js/real-estate.js, js/commodities.js)
+	FFM13World IM;
+	IM.NewGame(TEXT("Immo"), 173, 0);
+	IM.Money = 500000000;
+	PRUEFE(IM.ImmobilienKosten(0) == 3200000 * 0.035 * 0 + 3200000 && IM.ImmobilienKosten(0) == 3200000, "Immobilien: Kosten Stufe 1 = Grundpreis (Bundesliga-Skala 1,0)");
+	FString IGrund;
+	const int64 IGeld = IM.Money;
+	PRUEFE(IM.KaufeOderAusbaueImmobilie(0, IGrund) && IM.Money == IGeld - 3200000 && IM.ImmobilienBauten.Num() == 1, "Kauf: voll bezahlt, Baustelle startet");
+	PRUEFE(!IM.KaufeOderAusbaueImmobilie(0, IGrund) && IGrund.Contains(TEXT("Baustelle")), "Immobilien: nur eine Baustelle je Objekt");
+	// Bauzeit: Kosten geteilt durch 400.000, mindestens zehn Spieltage
+	PRUEFE(IM.ImmobilienBauten[0].TageRest == 10, "Bauzeit: mindestens zehn Spieltage");
+	for (int32 t = 0; t < 10; ++t) IM.TickImmobilien();
+	PRUEFE(IM.Immobilien[0].bBesitz && IM.Immobilien[0].Stufe == 1 && IM.ImmobilienBauten.Num() == 0, "Fertig: Objekt gehoert dem Verein, Stufe 1");
+	PRUEFE(IM.ImmobilienMiete(0) == 12600, "Miete Stufe 1 = Grundmiete");
+	const int64 IMiet = IM.Money;
+	IM.TickImmobilien();
+	PRUEFE(IM.Money == IMiet + 12600, "Mieteinnahmen je Spieltag aufs Konto");
+	PRUEFE(IM.KaufeOderAusbaueImmobilie(0, IGrund) && IM.ImmobilienKosten(0) == 6400000, "Ausbau Stufe 2 kostet das Doppelte");
+	// Verkauf zu 55 Prozent
+	FFM13World IV = IM;
+	const int64 IVGeld = IV.Money;
+	IV.ImmobilienBauten.Reset();
+	FString IVGrund;
+	PRUEFE(IV.VerkaufeImmobilie(0, IVGrund) && IV.Money == IVGeld + FM13Transfers::JsRunden(3200000.0 * 1 * 2 / 2.0 * 0.55) && !IV.Immobilien[0].bBesitz, "Verkauf: 55 Prozent der gezahlten Summe");
+	// Rohstoffboerse: Preise bleiben in ihren Grenzen
+	for (int32 t = 0; t < 200; ++t) IM.TickCommodityMarket();
+	bool IGrenzen = true;
+	for (int32 k = 0; k < 4; ++k) if (IM.Rohstoffe[k].Preis < IM.Rohstoffe[k].MinPreis - 1e-9 || IM.Rohstoffe[k].Preis > IM.Rohstoffe[k].MaxPreis + 1e-9) IGrenzen = false;
+	PRUEFE(IGrenzen && IM.RohstoffEreignis.Len() > 0, "Rohstoffboerse: Preise bleiben zwischen Mindest- und Hoechstpreis");
+	FFM13World ILd;
+	FString IFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(IM), ILd, IFehler) && ILd.Immobilien[0].Stufe == IM.Immobilien[0].Stufe && ILd.Rohstoffe[0].Preis == IM.Rohstoffe[0].Preis, "Immobilien und Rohstoffe bleiben im Spielstand (%s)", *IFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);
