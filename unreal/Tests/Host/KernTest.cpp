@@ -1330,6 +1330,58 @@ static void TestVerkaufUndInsolvenz()
 	PRUEFE(W.NegativeStreak == 0 && !W.bInsolvenzEmbargo, "Im Plus endet alles");
 }
 
+static void TestKredite()
+{
+	std::printf("Kredite: Stufen, Raten, Sondertilgung, Hoechstzahl, Bonitaet, Alt-Kredit\n");
+	FFM13World W;
+	W.NewGame(TEXT("Kredit"), 141, 0);
+	FString G;
+	W.Money = 1000000;
+	const int64 Geld = W.Money;
+	PRUEFE(W.TakeLoanTier(TEXT("kurz"), 1000000, G), "Kredit klappt: %s", *G);
+	PRUEFE(W.Money == Geld + 1000000, "Kredit gibt das Geld aus");
+	PRUEFE(W.ActiveLoans.Num() == 1, "Ein laufender Kredit");
+	const FFM13World::FFM13Loan L = W.ActiveLoans[0];
+	const int64 Gesamt = FM13Transfers::JsRunden(1000000.0 * 1.15);
+	PRUEFE(L.TotalToRepay == Gesamt && L.Installment == (Gesamt + 9) / 10 && L.MatchdaysLeft == 10, "Kurzfristig: 10 Spieltage, Rate aufgerundet");
+	const int64 Vor = W.Money;
+	W.ProcessLoanInstallments();
+	PRUEFE(W.Money == Vor - L.Installment && W.ActiveLoans[0].MatchdaysLeft == 9, "Spieltag zieht die Rate ab");
+	const int64 Abloese = FM13Transfers::JsRunden((double)(L.Installment * 9) * 0.85);
+	PRUEFE(!W.SpecialRepayLoan(999, G), "Unbekannter Kredit wird abgelehnt");
+	W.Money = Abloese - 1;
+	PRUEFE(!W.SpecialRepayLoan(L.Id, G) && G.Contains(TEXT("Nicht genug")), "Sondertilgung braucht das Geld");
+	W.Money = 5000000;
+	const int64 Vor2 = W.Money;
+	PRUEFE(W.SpecialRepayLoan(L.Id, G) && W.Money == Vor2 - Abloese && W.ActiveLoans.Num() == 0, "Sondertilgung zu 85 %% der Restschuld");
+	W.ActiveLoans.Reset();
+	W.Money = 5000000;
+	PRUEFE(W.TakeLoanTier(TEXT("lang"), 1000, G) && W.TakeLoanTier(TEXT("mittel"), 1000, G) && W.TakeLoanTier(TEXT("kurz"), 1000, G), "Drei Kredite gleichzeitig");
+	PRUEFE(!W.TakeLoanTier(TEXT("kurz"), 1000, G) && G.Contains(TEXT("Maximal")), "Hoechstens drei laufende Kredite");
+	W.ActiveLoans.Reset();
+	PRUEFE(!W.TakeLoanTier(TEXT("unbekannt"), 1000, G) && !W.TakeLoanTier(TEXT("kurz"), 0, G), "Ungueltige Stufe oder Betrag");
+	// Bonitaet 90 bringt 3 % weniger Zins: 12 % statt 15 %
+	W.CreditRatingTenth = 900;
+	PRUEFE(W.TakeLoanTier(TEXT("kurz"), 1000, G) && W.ActiveLoans[0].TotalToRepay == 1120, "Gute Bonitaet senkt den Zins");
+	W.ActiveLoans.Reset();
+	// Bonitaet sinkt im Minus um 1,5 und steigt im Plus um 0,3
+	W.CreditRatingTenth = 700;
+	W.Money = -1;
+	W.TickCreditRating();
+	PRUEFE(W.CreditRatingTenth == 685, "Minus senkt die Bonitaet (%d)", W.CreditRatingTenth);
+	W.Money = 1;
+	W.TickCreditRating();
+	PRUEFE(W.CreditRatingTenth == 688, "Plus hebt die Bonitaet (%d)", W.CreditRatingTenth);
+	// Alt-Sofortkredit: 12 % Aufschlag, Tilgung ohne Rabatt
+	W.LoanDebt = 0;
+	W.Money = 1000;
+	W.TakeLoanLegacy(100000);
+	PRUEFE(W.LoanDebt == 112000, "Soforthilfe: 12 %% Aufschlag (%lld)", (long long)W.LoanDebt);
+	PRUEFE(W.PayLoanLegacy(50000) && W.LoanDebt == 62000, "Tilgung senkt die Schuld");
+	W.Money = 10;
+	PRUEFE(!W.PayLoanLegacy(50000), "Tilgung ohne Geld wird abgelehnt");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2509,6 +2561,7 @@ int main()
 	TestTransferRegeln();
 	TestMedizincheck();
 	TestVerkaufUndInsolvenz();
+	TestKredite();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

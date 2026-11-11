@@ -592,6 +592,19 @@ namespace FM13Save
 		W.Field(TEXT("negativeStreak"), S.NegativeStreak);
 		W.FieldBool(TEXT("insolvenzEmbargo"), S.bInsolvenzEmbargo);
 		W.Field(TEXT("forcedSales"), S.ForcedSalesCount);
+		W.ArrayKey(TEXT("activeLoans"));
+		for (const FFM13World::FFM13Loan& L : S.ActiveLoans)
+		{
+			W.ElementObject();
+			W.Field(TEXT("id"), L.Id); W.Field(TEXT("tier"), L.TierName);
+			W.Field(TEXT("principal"), L.Principal); W.Field(TEXT("rate"), L.Installment);
+			W.Field(TEXT("left"), L.MatchdaysLeft); W.Field(TEXT("total"), L.TotalToRepay);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.Field(TEXT("loanNextId"), S.NextLoanId);
+		W.Field(TEXT("loanDebt"), S.LoanDebt);
+		W.Field(TEXT("creditRating"), S.CreditRatingTenth);
 		W.FieldBool(TEXT("ffpHasResult"), S.bHasFfpResult);
 		W.Field(TEXT("ffpResSeason"), S.FfpLastResult.Season);
 		W.Field(TEXT("ffpResNet"), S.FfpLastResult.Net);
@@ -1352,6 +1365,17 @@ namespace FM13Save
 		W.NegativeStreak = (int32)R.Int(Root, TEXT("negativeStreak"), 0);
 		W.bInsolvenzEmbargo = R.Bool(Root, TEXT("insolvenzEmbargo"), false);
 		W.ForcedSalesCount = (int32)R.Int(Root, TEXT("forcedSales"), 0);
+		for (int32 N : R.Items(Root, TEXT("activeLoans")))
+		{
+			FFM13World::FFM13Loan L;
+			L.Id = (int32)R.Int(N, TEXT("id"), 0); L.TierName = R.Str(N, TEXT("tier"), TEXT(""));
+			L.Principal = R.Int(N, TEXT("principal"), 0); L.Installment = R.Int(N, TEXT("rate"), 0);
+			L.MatchdaysLeft = (int32)R.Int(N, TEXT("left"), 0); L.TotalToRepay = R.Int(N, TEXT("total"), 0);
+			W.ActiveLoans.Add(L);
+		}
+		W.NextLoanId = (int32)R.Int(Root, TEXT("loanNextId"), 1);
+		W.LoanDebt = R.Int(Root, TEXT("loanDebt"), 0);
+		W.CreditRatingTenth = (int32)R.Int(Root, TEXT("creditRating"), 700);
 		W.bHasFfpResult = R.Bool(Root, TEXT("ffpHasResult"), false);
 		W.FfpLastResult.Season = (int32)R.Int(Root, TEXT("ffpResSeason"), 0);
 		W.FfpLastResult.Net = R.Int(Root, TEXT("ffpResNet"), 0);

@@ -297,7 +297,9 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
-	CheckInsolvencyRisk();   // wie in js/match-live.js: jeder Spieltag nach den Finanzen
+	TickCreditRating();          // wie js/match-live.js: Bonitaet je Spieltag
+	ProcessLoanInstallments();   // Kreditraten, dann die Insolvenzpruefung (gleiche Reihenfolge wie im Browserspiel)
+	CheckInsolvencyRisk();
 	TickSponsor();
 
 	RecentStyles.Add(TacticStyle);
@@ -1129,6 +1131,99 @@ bool FFM13World::BuyPlayer(int32 MarketIndex, FString& OutReason)
 	Market.RemoveAt(MarketIndex);
 	AddMessage(TEXT("Neuzugang"), Squad.Last().Name + TEXT(" unterschreibt fuer drei Jahre."));
 	return true;
+}
+
+// ---------- Kredite (js/finances.js: LOAN_TIERS, takeLoanTier, processLoanInstallments, specialRepayLoan) ----------
+
+namespace
+{
+	struct FKreditStufe { const TCHAR* Key; const TCHAR* Name; int32 Laufzeit; double Zins; };
+	const FKreditStufe KreditStufen[3] = {
+		{ TEXT("kurz"), TEXT("Kurzfristig"), 10, 0.15 },
+		{ TEXT("mittel"), TEXT("Mittelfristig"), 20, 0.10 },
+		{ TEXT("lang"), TEXT("Langfristig"), 34, 0.06 },
+	};
+	const int32 MaxAktiveKredite = 3;   // MAX_ACTIVE_LOANS
+
+	// getCreditRatingInterestModifier(): Bonitaet in Zehnteln (850 = 85)
+	double KreditZinsAufschlag(int32 RatingZehntel)
+	{
+		if (RatingZehntel >= 850) return -0.03;
+		if (RatingZehntel >= 600) return 0.0;
+		if (RatingZehntel >= 350) return 0.03;
+		return 0.07;
+	}
+}
+
+bool FFM13World::TakeLoanTier(const FString& Key, int64 Amount, FString& OutReason)
+{
+	if (ActiveLoans.Num() >= MaxAktiveKredite) { OutReason = TEXT("Maximal 3 laufende Kredite gleichzeitig!"); return false; }
+	const FKreditStufe* Stufe = nullptr;
+	for (const FKreditStufe& S : KreditStufen) if (Key == S.Key) Stufe = &S;
+	if (!Stufe || Amount <= 0) { OutReason = TEXT("Bitte einen gueltigen Betrag eingeben!"); return false; }
+	const double Zins = FMath::Max(0.02, Stufe->Zins + KreditZinsAufschlag(CreditRatingTenth));
+	const int64 Gesamt = FM13Transfers::JsRunden((double)Amount * (1.0 + Zins));   // Math.round(amount * (1 + rate))
+	const int64 Rate = (Gesamt + Stufe->Laufzeit - 1) / Stufe->Laufzeit;             // Math.ceil(total / duration)
+	Book(TEXT("Kredit: Aufnahme"), Amount);
+	FFM13Loan L;
+	L.Id = NextLoanId++;
+	L.TierName = Stufe->Name;
+	L.Principal = Amount;
+	L.Installment = Rate;
+	L.MatchdaysLeft = Stufe->Laufzeit;
+	L.TotalToRepay = Gesamt;
+	ActiveLoans.Add(L);
+	return true;
+}
+
+// Alt-Sofortkredit: flacher Aufschlag von 12 %, freie Rueckzahlung
+void FFM13World::TakeLoanLegacy(int64 Amount)
+{
+	Book(TEXT("Kredit: Soforthilfe"), Amount);
+	LoanDebt += FM13Transfers::JsRunden((double)Amount * 1.12);
+}
+
+bool FFM13World::PayLoanLegacy(int64 Amount)
+{
+	if (LoanDebt <= 0 || Money < Amount) return false;
+	Book(TEXT("Kredit: Tilgung"), -Amount);
+	LoanDebt -= Amount;
+	return true;
+}
+
+// processLoanInstallments(): jeder Spieltag zieht die Rate, abgelaufene Kredite fallen weg
+void FFM13World::ProcessLoanInstallments()
+{
+	if (ActiveLoans.Num() == 0) return;
+	for (FFM13Loan& L : ActiveLoans)
+	{
+		Book(TEXT("Kredit: Rate"), -L.Installment);
+		L.MatchdaysLeft--;
+	}
+	for (const FFM13Loan& L : ActiveLoans)
+		if (L.MatchdaysLeft <= 0)
+			AddMessage(TEXT("Kredit zurueckgezahlt"), FString(TEXT("Der Kredit ")) + L.TierName + TEXT(" ist vollstaendig zurueckgezahlt."));
+	ActiveLoans.RemoveAll([](const FFM13Loan& L) { return L.MatchdaysLeft <= 0; });
+}
+
+// specialRepayLoan(): vorzeitige Komplett-Tilgung zu 85 % der Restschuld
+bool FFM13World::SpecialRepayLoan(int32 LoanId, FString& OutReason)
+{
+	const int32 Idx = ActiveLoans.IndexOfByPredicate([LoanId](const FFM13Loan& L) { return L.Id == LoanId; });
+	if (Idx < 0) { OutReason = TEXT("Kredit nicht gefunden."); return false; }
+	const FFM13Loan L = ActiveLoans[Idx];
+	const int64 Abloese = FM13Transfers::JsRunden((double)(L.Installment * L.MatchdaysLeft) * 0.85);
+	if (Money < Abloese) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Abloese); return false; }
+	Book(TEXT("Kredit: Sondertilgung"), -Abloese);
+	ActiveLoans.RemoveAt(Idx);
+	return true;
+}
+
+// tickCreditRating(): gute Wirtschaft (Konto im Plus, kein Minus-Streak) bessert die Bonitaet, sonst sinkt sie
+void FFM13World::TickCreditRating()
+{
+	if (Money >= 0 && NegativeStreak == 0) CreditRatingTenth = FMath::Min(1000, CreditRatingTenth + 3);
+	else CreditRatingTenth = FMath::Max(100, CreditRatingTenth - 15);
 }
 
 // sellPlayer() (js/transfermarket.js): Sofortverkauf zu 80 % des Marktwerts, Beraterprovision
@@ -4472,7 +4567,9 @@ void FFM13World::CreditAiLeagueGoals(FFM13Club& C, int32 Tore)
 // Stadion, Vereinsgelaende und Jugend zaehlen nicht als Verlust. Im C++-Kern heissen die Buchungen so.
 bool FFM13World::FfpExempt(const FString& Label)
 {
-	return Label == TEXT("Stadionausbau") || Label == TEXT("Ausbau Jugendakademie") || Label == TEXT("Ausbau Trainingsplatz");
+	return Label == TEXT("Stadionausbau") || Label == TEXT("Ausbau Jugendakademie") || Label == TEXT("Ausbau Trainingsplatz")
+		|| Label == TEXT("Kredit: Aufnahme") || Label == TEXT("Kredit: Rate") || Label == TEXT("Kredit: Sondertilgung")
+		|| Label == TEXT("Kredit: Soforthilfe") || Label == TEXT("Kredit: Tilgung");   // Finanzierung, kein Verlust (FFP_EXEMPTE_LABELS)
 }
 
 int64 FFM13World::FfpSeasonNet() const

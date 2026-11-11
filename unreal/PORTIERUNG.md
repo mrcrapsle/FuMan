@@ -144,7 +144,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `finances.js` | 1012 | teilweise | Buchungen, Kontoauszug, Insolvenz | Book, Kontoauszug, Insolvenzkette (checkInsolvencyRisk: Warnung ab 3 Tagen, Transfersperre ab 6, Zwangsverkauf 60 % alle 10, Punktabzug alle 15 Tage). Offen: Steuerberater und Krisenfest-Perk (Perks im Kern noch nicht da), Finanzzentrale, Kreditraten |
+| `finances.js` | 1012 | teilweise | Buchungen, Kontoauszug, Insolvenz, Kredite | Book, Kontoauszug, Insolvenzkette (checkInsolvencyRisk: Warnung ab 3 Tagen, Transfersperre ab 6, Zwangsverkauf 60 % alle 10, Punktabzug alle 15 Tage), Kredite (Stufen kurz/mittel/lang mit Raten, Sondertilgung 85 %, Bonität mit Zinsaufschlag, Alt-Sofortkredit). Offen: Steuerberater und Krisenfest-Perk (Perks im Kern noch nicht da), Finanzzentrale, Festgeld, Kontoverlauf |
 | `financial-charts.js` | 225 | offen | FINANZ-DASHBOARD-CHARTS |  |
 | `ffp.js` | 132 | portiert | Financial Fairplay |  |
 | `media-rights.js` | 244 | teilweise | TV-Geld | TvMoney 1:1, Raten und Restausschüttung (Medienverträge offen) |

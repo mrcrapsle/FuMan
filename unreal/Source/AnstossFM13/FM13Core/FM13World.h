@@ -410,6 +410,25 @@ public:
 	bool bInsolvenzEmbargo = false;  // game.transferEmbargo: ab 6 Spieltagen im Minus, weg sobald das Konto im Plus ist
 	int32 NegativeStreak = 0;        // game.negativeStreak: Spieltage in Folge im Minus
 	int32 ForcedSalesCount = 0;      // game.forcedSalesCount: Zwangsverkaeufe
+	struct FFM13Loan
+	{
+		int32 Id = 0;
+		FString TierName;
+		int64 Principal = 0;
+		int64 Installment = 0;
+		int32 MatchdaysLeft = 0;
+		int64 TotalToRepay = 0;
+	};
+	TArray<FFM13Loan> ActiveLoans;                 // game.activeLoans: laufende Kredite mit Ratenzahlung (hoechstens 3)
+	int32 NextLoanId = 1;
+	int64 LoanDebt = 0;                            // game.loanDebt: Alt-Sofortkredit (Soforthilfe / Tilgen)
+	int32 CreditRatingTenth = 700;                 // financeCentralState.creditRating mal 10, ganzzahlig damit das Speichern exakt bleibt
+	bool TakeLoanTier(const FString& Key, int64 Amount, FString& OutReason);   // takeLoanTier()
+	void TakeLoanLegacy(int64 Amount);             // takeLoan() (Soforthilfe)
+	bool PayLoanLegacy(int64 Amount);              // payLoan() (Tilgen)
+	void ProcessLoanInstallments();                // processLoanInstallments(): jeden Spieltag
+	bool SpecialRepayLoan(int32 LoanId, FString& OutReason);   // specialRepayLoan(): vorzeitige Tilgung mit 15 % Rabatt
+	void TickCreditRating();                       // tickCreditRating(): Bonitaet je Spieltag
 	int32 PendingFfpDeduction = 0;   // Punktabzug fuer die neue Saison, nach dem Tabellen-Neustart
 	bool bHasFfpResult = false;
 	FFM13FfpResult FfpLastResult;
