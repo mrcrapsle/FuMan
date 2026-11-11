@@ -2043,6 +2043,59 @@ static void TestMedizincheck()
 	FFM13World ILd;
 	FString IFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(IM), ILd, IFehler) && ILd.Immobilien[0].Stufe == IM.Immobilien[0].Stufe && ILd.Rohstoffe[0].Preis == IM.Rohstoffe[0].Preis, "Immobilien und Rohstoffe bleiben im Spielstand (%s)", *IFehler);
+	// Holding und Industrie (js/industry.js, js/holding.js)
+	FFM13World HI;
+	HI.NewGame(TEXT("Holding"), 174, 0);
+	HI.Money = 500000000;
+	PRUEFE(HI.HoldingGeld == 50000 && HI.HoldingWert() == 50000, "Holding: Startgeld 50.000, Wert 50.000");
+	FString HGrund;
+	PRUEFE(!HI.KaufeFabrik(0, HGrund) && HGrund.Contains(TEXT("reicht nicht")), "Fabrik: Holding-Konto reicht nicht");
+	HI.HoldingGeld = 1000000;
+	PRUEFE(HI.KaufeFabrik(0, HGrund) && HI.Fabriken[0].bBesitz && HI.HoldingGeld == 400000, "Fabrik gekauft, bezahlt vom Holding-Konto");
+	PRUEFE(HI.HoldingWert() == 530000, "Holdingwert: 50.000 plus 80 Prozent der Fabrikkosten (600.000)");
+	PRUEFE(HI.ProduktionsDauer(0) == 4 && HI.ProduktionsDauer(1) == 4, "Produktionsdauer Stufe 1: vier Spieltage");
+	// Produktion: Trikots aus Baumwolle, nach vier Spieltagen im Lager
+	const int32 HLager = HI.Waren[0].Lager;
+	const int32 HRoh = HI.Rohstoffe[0].Lager;
+	PRUEFE(HI.StarteProduktion(0, 100, HGrund) && HI.Produktionen.Num() == 1 && HI.Rohstoffe[0].Lager == HRoh - 100, "Produktion: 100 Trikots verbrauchen 100 kg Baumwolle");
+	for (int32 t = 0; t < 4; ++t) HI.TickProduktion();
+	PRUEFE(HI.Produktionen.Num() == 0 && HI.Waren[0].Lager == HLager + 100, "Produktion: nach vier Spieltagen im Lager");
+	PRUEFE(!HI.StarteProduktion(1, 10, HGrund) && HGrund.Contains(TEXT("Fabrik")), "Produktion ohne Fabrik abgelehnt");
+	// Rohstoffe und Lager
+	const int64 HKaufPreis = FM13Transfers::JsRunden(HI.Rohstoffe[0].Preis * 100);
+	const int64 HVorKauf = HI.HoldingGeld;
+	PRUEFE(HI.KaufeRohstoff(0, 100, HGrund) && HI.HoldingGeld == HVorKauf - HKaufPreis, "Rohstoff gekauft, bezahlt vom Holding-Konto");
+	PRUEFE(HI.LagerKapazitaet() == 2000 && !HI.KaufeRohstoff(0, 2000, HGrund) && HGrund.Contains(TEXT("Lagerkapazitaet")), "Lager voll: kein Zukauf ueber die Kapazitaet");
+	PRUEFE(HI.AusbaueLager(HGrund) && HI.LagerKapazitaet() == 4000, "Zentrallager ausgebaut, Kapazitaet verdoppelt");
+	// Lohnfertigung: Auftrag 1 braucht 1000 kg Baumwolle
+	HI.Rohstoffe[0].Lager = 500;
+	PRUEFE(!HI.ErfuelleB2B(1, HGrund) && HGrund.Contains(TEXT("Rohstoff")), "Lohnfertigung: zu wenig Rohstoff");
+	HI.Rohstoffe[0].Lager = 2000;
+	const int64 HGeldB2B = HI.HoldingGeld;
+	PRUEFE(HI.ErfuelleB2B(1, HGrund) && HI.B2BAuftraege[0].bErledigt && HI.HoldingGeld == HGeldB2B + 65000, "Lohnfertigung ausgeliefert, Honorar 65.000 aufs Holding-Konto");
+	// Saisonstart: je eigener Fabrik ein neuer Auftrag
+	HI.ErneuereB2BAuftraege();
+	bool HNeuerAuftrag = false;
+	for (const FFM13World::FFM13B2BAuftrag& Neu : HI.B2BAuftraege) if (Neu.Fabrik == 0 && !Neu.bErledigt) HNeuerAuftrag = Neu.Honorar > 0;
+	PRUEFE(HNeuerAuftrag, "Saisonstart: neuer Lohnfertigungs-Auftrag fuer die Textilfabrik");
+	// Ueberweisungen zwischen Verein und Holding
+	const int64 HVerein = HI.Money;
+	const int64 HHold = HI.HoldingGeld;
+	PRUEFE(HI.UeberweisungZurHolding(100000, HGrund) && HI.Money == HVerein - 100000 && HI.HoldingGeld == HHold + 100000, "Ueberweisung Verein zur Holding");
+	PRUEFE(HI.UeberweisungVonHolding(100000, HGrund) && HI.Money == HVerein && HI.HoldingGeld == HHold, "Ueberweisung Holding zum Verein");
+	// Fusion: schwacher Konkurrent (unter 50) und 1,5 mal Kosten
+	HI.Konkurrenten[0].Staerke = 40;
+	HI.HoldingGeld = 2000000;
+	PRUEFE(HI.FusioniereFabrik(0, HGrund) && HI.Fabriken[0].Stufe == 2 && HI.Konkurrenten.Num() == 2, "Fusion: Fabrik eine Stufe hoeher, Konkurrent verschwindet");
+	// Uebernahmeangebot annehmen: Holding geht, Fabriken gehen weg
+	HI.Uebernahmen.Add(FFM13World::FFM13Uebernahme{ TEXT("TexPro Industries"), 1000000, HI.Matchday + 5 });
+	const int64 HVorUebernahme = HI.Money;
+	PRUEFE(HI.AntworteUebernahme(true, HGrund) && HI.Money == HVorUebernahme + 1000000 && !HI.Fabriken[0].bBesitz && HI.Uebernahmen.Num() == 0, "Uebernahme angenommen: Verkaufserloes, Fabriken weg");
+	// Spielstand
+	FFM13World HSave = HI;
+	FFM13World HLd;
+	FString HFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(HSave), HLd, HFehler) && HLd.HoldingGeld == HSave.HoldingGeld && HLd.Waren[0].Lager == HSave.Waren[0].Lager && HLd.B2BAuftraege.Num() == HSave.B2BAuftraege.Num() && HLd.Fabriken[0].Stufe == HSave.Fabriken[0].Stufe, "Holding und Industrie bleiben im Spielstand (%s)", *HFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

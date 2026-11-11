@@ -75,6 +75,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	RngKabine.Initialize(Seed * 7919 + 13);
 	RngJugend.Initialize(Seed * 104729 + 29);
 	RngTransfer.Initialize(Seed * 31337 + 7);
+	RngIndustrie.Initialize(Seed * 15485863 + 11);
 	TransferBudget = LeagueTransferBudget(StartLevel);
 	ResetOekonomieGrunddaten();
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
@@ -233,6 +234,10 @@ bool FFM13World::PlayMatchday()
 	TickBoardRoom();
 	TickWinterTalk();
 	TickMemberAssembly();
+	TickRohstoffPreise();
+	TickKonkurrenten();
+	TickUebernahmeAblauf();
+	TickProduktion();
 	TickCommodityMarket();
 	TickImmobilien();
 	TickFriendships();
@@ -660,6 +665,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	TickBuybackOptions();
 	JoinPreContractPlayers();
 	++Season;
+	ErneuereB2BAuftraege();
 	OpenMemberAssembly();
 	RecordSeasonExpectationRank();
 	Matchday = 1;
@@ -4844,7 +4850,7 @@ namespace
 void FFM13World::TickCommodityMarket()
 {
 	// Ereignisse: 22 % Wahrscheinlichkeit je Spieltag, sonst ruhiger Handel
-	const bool bEreignis = RngTransfer.FRand() < 0.22f;
+	const bool bEreignis = RngIndustrie.FRand() < 0.22f;
 	if (bEreignis)
 	{
 		struct FEreignis { const TCHAR* Text; int32 Mat; double Faktor; };   // Mat -1: alle
@@ -4855,7 +4861,7 @@ void FFM13World::TickCommodityMarket()
 			{ TEXT("Globale Ueberproduktion: Lederpreis gibt spuerbar nach (-20 Prozent)!"), 2, 0.80 },
 			{ TEXT("Weltweite Rohstoff-Rallye: Alle Maerkte ziehen kraeftig an (+15 Prozent)!"), -1, 1.15 },
 		};
-		const FEreignis& E = Liste[RngTransfer.RandRange(0, 4)];
+		const FEreignis& E = Liste[RngIndustrie.RandRange(0, 4)];
 		RohstoffEreignis = E.Text;
 		for (int32 k = 0; k < 4; ++k)
 		{
@@ -4875,7 +4881,7 @@ void FFM13World::TickCommodityMarket()
 		for (int32 k = 0; k < 4; ++k)
 		{
 			FFM13Rohstoff& R = Rohstoffe[k];
-			const double Veraenderung = (RngTransfer.FRand() - 0.48) * 0.45;
+			const double Veraenderung = (RngIndustrie.FRand() - 0.48) * 0.45;
 			const double Alt = R.Preis;
 			R.Preis = FMath::Clamp(Auf2(R.Preis + Veraenderung), R.MinPreis, R.MaxPreis);
 			R.Delta = Auf2(R.Preis - Alt);
@@ -4965,4 +4971,281 @@ void FFM13World::ResetOekonomieGrunddaten()
 	Immobilien[3] = FFM13Immobilie{ TEXT("Einkaufszentrum 'Fan-Meile'"), false, 0, 3, 18000000, 44100 };
 	Immobilien[4] = FFM13Immobilie{ TEXT("Hotel-Beteiligung"), false, 0, 3, 22000000, 51800 };
 	Immobilien[5] = FFM13Immobilie{ TEXT("Gewerbepark"), false, 0, 3, 15000000, 36900 };
+	// Industrie und Holding (js/state.js)
+	Fabriken[0] = FFM13Fabrik{ TEXT("Textilfabrik 'Stoff & Naht'"), TEXT("Trikots"), 0, false, 1, 5, 600000 };
+	Fabriken[1] = FFM13Fabrik{ TEXT("Strickerei 'Maschenwerk'"), TEXT("Schals"), 1, false, 1, 5, 320000 };
+	Fabriken[2] = FFM13Fabrik{ TEXT("Leder- & Ballmanufaktur"), TEXT("Baelle"), 2, false, 1, 5, 420000 };
+	Fabriken[3] = FFM13Fabrik{ TEXT("Spritzguss- & Zubehoerwerk"), TEXT("Caps & Wimpel"), 3, false, 1, 5, 250000 };
+	HoldingGeld = 50000;
+	Lagerstufe = 1;
+	B2BAuftraege.Reset();
+	B2BAuftraege.Add(FFM13B2BAuftrag{ 1, -1, TEXT("Real Madriz"), TEXT("Trikots"), 1000, 0, 1000, 65000, false });
+	B2BAuftraege.Add(FFM13B2BAuftrag{ 2, -1, TEXT("Bayern Muenchen"), TEXT("Fan-Schals"), 2000, 1, 1200, 38000, false });
+	B2BAuftraege.Add(FFM13B2BAuftrag{ 3, -1, TEXT("Liverpol FC"), TEXT("Spielbaelle"), 800, 2, 960, 48000, false });
+	NextB2BId = 4;
+	Konkurrenten.Reset();
+	Konkurrenten.Add(FFM13Firma{ TEXT("TexPro Industries"), 60, TEXT("") });
+	Konkurrenten.Add(FFM13Firma{ TEXT("Nordwoll Handels-KG"), 55, TEXT("") });
+	Konkurrenten.Add(FFM13Firma{ TEXT("LederWerk Sued"), 65, TEXT("") });
+	Uebernahmen.Reset();
+	RohstoffEreignisBias = 0;
+	Waren.Reset();
+	const TCHAR* WarenNamen[25] = { TEXT("Heimtrikot 2026/27"), TEXT("Fan-Schal 'Tradition'"), TEXT("Snapback Cap"), TEXT("Offizieller Spielball"), TEXT("Auswaertstrikot 2026/27"), TEXT("Torwarttrikot"), TEXT("Trainingsshirt"), TEXT("Kapuzenpulli mit Wappen"), TEXT("Baby-Body 'Nachwuchs'"), TEXT("Bademantel"), TEXT("Stutzen-Set"), TEXT("Wintermuetze"), TEXT("Fan-Handschuhe"), TEXT("Stadion-Decke"), TEXT("Auswaerts-Schal"), TEXT("Leder-Geldboerse"), TEXT("Schluesselanhaenger"), TEXT("Mini-Ball fuer Kinder"), TEXT("Sporttasche"), TEXT("Wimpel 'Heimspiel'"), TEXT("Vereins-Tasse"), TEXT("Trinkflasche"), TEXT("Regenschirm"), TEXT("Handyhuelle mit Wappen") };
+	const int32 WarenLager[25] = { 250, 500, 300, 150, 180, 90, 220, 200, 120, 60, 300, 240, 200, 140, 260, 120, 500, 200, 110, 400, 320, 280, 160, 240 };
+	const int32 WarenRoh[25] = { 0, 1, 3, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3 };
+	const double WarenMenge[25] = { 1.0, 0.6, 0.5, 1.2, 1.0, 1.0, 0.7, 1.3, 0.4, 1.8, 0.4, 0.5, 0.4, 1.4, 0.6, 0.5, 0.1, 0.4, 1.5, 0.2, 0.4, 0.5, 0.8, 0.3 };
+	const int32 WarenFabrik[25] = { 0, 1, 3, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3 };
+	for (int32 i = 0; i < 25; ++i) Waren.Add(FFM13Ware{ WarenNamen[i], WarenLager[i], WarenRoh[i], WarenMenge[i], WarenFabrik[i] });
+	Produktionen.Reset();
+}
+
+// ---------- Holding und Industrie (js/industry.js, js/holding.js) ----------
+
+namespace
+{
+	const TCHAR* InternationaleVereine[] = {
+		TEXT("Real Madriz"), TEXT("FC Barcalona"), TEXT("Atletico Madriz"), TEXT("FC Sevillia"), TEXT("Valencia CFF"), TEXT("Real Betiss"),
+		TEXT("Manchester Unitad"), TEXT("Manchester Cyty"), TEXT("Liverpol FC"), TEXT("Chelsea FC London"), TEXT("Arsenall London"), TEXT("Tottenham Hotspurr"),
+		TEXT("Juwentus Turin"), TEXT("AC Millan"), TEXT("Inter Milano"), TEXT("SSC Neapell"), TEXT("AS Romm"), TEXT("Lazio Romm"),
+		TEXT("Paris St. Germaine"), TEXT("Olympique Marseile"), TEXT("Olympique Lyonn"), TEXT("AS Monakko"),
+		TEXT("Ajax Amsterdaam"), TEXT("PSV Eindhofen"), TEXT("Feyenoordt Rotterdam"), TEXT("FC Porto Portugal"), TEXT("Benfika Lissabon"),
+		TEXT("Sporting Lissabonn"), TEXT("Club Bruggge"),
+		TEXT("Celtic Glasgoww"), TEXT("Galatasaray Istanbull"), TEXT("Fenerbahce Istanbull"), TEXT("Roter Stern Belgratt"),
+		TEXT("Schachtar Donezkk"), TEXT("Zenit St. Petersborg"), TEXT("RB Salzborg"), TEXT("Rapid Wienn"), TEXT("FC Baselll"), TEXT("Young Boys Bernn"),
+	};
+	const TCHAR* MarktEreignisse[] = {
+		TEXT("Stabile Weltmaerkte - keine besonderen Vorkommnisse."),
+		TEXT("Rohstoffknappheit durch Lieferengpaesse treibt die Preise!"),
+		TEXT("Ueberangebot am Weltmarkt drueckt die Preise."),
+		TEXT("Handelsabkommen sorgt fuer guenstigere Importe."),
+		TEXT("Energiepreiskrise verteuert die Produktion weltweit."),
+		TEXT("Stoerungen in globalen Lieferketten sorgen fuer Nervositaet."),
+	};
+}
+
+int64 FFM13World::LagerBestand() const
+{
+	int64 Summe = 0;
+	for (const FFM13Rohstoff& R : Rohstoffe) Summe += R.Lager;
+	return Summe;
+}
+
+// getHoldingValuation(): Grundwert 50.000 plus 80 % der Summe aus Kauf und Ausbau je Fabrik
+int64 FFM13World::HoldingWert() const
+{
+	double Investiert = 0.0;
+	for (const FFM13Fabrik& F : Fabriken) if (F.bBesitz) Investiert += (double)F.Kosten * (F.Stufe * (F.Stufe + 1) / 2.0);
+	return FM13Transfers::JsRunden(50000.0 + Investiert * 0.8);
+}
+
+bool FFM13World::KaufeFabrik(int32 Index, FString& OutReason)
+{
+	if (!Fabriken[Index].Name.Len()) { OutReason = TEXT("Diese Fabrik gibt es nicht."); return false; }
+	FFM13Fabrik& F = Fabriken[Index];
+	if (F.bBesitz) { OutReason = TEXT("Die Fabrik gehoert schon dem Verein."); return false; }
+	if (HoldingGeld < F.Kosten) { OutReason = FString::Printf(TEXT("Holding-Konto reicht nicht: %lld von %lld."), (long long)HoldingGeld, (long long)F.Kosten); return false; }
+	HoldingGeld -= F.Kosten;
+	F.bBesitz = true;
+	return true;
+}
+
+bool FFM13World::AusbaueFabrik(int32 Index, FString& OutReason)
+{
+	FFM13Fabrik& F = Fabriken[Index];
+	if (!F.bBesitz) { OutReason = TEXT("Die Fabrik gehoert dem Verein noch nicht."); return false; }
+	if (F.Stufe >= F.Max) { OutReason = TEXT("Maximalstufe erreicht."); return false; }
+	const int64 Kosten = F.Kosten * (F.Stufe + 1);
+	if (HoldingGeld < Kosten) { OutReason = FString::Printf(TEXT("Holding-Konto reicht nicht: %lld noetig."), (long long)Kosten); return false; }
+	HoldingGeld -= Kosten;
+	F.Stufe++;
+	return true;
+}
+
+// mergeFactoryWithCompetitor(): schwacher Konkurrent (Staerke unter 50), 1,5 mal Kosten, eine Stufe mehr
+bool FFM13World::FusioniereFabrik(int32 Index, FString& OutReason)
+{
+	FFM13Fabrik& F = Fabriken[Index];
+	if (!F.bBesitz) { OutReason = TEXT("Diese Fabrik gehoert dir noch nicht."); return false; }
+	const int32 Schwach = Konkurrenten.IndexOfByPredicate([](const FFM13Firma& K) { return K.Staerke < 50; });
+	if (Schwach < 0) { OutReason = TEXT("Aktuell kein fusionswilliger schwacher Konkurrent am Markt."); return false; }
+	const int64 Kosten = FM13Transfers::JsRunden((double)F.Kosten * 1.5);
+	if (HoldingGeld < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Holding-Kapital! Benoetigt: %lld"), (long long)Kosten); return false; }
+	HoldingGeld -= Kosten;
+	F.Stufe = FMath::Min(F.Max, F.Stufe + 1);
+	Konkurrenten.RemoveAt(Schwach);
+	return true;
+}
+
+int32 FFM13World::ProduktionsDauer(int32 Fabrik) const
+{
+	return FMath::Max(1, 4 - (int32)FMath::FloorToInt((Fabriken[Fabrik].Stufe - 1) * 0.7));   // Stufe 1: 4 Spieltage, Stufe 5: 1
+}
+
+bool FFM13World::StarteProduktion(int32 Ware, int32 Menge, FString& OutReason)
+{
+	if (!Waren.IsValidIndex(Ware)) { OutReason = TEXT("Dieses Produkt gibt es nicht."); return false; }
+	const FFM13Ware& W = Waren[Ware];
+	const FFM13Fabrik& F = Fabriken[W.Fabrik];
+	const int32 Bedarf = (int32)std::ceil(W.RohstoffMenge * Menge);   // kg, aufgerundet
+	if (!F.bBesitz) { OutReason = FString::Printf(TEXT("Dafuer fehlt die passende Fabrik: %s."), *F.Name); return false; }
+	if (Rohstoffe[W.Rohstoff].Lager < Bedarf) { OutReason = FString::Printf(TEXT("Zu wenig Rohstoff: %d kg am Lager, %d kg noetig."), Rohstoffe[W.Rohstoff].Lager, Bedarf); return false; }
+	Rohstoffe[W.Rohstoff].Lager -= Bedarf;
+	const int32 Dauer = ProduktionsDauer(W.Fabrik);
+	FFM13Produktion P;
+	P.Ware = Ware;
+	P.Menge = Menge;
+	P.TageRest = Dauer;
+	P.Dauer = Dauer;
+	Produktionen.Add(P);
+	return true;
+}
+
+void FFM13World::TickProduktion()
+{
+	for (int32 i = Produktionen.Num() - 1; i >= 0; --i)
+	{
+		FFM13Produktion& P = Produktionen[i];
+		P.TageRest--;
+		if (P.TageRest > 0) continue;
+		Waren[P.Ware].Lager += P.Menge;
+		AddMessage(TEXT("Produktion abgeschlossen"), FString::Printf(TEXT("%dx %s liegen jetzt im Lager bereit."), P.Menge, *Waren[P.Ware].Name));
+		Produktionen.RemoveAt(i);
+	}
+}
+
+bool FFM13World::KaufeRohstoff(int32 Rohstoff, int32 Menge, FString& OutReason)
+{
+	FFM13Rohstoff& R = Rohstoffe[Rohstoff];
+	const int64 Kosten = FM13Transfers::JsRunden(R.Preis * Menge);
+	if (LagerBestand() + Menge > LagerKapazitaet()) { OutReason = TEXT("Lagerkapazitaet erschoepft - bau das Zentrallager weiter aus."); return false; }
+	if (HoldingGeld < Kosten) { OutReason = TEXT("Nicht genug Geld auf dem Holding-Konto."); return false; }
+	HoldingGeld -= Kosten;
+	R.Lager += Menge;
+	return true;
+}
+
+bool FFM13World::AusbaueLager(FString& OutReason)
+{
+	if (Lagerstufe >= 5) { OutReason = TEXT("Zentrallager ist bereits voll ausgebaut."); return false; }
+	if (HoldingGeld < 30000) { OutReason = FString::Printf(TEXT("Holding-Konto reicht nicht: %lld von 30.000 noetig."), (long long)HoldingGeld); return false; }
+	HoldingGeld -= 30000;
+	Lagerstufe++;
+	return true;
+}
+
+// tickRawMaterialPrices(): 15 % Ereignis je Spieltag, dann Schwankung mit Ereignisrichtung
+void FFM13World::TickRohstoffPreise()
+{
+	if (RngIndustrie.FRand() < 0.15f)
+	{
+		const int32 Wahl = RngIndustrie.RandRange(0, 5);
+		RohstoffEreignis = MarktEreignisse[Wahl];
+		RohstoffEreignisBias = Wahl == 1 ? 1 : (Wahl == 2 ? -1 : 0);
+	}
+	for (int32 k = 0; k < 4; ++k)
+	{
+		FFM13Rohstoff& R = Rohstoffe[k];
+		const double Schwung = (RngIndustrie.FRand() - 0.5) * (R.BasisPreis * 0.08) + RohstoffEreignisBias * (R.BasisPreis * 0.03);
+		const double Neu = FMath::Max(R.MinPreis, FMath::Min(R.MaxPreis, R.Preis + Schwung));
+		const double Alt = R.Preis;
+		R.Delta = std::round((Neu - Alt) * 100.0) / 100.0;
+		R.Preis = std::round(Neu * 100.0) / 100.0;
+	}
+}
+
+// tickCompetitorFirms(): Staerke wandert, selten ein Uebernahmeangebot einer starken Firma
+void FFM13World::TickKonkurrenten()
+{
+	for (FFM13Firma& K : Konkurrenten)
+	{
+		K.Staerke = FMath::Clamp(K.Staerke + RngIndustrie.RandRange(-3, 3), 30, 95);
+		if (RngIndustrie.FRand() < 0.08f)
+		{
+			const TCHAR* Aktionen[4] = { TEXT("expandiert aggressiv"), TEXT("kaempft mit Lieferproblemen"), TEXT("senkt die Preise stark"), TEXT("meldet Rekordgewinne") };
+			K.LetzteAktion = Aktionen[RngIndustrie.RandRange(0, 3)];
+		}
+	}
+	const int32 Dominant = Konkurrenten.IndexOfByPredicate([](const FFM13Firma& K) { return K.Staerke >= 85; });
+	bool bFabrik = false;
+	for (const FFM13Fabrik& F : Fabriken) if (F.bBesitz) bFabrik = true;
+	if (Dominant >= 0 && bFabrik && Uebernahmen.Num() == 0 && RngIndustrie.FRand() < 0.05f)
+	{
+		FFM13Uebernahme U;
+		U.Firma = Konkurrenten[Dominant].Name;
+		U.Angebot = FM13Transfers::JsRunden((double)HoldingWert() * (1.1 + RngIndustrie.FRand() * 0.3));
+		U.GueltigBis = Matchday + 5;
+		Uebernahmen.Add(U);
+		AddMessage(FString::Printf(TEXT("Uebernahmeangebot von %s"), *U.Firma), FString::Printf(TEXT("%s bietet %lld fuer die komplette Holding. Gueltig fuer 5 Spieltage."), *U.Firma, (long long)U.Angebot));
+	}
+}
+
+void FFM13World::TickUebernahmeAblauf()
+{
+	Uebernahmen.RemoveAll([this](const FFM13Uebernahme& U) { return U.GueltigBis < Matchday; });
+}
+
+// Annehmen: Verkauf der Holding, alle Fabriken gehen weg, Holding-Konto und Lager bleiben
+bool FFM13World::AntworteUebernahme(bool bAnnehmen, FString& OutReason)
+{
+	if (Uebernahmen.Num() == 0) { OutReason = TEXT("Kein Angebot mehr offen."); return false; }
+	const FFM13Uebernahme U = Uebernahmen[0];
+	if (bAnnehmen)
+	{
+		Book(TEXT("Verkauf der Holding"), U.Angebot);
+		for (FFM13Fabrik& F : Fabriken) { F.bBesitz = false; F.Stufe = 1; }
+		AddMessage(TEXT("Holding verkauft"), FString::Printf(TEXT("Die Holding wurde fuer %lld an %s verkauft."), (long long)U.Angebot, *U.Firma));
+	}
+	Uebernahmen.RemoveAt(0);
+	return true;
+}
+
+bool FFM13World::ErfuelleB2B(int32 AuftragId, FString& OutReason)
+{
+	const int32 Idx = B2BAuftraege.IndexOfByPredicate([AuftragId](const FFM13B2BAuftrag& A) { return A.Id == AuftragId; });
+	if (Idx < 0 || B2BAuftraege[Idx].bErledigt) { OutReason = TEXT("Diesen Auftrag gibt es nicht mehr."); return false; }
+	const FFM13B2BAuftrag& A = B2BAuftraege[Idx];
+	if (Rohstoffe[A.Rohstoff].Lager < A.RohstoffMenge) { OutReason = FString::Printf(TEXT("Zu wenig Rohstoff: %d kg am Lager, %d kg noetig."), Rohstoffe[A.Rohstoff].Lager, A.RohstoffMenge); return false; }
+	Rohstoffe[A.Rohstoff].Lager -= A.RohstoffMenge;
+	HoldingGeld += A.Honorar;
+	B2BAuftraege[Idx].bErledigt = true;
+	return true;
+}
+
+// refreshB2BContracts(): Saisonstart, je eigener Fabrik ein Auftrag fuer ihr Produkt
+void FFM13World::ErneuereB2BAuftraege()
+{
+	B2BAuftraege.RemoveAll([](const FFM13B2BAuftrag& A) { return A.bErledigt; });
+	for (int32 k = 0; k < 4; ++k)
+	{
+		const FFM13Fabrik& F = Fabriken[k];
+		if (!F.bBesitz) continue;
+		if (B2BAuftraege.ContainsByPredicate([k](const FFM13B2BAuftrag& A) { return A.Fabrik == k; })) continue;
+		const int32 Menge = 400 + F.Stufe * 200;
+		FFM13B2BAuftrag A;
+		A.Id = NextB2BId++;
+		A.Fabrik = k;
+		A.Verein = InternationaleVereine[RngIndustrie.RandRange(0, 39)];
+		A.Artikel = F.Produkt;
+		A.Menge = Menge * 2;
+		A.Rohstoff = F.Rohstoff;
+		A.RohstoffMenge = Menge;
+		A.Honorar = FM13Transfers::JsRunden((double)Menge * Rohstoffe[F.Rohstoff].BasisPreis * 3.0 * (1.0 + 0.1 * F.Stufe) / 1000.0) * 1000;
+		B2BAuftraege.Add(A);
+	}
+}
+
+bool FFM13World::UeberweisungZurHolding(int64 Betrag, FString& OutReason)
+{
+	if (Money < Betrag) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld von %lld."), (long long)Money, (long long)Betrag); return false; }
+	Book(TEXT("Ueberweisung an die Holding"), -Betrag);
+	HoldingGeld += Betrag;
+	return true;
+}
+
+bool FFM13World::UeberweisungVonHolding(int64 Betrag, FString& OutReason)
+{
+	if (HoldingGeld < Betrag) { OutReason = FString::Printf(TEXT("Holding-Konto reicht nicht: %lld von %lld."), (long long)HoldingGeld, (long long)Betrag); return false; }
+	HoldingGeld -= Betrag;
+	Book(TEXT("Ueberweisung von der Holding"), Betrag);
+	return true;
 }

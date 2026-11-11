@@ -224,6 +224,7 @@ public:
 	void RefreshMarket();
 	void SetMarketTerms(FFM13MarketOffer& O);          // ensureTransferTerms(): Verkaeufer, Schmerzgrenze, Forderung
 	FRandomStream RngTransfer;                         // eigener Zufall fuer Transfers, damit der Rest gleich bleibt
+	FRandomStream RngIndustrie;                        // eigener Zufall fuer Rohstoffe, Konkurrenten, Holding-Auftraege
 	// Transferbudget und Wechselfenster (js/transfermarket.js, js/season-end.js)
 	int64 TransferBudget = 0;                          // game.transferBudget: Budget der Saison
 	bool bWinterWindowActive = false;                  // Winterfenster offen (game.winterWindowActive)
@@ -521,6 +522,85 @@ public:
 	FString RohstoffEreignis = TEXT("Stabile Weltmaerkte zu Saisonbeginn.");
 	void TickCommodityMarket();                       // jeden Spieltag, nach dem Spiel
 	void ResetOekonomieGrunddaten();                  // Rohstoffe und Immobilien auf den Startstand
+	// Holding und Industrie (js/industry.js, js/holding.js). Der Fanshop-Verkauf (js/merchandise.js) fehlt noch.
+	struct FFM13Fabrik
+	{
+		FString Name;
+		FString Produkt;
+		int32 Rohstoff = 0;        // Index in Rohstoffe
+		bool bBesitz = false;
+		int32 Stufe = 1;
+		int32 Max = 5;
+		int64 Kosten = 0;
+	};
+	FFM13Fabrik Fabriken[4];       // Textil, Strickerei, Leder, Spritzguss
+	int64 HoldingGeld = 50000;
+	int32 Lagerstufe = 1;          // Zentrallager, Kapazitaet je Stufe 2.000 kg
+	int64 LagerKapazitaet() const { return (int64)Lagerstufe * 2000; }
+	int64 LagerBestand() const;
+	struct FFM13B2BAuftrag
+	{
+		int32 Id = 0;
+		int32 Fabrik = 0;
+		FString Verein;
+		FString Artikel;
+		int32 Menge = 0;           // Stueck
+		int32 Rohstoff = 0;
+		int32 RohstoffMenge = 0;   // kg
+		int64 Honorar = 0;
+		bool bErledigt = false;
+	};
+	TArray<FFM13B2BAuftrag> B2BAuftraege;
+	int32 NextB2BId = 1;
+	struct FFM13Ware
+	{
+		FString Name;
+		int32 Lager = 0;           // Stueck
+		int32 Rohstoff = 0;
+		double RohstoffMenge = 0;  // kg je Stueck
+		int32 Fabrik = 0;
+	};
+	TArray<FFM13Ware> Waren;
+	struct FFM13Produktion
+	{
+		int32 Ware = 0;
+		int32 Menge = 0;
+		int32 TageRest = 0;
+		int32 Dauer = 0;
+	};
+	TArray<FFM13Produktion> Produktionen;
+	struct FFM13Firma
+	{
+		FString Name;
+		int32 Staerke = 60;
+		FString LetzteAktion;
+	};
+	TArray<FFM13Firma> Konkurrenten;
+	struct FFM13Uebernahme
+	{
+		FString Firma;
+		int64 Angebot = 0;
+		int32 GueltigBis = 0;
+	};
+	TArray<FFM13Uebernahme> Uebernahmen;
+	int32 RohstoffEreignisBias = 0;   // +1 Knappheit, -1 Ueberangebot, 0 sonst (Preisrichtung nach dem Ereignis)
+	int64 HoldingWert() const;        // getHoldingValuation()
+	bool KaufeFabrik(int32 Index, FString& OutReason);
+	bool AusbaueFabrik(int32 Index, FString& OutReason);
+	bool FusioniereFabrik(int32 Index, FString& OutReason);
+	int32 ProduktionsDauer(int32 Fabrik) const;
+	bool StarteProduktion(int32 Ware, int32 Menge, FString& OutReason);
+	void TickProduktion();                             // jeden Spieltag: Countdown, Lager wird aufgefuellt
+	bool KaufeRohstoff(int32 Rohstoff, int32 Menge, FString& OutReason);
+	bool AusbaueLager(FString& OutReason);
+	void TickRohstoffPreise();                         // jeden Spieltag, vor der Rohstoffboerse
+	void TickKonkurrenten();                           // jeden Spieltag
+	void TickUebernahmeAblauf();
+	bool AntworteUebernahme(bool bAnnehmen, FString& OutReason);
+	bool ErfuelleB2B(int32 AuftragId, FString& OutReason);
+	void ErneuereB2BAuftraege();                       // Saisonstart: je eigener Fabrik ein Auftrag
+	bool UeberweisungZurHolding(int64 Betrag, FString& OutReason);
+	bool UeberweisungVonHolding(int64 Betrag, FString& OutReason);
 	// Immobilien-Portfolio (js/real-estate.js): sechs Objekte, je bis Stufe drei, Miete je Spieltag
 	struct FFM13Immobilie
 	{

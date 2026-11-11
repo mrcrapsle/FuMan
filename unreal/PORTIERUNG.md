@@ -151,9 +151,9 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `sponsors.js` | 835 | teilweise | Sponsoren | Hauptsponsor mit drei Angeboten (Runde A); Ärmel, Ausrüster, Banden offen |
 | `sponsor-renewal.js` | 99 | teilweise | Sponsorverlängerung | Angebote 4 Spieltage vor Vertragsende (Runde A) |
 | `merchandise.js` | 418 | offen | 3-KANAL FANSHOP VERTRIEB |  |
-| `industry.js` | 332 | offen | Lange Liste: Karten zuklappen (js/abschnitte.js) |  |
+| `industry.js` | 332 | teilweise | Lange Liste: Karten zuklappen (js/abschnitte.js) |  |
 | `commodities.js` | 41 | portiert | DYNAMISCHE ROHSTOFF-BÖRSE (ENGINE) |  |
-| `holding.js` | 103 | teilweise | Betriebswert der Holding: Grundwert plus 80 % der in Fabriken gesteckten Summe (Kauf |  |
+| `holding.js` | 103 | portiert | Betriebswert der Holding: Grundwert plus 80 % der in Fabriken gesteckten Summe (Kauf |  |
 | `stocks.js` | 292 | offen | AKTIENMARKT: ECHTE KURSBEWEGUNG, EVENTS & 3D-CHART |  |
 | `betting.js` | 227 | offen | WETTBÜRO: FIKTIVER BUCHMACHER MIT ECHTEN QUOTEN |  |
 | `real-estate.js` | 114 | portiert | Immobilien-Portfolio |  |

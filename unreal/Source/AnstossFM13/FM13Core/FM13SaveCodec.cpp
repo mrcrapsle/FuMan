@@ -439,6 +439,48 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.Field(TEXT("rngIndustrieSeed"), (int64)S.RngIndustrie.GetCurrentSeed());
+		W.Field(TEXT("holdingGeld"), S.HoldingGeld);
+		W.Field(TEXT("lagerstufe"), S.Lagerstufe);
+		W.Field(TEXT("nextB2B"), S.NextB2BId);
+		W.Field(TEXT("rohBias"), S.RohstoffEreignisBias);
+		W.Field(TEXT("rohL0"), S.Rohstoffe[0].Lager); W.Field(TEXT("rohL1"), S.Rohstoffe[1].Lager);
+		W.Field(TEXT("rohL2"), S.Rohstoffe[2].Lager); W.Field(TEXT("rohL3"), S.Rohstoffe[3].Lager);
+		W.FieldBool(TEXT("fab0"), S.Fabriken[0].bBesitz); W.Field(TEXT("fabL0"), S.Fabriken[0].Stufe);
+		W.FieldBool(TEXT("fab1"), S.Fabriken[1].bBesitz); W.Field(TEXT("fabL1"), S.Fabriken[1].Stufe);
+		W.FieldBool(TEXT("fab2"), S.Fabriken[2].bBesitz); W.Field(TEXT("fabL2"), S.Fabriken[2].Stufe);
+		W.FieldBool(TEXT("fab3"), S.Fabriken[3].bBesitz); W.Field(TEXT("fabL3"), S.Fabriken[3].Stufe);
+		W.ArrayKey(TEXT("b2b"));
+		for (const FFM13World::FFM13B2BAuftrag& A : S.B2BAuftraege)
+		{
+			W.ElementObject();
+			W.Field(TEXT("id"), A.Id); W.Field(TEXT("fabrik"), A.Fabrik); W.Field(TEXT("verein"), A.Verein);
+			W.Field(TEXT("artikel"), A.Artikel); W.Field(TEXT("menge"), A.Menge); W.Field(TEXT("rohstoff"), A.Rohstoff);
+			W.Field(TEXT("rohMenge"), A.RohstoffMenge); W.Field(TEXT("honorar"), A.Honorar); W.FieldBool(TEXT("erledigt"), A.bErledigt);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("waren"));
+		for (const FFM13World::FFM13Ware& Wa : S.Waren) { W.ElementObject(); W.Field(TEXT("lager"), Wa.Lager); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("produktion"));
+		for (const FFM13World::FFM13Produktion& P : S.Produktionen)
+		{
+			W.ElementObject(); W.Field(TEXT("ware"), P.Ware); W.Field(TEXT("menge"), P.Menge); W.Field(TEXT("tage"), P.TageRest); W.Field(TEXT("dauer"), P.Dauer); W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("konkurrenten"));
+		for (const FFM13World::FFM13Firma& K : S.Konkurrenten)
+		{
+			W.ElementObject(); W.Field(TEXT("name"), K.Name); W.Field(TEXT("staerke"), K.Staerke); W.Field(TEXT("aktion"), K.LetzteAktion); W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("uebernahmen"));
+		for (const FFM13World::FFM13Uebernahme& U : S.Uebernahmen)
+		{
+			W.ElementObject(); W.Field(TEXT("firma"), U.Firma); W.Field(TEXT("angebot"), U.Angebot); W.Field(TEXT("bis"), U.GueltigBis); W.EndObject();
+		}
+		W.EndArray();
 		W.Field(TEXT("rohP0"), (int64)FMath::RoundToInt64(S.Rohstoffe[0].Preis * 1000000.0)); W.Field(TEXT("rohD0"), (int64)FMath::RoundToInt64(S.Rohstoffe[0].Delta * 1000000.0));
 		W.Field(TEXT("rohP1"), (int64)FMath::RoundToInt64(S.Rohstoffe[1].Preis * 1000000.0)); W.Field(TEXT("rohD1"), (int64)FMath::RoundToInt64(S.Rohstoffe[1].Delta * 1000000.0));
 		W.Field(TEXT("rohP2"), (int64)FMath::RoundToInt64(S.Rohstoffe[2].Preis * 1000000.0)); W.Field(TEXT("rohD2"), (int64)FMath::RoundToInt64(S.Rohstoffe[2].Delta * 1000000.0));
@@ -1097,6 +1139,61 @@ namespace FM13Save
 		}
 		W.ResetOekonomieGrunddaten();
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		W.RngIndustrie.Initialize((int32)R.Int(Root, TEXT("rngIndustrieSeed"), 1));
+		W.HoldingGeld = R.Int(Root, TEXT("holdingGeld"), 50000);
+		W.Lagerstufe = (int32)R.Int(Root, TEXT("lagerstufe"), 1);
+		W.NextB2BId = (int32)R.Int(Root, TEXT("nextB2B"), 4);
+		W.RohstoffEreignisBias = (int32)R.Int(Root, TEXT("rohBias"), 0);
+		W.Rohstoffe[0].Lager = (int32)R.Int(Root, TEXT("rohL0"), 0); W.Rohstoffe[1].Lager = (int32)R.Int(Root, TEXT("rohL1"), 0);
+		W.Rohstoffe[2].Lager = (int32)R.Int(Root, TEXT("rohL2"), 0); W.Rohstoffe[3].Lager = (int32)R.Int(Root, TEXT("rohL3"), 0);
+		const TCHAR* FabBesitz[4] = { TEXT("fab0"), TEXT("fab1"), TEXT("fab2"), TEXT("fab3") };
+		const TCHAR* FabStufe[4] = { TEXT("fabL0"), TEXT("fabL1"), TEXT("fabL2"), TEXT("fabL3") };
+		for (int32 k = 0; k < 4; ++k)
+		{
+			W.Fabriken[k].bBesitz = R.Bool(Root, FabBesitz[k], false);
+			W.Fabriken[k].Stufe = (int32)R.Int(Root, FabStufe[k], 1);
+		}
+		W.B2BAuftraege.Reset();
+		for (int32 N : R.Items(Root, TEXT("b2b")))
+		{
+			FFM13World::FFM13B2BAuftrag A;
+			A.Id = (int32)R.Int(N, TEXT("id"), 0); A.Fabrik = (int32)R.Int(N, TEXT("fabrik"), -1);
+			A.Verein = R.Str(N, TEXT("verein"), TEXT("")); A.Artikel = R.Str(N, TEXT("artikel"), TEXT(""));
+			A.Menge = (int32)R.Int(N, TEXT("menge"), 0); A.Rohstoff = (int32)R.Int(N, TEXT("rohstoff"), 0);
+			A.RohstoffMenge = (int32)R.Int(N, TEXT("rohMenge"), 0); A.Honorar = R.Int(N, TEXT("honorar"), 0);
+			A.bErledigt = R.Bool(N, TEXT("erledigt"), false);
+			W.B2BAuftraege.Add(A);
+		}
+		{
+			int32 Index = 0;
+			for (int32 N : R.Items(Root, TEXT("waren")))
+			{
+				if (W.Waren.IsValidIndex(Index)) W.Waren[Index].Lager = (int32)R.Int(N, TEXT("lager"), 0);
+				++Index;
+			}
+		}
+		W.Produktionen.Reset();
+		for (int32 N : R.Items(Root, TEXT("produktion")))
+		{
+			FFM13World::FFM13Produktion Pr;
+			Pr.Ware = (int32)R.Int(N, TEXT("ware"), 0); Pr.Menge = (int32)R.Int(N, TEXT("menge"), 0);
+			Pr.TageRest = (int32)R.Int(N, TEXT("tage"), 0); Pr.Dauer = (int32)R.Int(N, TEXT("dauer"), 0);
+			W.Produktionen.Add(Pr);
+		}
+		W.Konkurrenten.Reset();
+		for (int32 N : R.Items(Root, TEXT("konkurrenten")))
+		{
+			FFM13World::FFM13Firma K;
+			K.Name = R.Str(N, TEXT("name"), TEXT("")); K.Staerke = (int32)R.Int(N, TEXT("staerke"), 60); K.LetzteAktion = R.Str(N, TEXT("aktion"), TEXT(""));
+			W.Konkurrenten.Add(K);
+		}
+		W.Uebernahmen.Reset();
+		for (int32 N : R.Items(Root, TEXT("uebernahmen")))
+		{
+			FFM13World::FFM13Uebernahme U;
+			U.Firma = R.Str(N, TEXT("firma"), TEXT("")); U.Angebot = R.Int(N, TEXT("angebot"), 0); U.GueltigBis = (int32)R.Int(N, TEXT("bis"), 0);
+			W.Uebernahmen.Add(U);
+		}
 		W.Rohstoffe[0].Preis = (double)R.Int(Root, TEXT("rohP0"), (int64)((W.Rohstoffe[0].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[0].Delta = (double)R.Int(Root, TEXT("rohD0"), (int64)((0.0) * 1000000.0)) / 1000000.0;
 		W.Rohstoffe[1].Preis = (double)R.Int(Root, TEXT("rohP1"), (int64)((W.Rohstoffe[1].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[1].Delta = (double)R.Int(Root, TEXT("rohD1"), (int64)((0.0) * 1000000.0)) / 1000000.0;
 		W.Rohstoffe[2].Preis = (double)R.Int(Root, TEXT("rohP2"), (int64)((W.Rohstoffe[2].Preis) * 1000000.0)) / 1000000.0; W.Rohstoffe[2].Delta = (double)R.Int(Root, TEXT("rohD2"), (int64)((0.0) * 1000000.0)) / 1000000.0;
