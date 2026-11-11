@@ -37,7 +37,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `leagues.js` | 425 | portiert | 6 Ligen, Spielplan, Auf- und Abstieg | FM13League, FM13World::AdvanceLeagues |
 | `match.js` | 632 | teilweise | Spieltag-Ablauf, Teamstärke | calcTeamStrength 1:1 (FM13Strength, 60 Vergleichsfälle gegen das Browserspiel), Heimvorteil der KI, Eingespieltheit. Neutral bis zum Port: Kabine, Unterwelt, Fan-Aktionen, Team-Anweisungen, Trainingslager, Spielerrollen, Zweikampfhärte bei Karten und Verletzungen |
 | `match-post.js` | 567 | teilweise | Vorstand, Entlassung | CheckJobSecurity, CheckSeasonEndSacking (Pressestimmen offen) |
-| `season-end.js` | 601 | teilweise | Saisonende, Budgets | ConcludeSeason, PlanSeason (vereinfacht) |
+| `season-end.js` | 601 | teilweise | Saisonende, Budgets | ConcludeSeason, PlanSeason mit Liga-Budget, Platzfaktor, Untergrenze, Abstiegsklausel, Rücklagen und Aufstiegsbudget (halbes Liga-Transferbudget, Schub für die nächste Saison). Offen: Eigengehalt des Managers (gehört zum Privatleben und braucht die Ausgabenbuchung) |
 | `save.js` | 663 | portiert | Spielstand | FM13SaveCodec, Autosave, Slots |
 | `save-safety.js` | 297 | portiert | Sicheres Speichern und Laden | Prüfen vor dem Übernehmen, Zwischendatei, .bak |
 | `inbox.js` | 261 | portiert | Postfach | Messages, Postfach-Seite |

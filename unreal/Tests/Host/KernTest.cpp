@@ -1464,6 +1464,17 @@ static void TestVertragsgespraech()
 	PRUEFE(bOk, "Gegenangebot wirkt oder bricht nach zwei Absagen ab");
 }
 
+static void TestAufstiegsbudget()
+{
+	std::printf("Aufstiegsbudget: halbes Liga-Transferbudget\n");
+	FFM13World W;
+	W.NewGame(TEXT("Aufstieg"), 141, 0);
+	W.LeagueLevel = 0;
+	PRUEFE(W.PromotionTransferBonus() == 12500000, "Bundesliga: 12,5 Mio. Aufstiegsbudget (%lld)", (long long)W.PromotionTransferBonus());
+	W.LeagueLevel = 1;
+	PRUEFE(W.PromotionTransferBonus() == 1500000, "2. Liga: 1,5 Mio. Aufstiegsbudget (%lld)", (long long)W.PromotionTransferBonus());
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2646,6 +2657,7 @@ int main()
 	TestKredite();
 	TestFestgeld();
 	TestVertragsgespraech();
+	TestAufstiegsbudget();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

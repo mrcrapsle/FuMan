@@ -689,7 +689,13 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	Matchday = 1;
 	OwnSeasonGoals.Reset();
 	Stress = (int32)FMath::RoundToInt((float)Stress / 2.f + 0.001f); // Sommerpause halbiert den Stress
-	if (Outcome == EFM13SeasonOutcome::Promoted) { PromotionBoostLevel = LeagueLevel; PromotionBoostSeason = Season; } // js/promotion-boost.js
+	if (Outcome == EFM13SeasonOutcome::Promoted)
+	{
+		// markPromotionBoost(): nach dem Saisonende gilt der Schub fuer die naechste Saison (Season + 1), dazu das Aufstiegsbudget
+		PromotionBoostLevel = LeagueLevel;
+		PromotionBoostSeason = Season + 1;
+		TransferBudget += PromotionTransferBonus();
+	}
 	for (FFM13League& L : Leagues)
 	{
 		L.ResetStats();
@@ -1720,6 +1726,12 @@ int32 FFM13World::TeamStrength(bool bHome) const
 double FFM13World::OwnCupStrength(bool bHome) const
 {
 	return TeamStrength(bHome) + (FM13Tactics::Formation(Formation).Def - 60) * 0.04 * 0.6;
+}
+
+int64 FFM13World::PromotionTransferBonus() const
+{
+	// PROMOTION_BUDGET_SHARE = 0,5 vom Liga-Transferbudget, auf 1.000 gerundet (promotion-boost.js)
+	return FM13Transfers::JsRunden((double)LeagueTransferBudget(LeagueLevel) * 0.5 / 1000.0) * 1000;
 }
 
 double FFM13World::PromotionEuphoria() const

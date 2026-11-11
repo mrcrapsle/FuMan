@@ -159,6 +159,7 @@ public:
 	double OwnMatchStrengthExact(TCHAR OppArchetype, bool bHome) const; // Ligaspiel: getOwnLeagueMatchStrength() plus Ansprache
 	double OwnCupStrength(bool bHome) const;        // Pokal, Europapokal, Relegation
 	double PromotionEuphoria() const;
+	int64 PromotionTransferBonus() const;   // getPromotionTransferBonus(): halbes Liga-Transferbudget
 	int32 LineupChemistry() const;                  // Eingespieltheit der Elf: 0 bis 3
 	EFM13Playstyle OwnPlaystyle() const;
 	TArray<FString> RecentStyles;           // Spielstile der letzten Ligaspiele (für die Gegner-Analyse)
