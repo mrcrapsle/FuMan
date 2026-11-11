@@ -198,6 +198,8 @@ bool FFM13World::PlayMatchday()
 		}
 	}
 
+	for (FFM13Player& P : Squad) CheckMatchdayBonusClauses(P);
+
 	// TV-Geld in Raten nach dem laufenden Tabellenplatz (applyMatchdayFinances im Browserspiel)
 	const int64 Rate = FM13Economy::TvMoney(LeagueLevel, OwnRank()) / FM13::MatchdaysPerSeason;
 	if (Rate > 0)
@@ -633,6 +635,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	AgeAiStars();
 	AdvanceLeagues(Rank, Outcome);
 	ApplyPendingFfpPointDeduction();
+	if (Outcome == EFM13SeasonOutcome::Promoted) TriggerPromotionBonusClauses();
 	// Transferbudget der neuen Saison: Liga-Budget x Platzierungsfaktor (season-end.js)
 	const double Platzfaktor = Rank <= 4 ? 1.3 : (Rank <= 10 ? 1.0 : 0.8);
 	TransferBudget = FM13Transfers::JsRunden((double)LeagueTransferBudget(LeagueLevel) * Platzfaktor / 1000.0) * 1000;
@@ -756,6 +759,7 @@ void FFM13World::DevelopPlayers(FFM13SeasonSummary& S)
 		P.MarketValue = FM13Economy::MarketValue(P.Strength, &Rng);
 		P.GoalsCareer += P.GoalsSeason;
 		P.GoalsSeason = 0;
+		for (bool& B : P.bBonusBezahlt) B = false;   // ensureBonusClauseFields: neue Saison, neue Auszahlung
 		P.Fitness = 100; // Sommerpause, js/season-end.js
 		P.AssistsCareer += P.Assists;
 		P.Assists = 0;
@@ -4378,4 +4382,71 @@ void FFM13World::ApplyPendingFfpPointDeduction()
 	if (Leagues.IsValidIndex(LeagueLevel))
 		for (FFM13Club& C : Leagues[LeagueLevel].Clubs) if (C.bOwn) C.PointDeduction += PendingFfpDeduction;
 	PendingFfpDeduction = 0;
+}
+
+// ---------- Erfolgsbasierte Vertragsboni (js/bonusclauses.js) ----------
+
+namespace
+{
+	const TCHAR* BonusNamen[3] = { TEXT("Torbonus"), TEXT("Einsatzbonus"), TEXT("Aufstiegsbonus") };
+}
+
+// Mindestbetrag: Tor 1,2 %, Einsatz 0,7 %, Aufstieg 2 % des Marktwerts (jeweils mit Untergrenze)
+int64 FFM13World::BonusMindest(const FFM13Player& P, int32 Typ)
+{
+	switch (Typ)
+	{
+		case 0: return FMath::Max<int64>(500, FM13Transfers::JsRunden((double)P.MarketValue * 0.012));
+		case 1: return FMath::Max<int64>(300, FM13Transfers::JsRunden((double)P.MarketValue * 0.007));
+		default: return FMath::Max<int64>(1000, FM13Transfers::JsRunden((double)P.MarketValue * 0.02));
+	}
+}
+
+bool FFM13World::SetBonusClause(int32 PlayerId, int32 Typ, int32 Schwelle, int64 Betrag, FString& OutReason)
+{
+	if (Typ < 0 || Typ > 2) { OutReason = TEXT("Unbekannte Klausel."); return false; }
+	FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	if (Typ != 2 && Schwelle <= 0) { OutReason = TEXT("Bitte eine gueltige Schwelle angeben."); return false; }
+	if (Betrag <= 0) { OutReason = TEXT("Bitte einen gueltigen Bonusbetrag angeben."); return false; }
+	const int64 Mindest = BonusMindest(*P, Typ);
+	if (Betrag < Mindest) { OutReason = FString::Printf(TEXT("%s verlangt fuer diese Klausel mindestens %lld."), *P->Name, (long long)Mindest); return false; }
+	P->Bonus[Typ].bAktiv = true;
+	P->Bonus[Typ].Schwelle = Typ == 2 ? 0 : Schwelle;
+	P->Bonus[Typ].Betrag = Betrag;
+	P->bBonusBezahlt[Typ] = false;   // eine neue Klausel ist noch nicht eingeloest
+	P->Morale = FMath::Min(100, P->Morale + 3);
+	return true;
+}
+
+bool FFM13World::RemoveBonusClause(int32 PlayerId, int32 Typ, FString& OutReason)
+{
+	FFM13Player* P = FindPlayer(PlayerId);
+	if (!P || Typ < 0 || Typ > 2) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	P->Bonus[Typ] = FFM13Player::FFM13BonusKlausel();
+	return true;
+}
+
+// payOutBonusClause(): bucht ueber den Kontoauszug, die Beraterprovision kommt dazu
+void FFM13World::PayOutBonusClause(FFM13Player& P, int32 Typ)
+{
+	if (!P.Bonus[Typ].bAktiv || P.bBonusBezahlt[Typ]) return;
+	P.bBonusBezahlt[Typ] = true;
+	const int64 Provision = AgentFee(P, P.Bonus[Typ].Betrag);
+	Book(FString::Printf(TEXT("%s: %s"), BonusNamen[Typ], *P.Name), -(P.Bonus[Typ].Betrag + Provision));
+	AddMessage(FString::Printf(TEXT("%s ausgezahlt: %s"), BonusNamen[Typ], *P.Name),
+		FString::Printf(TEXT("%s hat die vereinbarte Bonusklausel erreicht - %lld werden ausgezahlt%s."), *P.Name, (long long)P.Bonus[Typ].Betrag,
+			Provision > 0 ? *FString::Printf(TEXT(" (zzgl. %lld Beraterprovision)"), (long long)Provision) : TEXT("")));
+}
+
+// checkMatchdayBonusClauses(): Tore und Einsaetze der Saison, Aufstieg kommt separat
+void FFM13World::CheckMatchdayBonusClauses(FFM13Player& P)
+{
+	if (P.Bonus[0].bAktiv && !P.bBonusBezahlt[0] && P.GoalsSeason >= P.Bonus[0].Schwelle) PayOutBonusClause(P, 0);
+	if (P.Bonus[1].bAktiv && !P.bBonusBezahlt[1] && P.Appearances >= P.Bonus[1].Schwelle) PayOutBonusClause(P, 1);
+}
+
+void FFM13World::TriggerPromotionBonusClauses()
+{
+	for (FFM13Player& P : Squad) if (P.Bonus[2].bAktiv) PayOutBonusClause(P, 2);
 }

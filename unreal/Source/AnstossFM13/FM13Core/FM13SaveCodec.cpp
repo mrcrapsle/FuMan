@@ -88,6 +88,9 @@ namespace
 		W.Field(TEXT("preOfferDeadline"), P.PreOfferDeadline);
 		W.Field(TEXT("preSignedClub"), P.PreSignedClub);
 		W.FieldBool(TEXT("hasAgent"), P.bHasAgent);
+		W.FieldBool(TEXT("bon0a"), P.Bonus[0].bAktiv); W.Field(TEXT("bon0t"), P.Bonus[0].Schwelle); W.Field(TEXT("bon0b"), P.Bonus[0].Betrag); W.FieldBool(TEXT("bon0p"), P.bBonusBezahlt[0]);
+		W.FieldBool(TEXT("bon1a"), P.Bonus[1].bAktiv); W.Field(TEXT("bon1t"), P.Bonus[1].Schwelle); W.Field(TEXT("bon1b"), P.Bonus[1].Betrag); W.FieldBool(TEXT("bon1p"), P.bBonusBezahlt[1]);
+		W.FieldBool(TEXT("bon2a"), P.Bonus[2].bAktiv); W.Field(TEXT("bon2t"), P.Bonus[2].Schwelle); W.Field(TEXT("bon2b"), P.Bonus[2].Betrag); W.FieldBool(TEXT("bon2p"), P.bBonusBezahlt[2]);
 		W.Field(TEXT("agentIndex"), (int64)P.AgentIndex);
 		W.Field(TEXT("agentFeeMicro"), (int64)FMath::RoundToInt64(P.AgentFeePct * 1000000.0));
 		W.Field(TEXT("apps"), P.Appearances);
@@ -703,6 +706,9 @@ namespace
 		P.PreOfferDeadline = (int32)R.Int(Obj, TEXT("preOfferDeadline"), 0);
 		P.PreSignedClub = R.Str(Obj, TEXT("preSignedClub"), TEXT(""));
 		P.bHasAgent = R.Bool(Obj, TEXT("hasAgent"), false);
+		P.Bonus[0].bAktiv = R.Bool(Obj, TEXT("bon0a"), false); P.Bonus[0].Schwelle = (int32)R.Int(Obj, TEXT("bon0t"), 0); P.Bonus[0].Betrag = R.Int(Obj, TEXT("bon0b"), 0); P.bBonusBezahlt[0] = R.Bool(Obj, TEXT("bon0p"), false);
+		P.Bonus[1].bAktiv = R.Bool(Obj, TEXT("bon1a"), false); P.Bonus[1].Schwelle = (int32)R.Int(Obj, TEXT("bon1t"), 0); P.Bonus[1].Betrag = R.Int(Obj, TEXT("bon1b"), 0); P.bBonusBezahlt[1] = R.Bool(Obj, TEXT("bon1p"), false);
+		P.Bonus[2].bAktiv = R.Bool(Obj, TEXT("bon2a"), false); P.Bonus[2].Schwelle = (int32)R.Int(Obj, TEXT("bon2t"), 0); P.Bonus[2].Betrag = R.Int(Obj, TEXT("bon2b"), 0); P.bBonusBezahlt[2] = R.Bool(Obj, TEXT("bon2p"), false);
 		P.AgentIndex = (uint8)R.Int(Obj, TEXT("agentIndex"), 0);
 		P.AgentFeePct = (double)R.Int(Obj, TEXT("agentFeeMicro"), 0) / 1000000.0;
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);

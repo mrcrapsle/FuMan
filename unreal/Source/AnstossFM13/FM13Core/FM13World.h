@@ -404,6 +404,13 @@ public:
 	int64 FfpAllowedLossPerSeason() const;           // 20 % der Liga-Basis der TV-Gelder
 	void EvaluateFinancialFairplay();                // Saisonende, vor Season++
 	void ApplyPendingFfpPointDeduction();            // nach dem Tabellen-Neustart
+	// Erfolgsbasierte Vertragsboni (js/bonusclauses.js)
+	static int64 BonusMindest(const FFM13Player& P, int32 Typ);   // Mindestbetrag je Marktwert
+	bool SetBonusClause(int32 PlayerId, int32 Typ, int32 Schwelle, int64 Betrag, FString& OutReason);
+	bool RemoveBonusClause(int32 PlayerId, int32 Typ, FString& OutReason);
+	void PayOutBonusClause(FFM13Player& P, int32 Typ);            // Konto, Beraterprovision, hoechstens einmal je Saison
+	void CheckMatchdayBonusClauses(FFM13Player& P);               // nach jedem Spieltag: Tore und Einsaetze
+	void TriggerPromotionBonusClauses();                          // bei vollzogenem Aufstieg
 	void ResolveTransferStrategy(int32 FinalRank);    // Saisonende, vor der Vorstandsversammlung
 	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
 	struct FFM13Rumor

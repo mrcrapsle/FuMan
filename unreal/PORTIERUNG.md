@@ -108,7 +108,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `contracts.js` | 296 | teilweise | Verträge | Verlängern (Verhandlung offen) |
 | `contract-tools.js` | 222 | offen | VERTRAGS- UND TRANSFER-WERKZEUGE (Phase 26.2): Gehalts-Ampel, Verlängerungs-Assistent, |  |
 | `contract-ultimatum.js` | 222 | offen | (aus match.js ausgelagert - reine Datei-Organisation, keine Verhaltensänderung) |  |
-| `bonusclauses.js` | 140 | offen | ERFOLGSBASIERTE VERTRAGSBONI |  |
+| `bonusclauses.js` | 140 | portiert | ERFOLGSBASIERTE VERTRAGSBONI |  |
 | `pro-loans.js` | 74 | offen | Profis verleihen (Phase 25.20): bisher ließen sich nur Spieler der zweiten Mannschaft und  |  |
 | `secondteam.js` | 919 | offen | ZWEITE MANNSCHAFT: eigenständiger Klub, der parallel zur ersten Mannschaft ganz |  |
 | `women-team.js` | 388 | offen | Frauenmannschaft: eigenes Team mit Kader, eigener Liga (12 Teams, 22 Spieltage parallel zu |  |

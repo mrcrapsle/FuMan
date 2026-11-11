@@ -1855,6 +1855,53 @@ static void TestMedizincheck()
 	FFM13World FLd;
 	FString FFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(FSave), FLd, FFehler) && FLd.FfpStrikes == FSave.FfpStrikes && FLd.FfpHistory.Num() == FSave.FfpHistory.Num() && FLd.bFfpEmbargo == FSave.bFfpEmbargo, "FFP bleibt im Spielstand (%s)", *FFehler);
+	// Erfolgsbasierte Vertragsboni (js/bonusclauses.js)
+	FFM13World BO;
+	BO.NewGame(TEXT("Boni"), 163, 0);
+	BO.Money = 500000000;
+	FFM13Player& BP = BO.Squad[0];
+	BP.MarketValue = 10000000;
+	BP.bHasAgent = false;
+	const int32 BId = BP.Id;
+	FString BonGrund;
+	PRUEFE(BO.BonusMindest(BP, 0) == 120000 && BO.BonusMindest(BP, 1) == 70000 && BO.BonusMindest(BP, 2) == 200000, "Boni: Mindestbetrag je Marktwert (1,2 / 0,7 / 2 Prozent)");
+	PRUEFE(!BO.SetBonusClause(BId, 0, 5, 1000, BonGrund) && BonGrund.Contains(TEXT("mindestens")), "Boni: zu niedriger Betrag abgelehnt");
+	const int32 BMoral = BP.Morale;
+	PRUEFE(BO.SetBonusClause(BId, 0, 5, 120000, BonGrund) && BO.FindPlayer(BId)->Morale == FMath::Min(100, BMoral + 3), "Boni: Torbonus vereinbart, Moral +3");
+	// Tore erreicht: Auszahlung einmal, danach nicht mehr
+	FFM13Player* BPt = BO.FindPlayer(BId);
+	BPt->GoalsSeason = 5;
+	const int64 BonGeld = BO.Money;
+	BO.CheckMatchdayBonusClauses(*BPt);
+	PRUEFE(BO.Money == BonGeld - 120000 && BO.FindPlayer(BId)->bBonusBezahlt[0], "Boni: Torbonus bei 5 Toren ausgezahlt");
+	BO.CheckMatchdayBonusClauses(*BO.FindPlayer(BId));
+	PRUEFE(BO.Money == BonGeld - 120000, "Boni: nicht zweimal in einer Saison");
+	// Beraterprovision kommt dazu
+	FFM13World BA;
+	BA.NewGame(TEXT("BoniBerater"), 164, 0);
+	BA.Money = 500000000;
+	FFM13Player& BAP = BA.Squad[0];
+	BAP.MarketValue = 10000000;
+	BAP.bHasAgent = true; BAP.AgentFeePct = 0.1; BAP.AgentIndex = 0;
+	const int32 BAId = BAP.Id;
+	BA.SetBonusClause(BAId, 1, 10, 100000, BonGrund);
+	BA.FindPlayer(BAId)->Appearances = 10;
+	const int64 BAGeld = BA.Money;
+	BA.CheckMatchdayBonusClauses(*BA.FindPlayer(BAId));
+	PRUEFE(BA.Money == BAGeld - 110000, "Boni: Einsatzbonus zuzueglich zehn Prozent Beraterprovision");
+	// Aufstiegsbonus
+	BO.SetBonusClause(BId, 2, 0, 200000, BonGrund);
+	const int64 BAufGeld = BO.Money;
+	BO.TriggerPromotionBonusClauses();
+	PRUEFE(BO.Money == BAufGeld - 200000 && BO.FindPlayer(BId)->bBonusBezahlt[2], "Boni: Aufstiegsbonus bei vollzogenem Aufstieg");
+	// Klausel entfernen zahlt nichts mehr
+	BO.RemoveBonusClause(BId, 2, BonGrund);
+	PRUEFE(!BO.FindPlayer(BId)->Bonus[2].bAktiv, "Boni: Klausel entfernt");
+	// Spielstand
+	FFM13World BSaveW = BO;
+	FFM13World BLdW;
+	FString BonFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(BSaveW), BLdW, BonFehler) && BLdW.FindPlayer(BId)->Bonus[0].Betrag == 120000 && BLdW.FindPlayer(BId)->bBonusBezahlt[0], "Boni bleiben im Spielstand (%s)", *BonFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);
