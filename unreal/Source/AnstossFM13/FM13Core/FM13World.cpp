@@ -297,7 +297,8 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
-	TickCreditRating();          // wie js/match-live.js: Bonitaet je Spieltag
+	TickFixedDeposit();
+	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
 	ProcessLoanInstallments();   // Kreditraten, dann die Insolvenzpruefung (gleiche Reihenfolge wie im Browserspiel)
 	CheckInsolvencyRisk();
 	TickSponsor();
@@ -1224,6 +1225,34 @@ void FFM13World::TickCreditRating()
 {
 	if (Money >= 0 && NegativeStreak == 0) CreditRatingTenth = FMath::Min(1000, CreditRatingTenth + 3);
 	else CreditRatingTenth = FMath::Max(100, CreditRatingTenth - 15);
+}
+
+// ---------- Festgeld (js/finances.js: openFixedDeposit, tickFixedDeposit) ----------
+
+bool FFM13World::OpenFixedDeposit(int64 Amount, int32 Matchdays, FString& OutReason)
+{
+	if (bFestgeld) { OutReason = TEXT("Es laeuft bereits eine Festgeldanlage!"); return false; }
+	if (Amount <= 0 || Money < Amount) { OutReason = TEXT("Ungueltiger Betrag oder nicht genug Geld!"); return false; }
+	// Zinsstufen nach Laufzeit: 3 %, ab 10 Spieltagen 7 %, ab 20 Spieltagen 12 %
+	const double Zins = Matchdays >= 20 ? 0.12 : (Matchdays >= 10 ? 0.07 : 0.03);
+	Book(TEXT("Festgeld: Anlage"), -Amount);
+	Festgeld.Principal = Amount;
+	Festgeld.TotalMatchdays = Matchdays;
+	Festgeld.MatchdaysLeft = Matchdays;
+	Festgeld.Payout = FM13Transfers::JsRunden((double)Amount * (1.0 + Zins));   // Math.round(amount * (1 + rate))
+	bFestgeld = true;
+	return true;
+}
+
+// tickFixedDeposit(): jeder Spieltag zaehlt herunter, bei Ablauf wird ausgezahlt
+void FFM13World::TickFixedDeposit()
+{
+	if (!bFestgeld) return;
+	Festgeld.MatchdaysLeft--;
+	if (Festgeld.MatchdaysLeft > 0) return;
+	Book(TEXT("Festgeld: Auszahlung"), Festgeld.Payout);
+	AddMessage(TEXT("Festgeldanlage ausgezahlt!"), FString::Printf(TEXT("Die Festgeldanlage ueber %lld wurde ausgezahlt: %lld."), (long long)Festgeld.Principal, (long long)Festgeld.Payout));
+	bFestgeld = false;
 }
 
 // sellPlayer() (js/transfermarket.js): Sofortverkauf zu 80 % des Marktwerts, Beraterprovision
@@ -4569,7 +4598,8 @@ bool FFM13World::FfpExempt(const FString& Label)
 {
 	return Label == TEXT("Stadionausbau") || Label == TEXT("Ausbau Jugendakademie") || Label == TEXT("Ausbau Trainingsplatz")
 		|| Label == TEXT("Kredit: Aufnahme") || Label == TEXT("Kredit: Rate") || Label == TEXT("Kredit: Sondertilgung")
-		|| Label == TEXT("Kredit: Soforthilfe") || Label == TEXT("Kredit: Tilgung");   // Finanzierung, kein Verlust (FFP_EXEMPTE_LABELS)
+		|| Label == TEXT("Kredit: Soforthilfe") || Label == TEXT("Kredit: Tilgung")
+		|| Label == TEXT("Festgeld: Anlage") || Label == TEXT("Festgeld: Auszahlung");   // Finanzierung, kein Verlust (FFP_EXEMPTE_LABELS)
 }
 
 int64 FFM13World::FfpSeasonNet() const

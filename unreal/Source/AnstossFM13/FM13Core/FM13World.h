@@ -423,6 +423,17 @@ public:
 	int32 NextLoanId = 1;
 	int64 LoanDebt = 0;                            // game.loanDebt: Alt-Sofortkredit (Soforthilfe / Tilgen)
 	int32 CreditRatingTenth = 700;                 // financeCentralState.creditRating mal 10, ganzzahlig damit das Speichern exakt bleibt
+	struct FFM13Festgeld
+	{
+		int64 Principal = 0;
+		int64 Payout = 0;
+		int32 MatchdaysLeft = 0;
+		int32 TotalMatchdays = 0;
+	};
+	FFM13Festgeld Festgeld;                        // game.financeCentralState.fixedDeposit
+	bool bFestgeld = false;                        // true = eine Festgeldanlage laeuft
+	bool OpenFixedDeposit(int64 Amount, int32 Matchdays, FString& OutReason);   // openFixedDeposit()
+	void TickFixedDeposit();                       // tickFixedDeposit(): jeden Spieltag
 	bool TakeLoanTier(const FString& Key, int64 Amount, FString& OutReason);   // takeLoanTier()
 	void TakeLoanLegacy(int64 Amount);             // takeLoan() (Soforthilfe)
 	bool PayLoanLegacy(int64 Amount);              // payLoan() (Tilgen)

@@ -1382,6 +1382,26 @@ static void TestKredite()
 	PRUEFE(!W.PayLoanLegacy(50000), "Tilgung ohne Geld wird abgelehnt");
 }
 
+static void TestFestgeld()
+{
+	std::printf("Festgeld: Zinsstufen, eine Anlage, Auszahlung\n");
+	FFM13World W;
+	W.NewGame(TEXT("Festgeld"), 141, 0);
+	FString G;
+	W.Money = 100000;
+	PRUEFE(!W.OpenFixedDeposit(0, 10, G), "Ohne Betrag kein Festgeld");
+	PRUEFE(!W.OpenFixedDeposit(200000, 10, G) && G.Contains(TEXT("nicht genug")), "Festgeld braucht das Geld");
+	PRUEFE(W.OpenFixedDeposit(1000, 10, G), "Festgeld klappt");
+	PRUEFE(W.Money == 99000 && W.Festgeld.Payout == 1070 && W.Festgeld.MatchdaysLeft == 10, "Zehn Spieltage: 7 %% Zins, Geld abgebucht");
+	PRUEFE(!W.OpenFixedDeposit(1000, 10, G) && G.Contains(TEXT("bereits")), "Nur eine Festgeldanlage gleichzeitig");
+	for (int32 t = 0; t < 9; ++t) W.TickFixedDeposit();
+	PRUEFE(W.bFestgeld && W.Money == 99000, "Vor Ablauf nichts ausgezahlt");
+	W.TickFixedDeposit();
+	PRUEFE(!W.bFestgeld && W.Money == 100070, "Auszahlung nach zehn Spieltagen (%lld)", (long long)W.Money);
+	W.Money = 100000;
+	PRUEFE(W.OpenFixedDeposit(1000, 20, G) && W.Festgeld.Payout == 1120, "Ab 20 Spieltagen 12 %% Zins");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2562,6 +2582,7 @@ int main()
 	TestMedizincheck();
 	TestVerkaufUndInsolvenz();
 	TestKredite();
+	TestFestgeld();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

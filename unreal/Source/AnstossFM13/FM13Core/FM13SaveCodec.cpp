@@ -605,6 +605,9 @@ namespace FM13Save
 		W.Field(TEXT("loanNextId"), S.NextLoanId);
 		W.Field(TEXT("loanDebt"), S.LoanDebt);
 		W.Field(TEXT("creditRating"), S.CreditRatingTenth);
+		W.FieldBool(TEXT("festgeldAktiv"), S.bFestgeld);
+		W.Field(TEXT("festgeldBetrag"), S.Festgeld.Principal); W.Field(TEXT("festgeldAuszahlung"), S.Festgeld.Payout);
+		W.Field(TEXT("festgeldRest"), S.Festgeld.MatchdaysLeft); W.Field(TEXT("festgeldLaufzeit"), S.Festgeld.TotalMatchdays);
 		W.FieldBool(TEXT("ffpHasResult"), S.bHasFfpResult);
 		W.Field(TEXT("ffpResSeason"), S.FfpLastResult.Season);
 		W.Field(TEXT("ffpResNet"), S.FfpLastResult.Net);
@@ -1376,6 +1379,9 @@ namespace FM13Save
 		W.NextLoanId = (int32)R.Int(Root, TEXT("loanNextId"), 1);
 		W.LoanDebt = R.Int(Root, TEXT("loanDebt"), 0);
 		W.CreditRatingTenth = (int32)R.Int(Root, TEXT("creditRating"), 700);
+		W.bFestgeld = R.Bool(Root, TEXT("festgeldAktiv"), false);
+		W.Festgeld.Principal = R.Int(Root, TEXT("festgeldBetrag"), 0); W.Festgeld.Payout = R.Int(Root, TEXT("festgeldAuszahlung"), 0);
+		W.Festgeld.MatchdaysLeft = (int32)R.Int(Root, TEXT("festgeldRest"), 0); W.Festgeld.TotalMatchdays = (int32)R.Int(Root, TEXT("festgeldLaufzeit"), 0);
 		W.bHasFfpResult = R.Bool(Root, TEXT("ffpHasResult"), false);
 		W.FfpLastResult.Season = (int32)R.Int(Root, TEXT("ffpResSeason"), 0);
 		W.FfpLastResult.Net = R.Int(Root, TEXT("ffpResNet"), 0);
