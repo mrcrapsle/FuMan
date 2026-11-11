@@ -193,6 +193,8 @@ bool FFM13World::PlayMatchday()
 			const int32 HG = FM13Match::Poisson(Rng, Xg.Home);
 			const int32 AG = FM13Match::Poisson(Rng, Xg.Away);
 			L.ApplyResult(F, HG, AG);
+			CreditAiLeagueGoals(L.Clubs[F.Home], HG);
+			CreditAiLeagueGoals(L.Clubs[F.Away], AG);
 		}
 	}
 
@@ -222,6 +224,7 @@ bool FFM13World::PlayMatchday()
 	}
 	TickIncomingOffers();
 	TickTransferWindows();
+	TickAiTransfers();
 	TickIncomingLoans();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickFriendships();
@@ -626,6 +629,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	EuropePot = bLigaPlatz ? (Rank == 1 ? 0 : (Rank <= 3 ? 1 : 2)) : 3;
 	if (bEuropeNextSeason) AddMessage(TEXT("Europapokal!"), TEXT("Der Verein spielt naechste Saison im Champions Cup."));
 	SeasonAwards(S, Rank, Outcome);
+	AgeAiStars();
 	AdvanceLeagues(Rank, Outcome);
 	// Transferbudget der neuen Saison: Liga-Budget x Platzierungsfaktor (season-end.js)
 	const double Platzfaktor = Rank <= 4 ? 1.3 : (Rank <= 10 ? 1.0 : 0.8);
@@ -4111,4 +4115,192 @@ bool FFM13World::SignFreeAgent(int32 Index, FString& OutReason)
 	FreeNegotiation = FFM13FreeNegotiation();
 	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt ablösefrei (Handgeld %lld)."), *P.Name, (long long)Handgeld));
 	return true;
+}
+
+// ---------- Wechsel zwischen KI-Vereinen (js/ai-clubs.js) ----------
+
+namespace
+{
+	// makeAiStar(): Staerke des Sterns = Vereinsstaerke + Zuschlag (5, jung 2) + Zufall x 5, hoechstens 95
+	int32 AiStarStaerke(FRandomStream& Rng, int32 Vereinsstaerke, int32 Zuschlag)
+	{
+		const double Wert = (double)Vereinsstaerke + (double)Zuschlag + Rng.FRand() * 5.0;
+		return FMath::Min(95, (int32)FM13Transfers::JsRunden(Wert));
+	}
+
+	const EFM13Position AiStarPositionen[6] = { EFM13Position::ST, EFM13Position::ST, EFM13Position::MIT, EFM13Position::MIT, EFM13Position::ABW, EFM13Position::TW };
+	const int32 AiTransferSpieltage[2] = { 2, 19 };   // Sommer- und Winterfenster
+}
+
+bool FFM13World::IsAiClub(const FFM13Club& C) const
+{
+	return !C.bOwn;
+}
+
+void FFM13World::AddAiNews(const FFM13AiNews& Eintrag)
+{
+	AiNews.Insert(Eintrag, 0);
+	while (AiNews.Num() > 30) AiNews.RemoveAt(AiNews.Num() - 1);
+}
+
+// makeAiStar(): Staerke aus dem Verein plus 5 (jung 2), Alter 22 bis 30 (jung 19 bis 21)
+void FFM13World::EnsureAiStars()
+{
+	for (int32 L = 0; L < Leagues.Num(); ++L)
+		for (int32 I = 0; I < Leagues[L].Clubs.Num(); ++I)
+		{
+			FFM13Club& C = Leagues[L].Clubs[I];
+			if (!IsAiClub(C) || C.bHasStar) continue;
+			C.bHasStar = true;
+			C.StarPos = AiStarPositionen[RngTransfer.RandRange(0, 5)];
+			C.StarStrength = AiStarStaerke(RngTransfer, C.Strength, 5);
+			C.StarAge = RngTransfer.RandRange(22, 30);
+			C.StarName = FM13Names::PlayerName(RngTransfer);
+			C.StarGoals = 0;
+		}
+}
+
+FFM13World::FFM13AiNews FFM13World::AiStarNews(int32 L, int32 I) const
+{
+	const FFM13Club& C = Leagues[L].Clubs[I];
+	FFM13AiNews N;
+	N.Player = C.StarName;
+	N.Pos = C.StarPos;
+	N.Strength = C.StarStrength;
+	N.From = C.Name;
+	return N;
+}
+
+// tickAiTransfers(): an den Fenster-Spieltagen 1 bis 2 Wechsel je Liga, Staerke wandert mit dem Spieler
+void FFM13World::TickAiTransfers()
+{
+	bool bFenster = false;
+	for (int32 Tag : AiTransferSpieltage) if (Matchday == Tag) bFenster = true;
+	if (!bFenster) return;
+	EnsureAiStars();
+	struct FMeldung { int32 Liga; FString Text; };
+	TArray<FMeldung> Meldungen;
+	for (int32 L = 0; L < Leagues.Num(); ++L)
+	{
+		// Tabelle der KI-Vereine: Punkte, dann Staerke
+		TArray<int32> Tabelle;
+		for (int32 I = 0; I < Leagues[L].Clubs.Num(); ++I) if (IsAiClub(Leagues[L].Clubs[I])) Tabelle.Add(I);
+		auto Punkte = [this, L](int32 I) { const FFM13Club& C = Leagues[L].Clubs[I]; return 3 * C.Won + C.Drawn; };
+		// stabile Einfuegesortierung: Punkte absteigend, dann Staerke absteigend
+		for (int32 a = 1; a < Tabelle.Num(); ++a)
+			for (int32 b = a; b > 0; --b)
+			{
+				const int32 X = Tabelle[b - 1], Y = Tabelle[b];
+				const bool bTauschen = Punkte(Y) > Punkte(X) || (Punkte(Y) == Punkte(X) && Leagues[L].Clubs[Y].Strength > Leagues[L].Clubs[X].Strength);
+				if (!bTauschen) break;
+				Tabelle[b - 1] = Y; Tabelle[b] = X;
+			}
+		if (Tabelle.Num() < 8) continue;
+		const int32 Deals = 1 + (RngTransfer.FRand() < 0.5f ? 1 : 0);
+		for (int32 d = 0; d < Deals; ++d)
+		{
+			const int32 Kaeufer = Tabelle[RngTransfer.RandRange(0, FMath::Min(5, Tabelle.Num()) - 1)];
+			int32 VerkaeuferLiga = L;
+			int32 Verkaeufer = -1;
+			if (L < Leagues.Num() - 1 && RngTransfer.FRand() < 0.35f)
+			{
+				// Star der besten Stern-Staerke in der Liga darunter
+				VerkaeuferLiga = L + 1;
+				int32 Bester = -1;
+				for (int32 I = 0; I < Leagues[L + 1].Clubs.Num(); ++I)
+				{
+					const FFM13Club& C = Leagues[L + 1].Clubs[I];
+					if (!IsAiClub(C)) continue;
+					if (Bester < 0 || C.StarStrength > Leagues[L + 1].Clubs[Bester].StarStrength) Bester = I;
+				}
+				Verkaeufer = Bester;
+			}
+			else
+			{
+				TArray<int32> Kandidaten;
+				for (int32 k = Tabelle.Num() / 2; k < Tabelle.Num(); ++k) if (Tabelle[k] != Kaeufer) Kandidaten.Add(Tabelle[k]);
+				if (Kandidaten.Num()) Verkaeufer = Kandidaten[RngTransfer.RandRange(0, Kandidaten.Num() - 1)];
+			}
+			if (Verkaeufer < 0) continue;
+			const FFM13Club& K = Leagues[L].Clubs[Kaeufer];
+			FFM13Club& V = Leagues[VerkaeuferLiga].Clubs[Verkaeufer];
+			if (!V.bHasStar || (VerkaeuferLiga == L && Verkaeufer == Kaeufer)) continue;
+			if (V.StarStrength < K.Strength) continue;   // nur echte Verstaerkungen
+			FFM13Club& KW = Leagues[L].Clubs[Kaeufer];
+			// Wechsel: Kaeufer bekommt den Star, Verkaeufer ein Nachwuchstalent
+			const int32 Delta = FMath::Max(1, FMath::Min(2, (int32)FM13Transfers::JsRunden((double)(V.StarStrength - KW.Strength) / 6.0)));
+			KW.Strength = FMath::Min(96, KW.Strength + Delta);
+			V.Strength = FMath::Max(20, V.Strength - Delta);
+			const int64 Ablose = FM13Transfers::JsRunden((double)FM13Economy::MarketValue(V.StarStrength, nullptr) * (1.1 + RngTransfer.FRand() * 0.4) / 10000.0) * 10000;
+			if (!KW.bHasStar || V.StarStrength > KW.StarStrength)
+			{
+				KW.bHasStar = true; KW.StarPos = V.StarPos; KW.StarName = V.StarName; KW.StarStrength = V.StarStrength; KW.StarAge = V.StarAge; KW.StarGoals = V.StarGoals;
+			}
+			FFM13AiNews N;
+			N.Player = V.StarName; N.Pos = V.StarPos; N.Strength = V.StarStrength; N.From = V.Name; N.To = KW.Name;
+			N.Fee = Ablose; N.FromLeague = VerkaeuferLiga; N.ToLeague = L;
+			N.Season = Season; N.Matchday = Matchday;
+			AddAiNews(N);
+			// Der Verkaeufer bekommt ein Nachwuchstalent als neuen Star
+			V.StarPos = AiStarPositionen[RngTransfer.RandRange(0, 5)];
+			V.StarStrength = AiStarStaerke(RngTransfer, V.Strength, 2);
+			V.StarAge = RngTransfer.RandRange(19, 21);
+			V.StarName = FM13Names::PlayerName(RngTransfer);
+			V.StarGoals = 0;
+			Meldungen.Add(FMeldung{ L, FString::Printf(TEXT("%s (%s, %d) wechselt von %s zu %s - Ablöse %lld"), *N.Player, FM13PositionName(N.Pos), N.Strength, *N.From, *N.To, (long long)Ablose) });
+		}
+	}
+	if (Meldungen.Num() == 0) return;
+	// Eigene Liga zuerst
+	TArray<FMeldung> Sortiert;
+	for (const FMeldung& M : Meldungen) if (M.Liga == LeagueLevel) Sortiert.Add(M);
+	for (const FMeldung& M : Meldungen) if (M.Liga != LeagueLevel) Sortiert.Add(M);
+	FString Text;
+	for (const FMeldung& M : Sortiert) Text += FString(TEXT("- ")) + FM13::LeagueName(M.Liga) + TEXT(": ") + M.Text + TEXT("\n");
+	AddMessage(FString::Printf(TEXT("Transfer-Ticker (%s)"), Matchday < 10 ? TEXT("Sommer") : TEXT("Winter")), Text);
+}
+
+// ageAiStars(): Saisonende, Karriereende mit 34 und ein neuer Star beim Verein
+void FFM13World::AgeAiStars()
+{
+	EnsureAiStars();
+	for (int32 L = 0; L < Leagues.Num(); ++L)
+		for (int32 I = 0; I < Leagues[L].Clubs.Num(); ++I)
+		{
+			FFM13Club& C = Leagues[L].Clubs[I];
+			if (!IsAiClub(C) || !C.bHasStar) continue;
+			C.StarAge++;
+			if (C.StarAge < 34) continue;
+			FFM13AiNews N;
+			N.Player = C.StarName; N.Pos = C.StarPos; N.Strength = C.StarStrength; N.From = C.Name; N.Fee = 0; N.bRetired = true;
+			N.Season = Season; N.Matchday = Matchday; N.FromLeague = L; N.ToLeague = L;
+			AddAiNews(N);
+			C.StarPos = AiStarPositionen[RngTransfer.RandRange(0, 5)];
+			C.StarStrength = AiStarStaerke(RngTransfer, C.Strength, 5);
+			C.StarAge = RngTransfer.RandRange(22, 30);
+			C.StarName = FM13Names::PlayerName(RngTransfer);
+			C.StarGoals = 0;
+		}
+}
+
+// creditAiLeagueGoals(): Anteil je Position fuer den Star, 26 % fuer die Sturmspitze, der Rest ungenannt
+void FFM13World::CreditAiLeagueGoals(FFM13Club& C, int32 Tore)
+{
+	if (!IsAiClub(C) || Tore <= 0) return;
+	if (!C.bHasStar) { EnsureAiStars(); }
+	if (!C.bHasStriker) { C.bHasStriker = true; C.StrikerName = FM13Names::PlayerName(RngTransfer); C.StrikerGoals = 0; }
+	double Anteil = 0.15;
+	switch (C.StarPos)
+	{
+		case EFM13Position::ST: Anteil = 0.3; break;
+		case EFM13Position::MIT: Anteil = 0.18; break;
+		case EFM13Position::ABW: Anteil = 0.07; break;
+		case EFM13Position::TW: Anteil = 0.0; break;
+	}
+	for (int32 i = 0; i < Tore; ++i)
+	{
+		const double Wurf = RngTransfer.FRand();
+		if (Wurf < Anteil) C.StarGoals++;
+		else if (Wurf < Anteil + 0.26) C.StrikerGoals++;
+	}
 }

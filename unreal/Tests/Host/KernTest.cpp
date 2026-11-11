@@ -1782,6 +1782,40 @@ static void TestMedizincheck()
 	FFM13World BLd;
 	FString BFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(BSave), BLd, BFehler) && BLd.AgentRelation(2) == 5 && BLd.FreeAgents.Num() == BSave.FreeAgents.Num() && BLd.FreeNegotiation.CounterFee == 12345 && std::fabs(BLd.Squad[0].AgentFeePct - BSave.Squad[0].AgentFeePct) < 1e-6, "Berater und freie Spieler bleiben im Spielstand (%s)", *BFehler);
+	// KI-Vereine (js/ai-clubs.js): Sterne, Alterung, Torgutschrift, Fenster-Wechsel
+	FFM13World KI;
+	KI.NewGame(TEXT("KIVereine"), 161, 0);
+	KI.EnsureAiStars();
+	bool KIAlleSterne = true;
+	int32 KIAnzahl = 0;
+	for (const FFM13League& L : KI.Leagues) for (const FFM13Club& C : L.Clubs) if (!C.bOwn) { KIAnzahl++; if (!C.bHasStar) KIAlleSterne = false; }
+	PRUEFE(KIAlleSterne && KIAnzahl > 0, "KI-Vereine: jeder hat einen Star");
+	// Alterung: Stern mit 33 wird Karriereende, der Verein bekommt einen neuen Stern
+	int32 AltIdx = -1;
+	for (int32 I = 0; I < KI.Leagues[0].Clubs.Num(); ++I) if (!KI.Leagues[0].Clubs[I].bOwn) { AltIdx = I; break; }
+	const FString AltName = KI.Leagues[0].Clubs[AltIdx].StarName;
+	KI.Leagues[0].Clubs[AltIdx].StarAge = 33;
+	KI.AgeAiStars();
+	bool KIRuhestand = false;
+	for (const FFM13World::FFM13AiNews& N : KI.AiNews) if (N.bRetired) KIRuhestand = true;
+	PRUEFE(KIRuhestand, "Karriereende: Meldung im Ticker (%s)", *AltName);
+	// Torgutschrift: die Tore gehen an Star, Sturmspitze oder Mitspieler, nie mehr als vergeben
+	FFM13Club& Tor = KI.Leagues[0].Clubs[1];
+	Tor.bHasStar = true; Tor.StarPos = EFM13Position::ST; Tor.StarGoals = 0; Tor.bHasStriker = false; Tor.StrikerGoals = 0;
+	KI.CreditAiLeagueGoals(Tor, 10);
+	PRUEFE(Tor.bHasStriker && Tor.StarGoals + Tor.StrikerGoals <= 10 && Tor.StarGoals >= 0 && Tor.StrikerGoals >= 0, "Torgutschrift: nie mehr Tore als gefallen");
+	// Fenster-Spieltag 2: der Ticker legt Wechsel an oder bleibt still, nie ohne Fenster
+	FFM13World KF = KI;
+	KF.Matchday = 5;
+	const int32 KFNews = KF.AiNews.Num();
+	KF.TickAiTransfers();
+	PRUEFE(KF.AiNews.Num() == KFNews, "Kein Wechsel ausserhalb der Fenster");
+	FFM13World KW2 = KI;
+	KW2.Matchday = 2;
+	KW2.TickAiTransfers();
+	bool KIWechselOk = true;
+	for (const FFM13World::FFM13AiNews& N : KW2.AiNews) if (!N.bRetired && (N.To.IsEmpty() || N.From == N.To || N.Fee <= 0)) KIWechselOk = false;
+	PRUEFE(KIWechselOk, "Fenster 2: Wechsel haben Käufer, Verkäufer und Ablöse");
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

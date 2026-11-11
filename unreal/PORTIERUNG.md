@@ -87,7 +87,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `season-objectives.js` | 391 | offen | Season Goals & Objectives System |  |
 | `scenarios.js` | 174 | offen | Karriere-Szenarien: beim "Neues Spiel" wählbare Herausforderungen mit eigenem Start |  |
 | `club-geo.js` | 456 | offen | Vereine mit echten Orten und regionale Ligen (Phase 24.1). |  |
-| `ai-clubs.js` | 136 | offen | KI-Vereine: jeder KI-Klub hat einen namentlich bekannten Star (team.star). In beiden |  |
+| `ai-clubs.js` | 136 | portiert | KI-Vereine: jeder KI-Klub hat einen namentlich bekannten Star (team.star). In beiden |  |
 | `coach-carousel.js` | 107 | offen | Trainerkarussell: Jeder KI-Verein hat einen Trainer. Bei anhaltendem Misserfolg (hinten in |  |
 
 ### Kader und Spieler
@@ -118,7 +118,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A), Transferbudget, Wechselfenster, Rückkauf-Ausübung, Gerüchte-Angebote, Leihspieler mit Kaufoption, Deadline-Day, Beraterprovision, freie Spieler, Tauschgeschäft im Poker. Offen: KI-Stern-Transfers (ai-clubs.js), Scout-Rabatt |
+| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A), Transferbudget, Wechselfenster, Rückkauf-Ausübung, Gerüchte-Angebote, Leihspieler mit Kaufoption, Deadline-Day, Beraterprovision, freie Spieler, Tauschgeschäft im Poker, KI-Stern-Transfers. Offen: Scout-Rabatt (ohne Scout-Personal im Kern) |
 | `transfer-poker.js` | 288 | teilweise | Transferpoker: Spieler vom Transfermarkt werden einem echten KI-Verein abgekauft. Der |  |
 | `transfer-strategy.js` | 131 | portiert | Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte |  |
 | `medical-check.js` | 96 | portiert | Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen |  |

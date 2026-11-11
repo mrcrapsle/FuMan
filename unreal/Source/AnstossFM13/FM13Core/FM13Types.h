@@ -210,6 +210,16 @@ struct FFM13Club
 	int32 Strength = 50;      // KI-Stärke; beim eigenen Verein zählt der Kader
 	EFM13Playstyle Playstyle = EFM13Playstyle::Ausgeglichen;
 	bool bOwn = false;
+	// KI-Star und Sturmspitze (js/ai-clubs.js); nur bei KI-Vereinen belegt
+	bool bHasStar = false;
+	EFM13Position StarPos = EFM13Position::ST;
+	FString StarName;
+	int32 StarStrength = 0;
+	int32 StarAge = 0;
+	int32 StarGoals = 0;
+	bool bHasStriker = false;
+	FString StrikerName;
+	int32 StrikerGoals = 0;
 
 	int32 Played = 0;
 	int32 Won = 0;

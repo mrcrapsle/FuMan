@@ -436,6 +436,24 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.ArrayKey(TEXT("aiNews"));
+		for (const FFM13World::FFM13AiNews& N : S.AiNews)
+		{
+			W.ElementObject();
+			W.Field(TEXT("season"), N.Season);
+			W.Field(TEXT("matchday"), N.Matchday);
+			W.Field(TEXT("player"), N.Player);
+			W.Field(TEXT("pos"), (int64)N.Pos);
+			W.Field(TEXT("strength"), N.Strength);
+			W.Field(TEXT("from"), N.From);
+			W.Field(TEXT("to"), N.To);
+			W.Field(TEXT("fee"), N.Fee);
+			W.FieldBool(TEXT("retired"), N.bRetired);
+			W.Field(TEXT("fromLeague"), N.FromLeague);
+			W.Field(TEXT("toLeague"), N.ToLeague);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.Field(TEXT("freeNegPlayer"), S.FreeNegotiation.PlayerId);
 		W.Field(TEXT("freeNegFee"), S.FreeNegotiation.CounterFee);
 		W.Field(TEXT("swapId"), S.Poker.SwapId);
@@ -559,6 +577,15 @@ namespace FM13Save
 				W.Field(TEXT("str"), C.Strength);
 				W.Field(TEXT("style"), (int64)C.Playstyle);
 				W.FieldBool(TEXT("own"), C.bOwn);
+				W.FieldBool(TEXT("hasStar"), C.bHasStar);
+				W.Field(TEXT("starPos"), (int64)C.StarPos);
+				W.Field(TEXT("starName"), C.StarName);
+				W.Field(TEXT("starStrength"), C.StarStrength);
+				W.Field(TEXT("starAge"), C.StarAge);
+				W.Field(TEXT("starGoals"), C.StarGoals);
+				W.FieldBool(TEXT("hasStriker"), C.bHasStriker);
+				W.Field(TEXT("strikerName"), C.StrikerName);
+				W.Field(TEXT("strikerGoals"), C.StrikerGoals);
 				W.Field(TEXT("p"), C.Played);
 				W.Field(TEXT("w"), C.Won);
 				W.Field(TEXT("d"), C.Drawn);
@@ -975,6 +1002,22 @@ namespace FM13Save
 			W.FreeAgents.Add(F);
 		}
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		for (int32 N : R.Items(Root, TEXT("aiNews")))
+		{
+			FFM13World::FFM13AiNews A;
+			A.Season = (int32)R.Int(N, TEXT("season"), 0);
+			A.Matchday = (int32)R.Int(N, TEXT("matchday"), 0);
+			A.Player = R.Str(N, TEXT("player"), TEXT(""));
+			A.Pos = (EFM13Position)FMath::Clamp((int32)R.Int(N, TEXT("pos"), 3), 0, 3);
+			A.Strength = (int32)R.Int(N, TEXT("strength"), 0);
+			A.From = R.Str(N, TEXT("from"), TEXT(""));
+			A.To = R.Str(N, TEXT("to"), TEXT(""));
+			A.Fee = R.Int(N, TEXT("fee"), 0);
+			A.bRetired = R.Bool(N, TEXT("retired"), false);
+			A.FromLeague = (int32)R.Int(N, TEXT("fromLeague"), 0);
+			A.ToLeague = (int32)R.Int(N, TEXT("toLeague"), 0);
+			W.AiNews.Add(A);
+		}
 		for (int32 N : R.Items(Root, TEXT("loanables")))
 		{
 			FFM13Loanable L;
@@ -1050,6 +1093,15 @@ namespace FM13Save
 				Club.Strength = (int32)R.Int(C, TEXT("str"), 50);
 				Club.Playstyle = (EFM13Playstyle)FMath::Clamp((int32)R.Int(C, TEXT("style"), 2), 0, 3);
 				Club.bOwn = R.Bool(C, TEXT("own"), false);
+				Club.bHasStar = R.Bool(C, TEXT("hasStar"), false);
+				Club.StarPos = (EFM13Position)FMath::Clamp((int32)R.Int(C, TEXT("starPos"), 3), 0, 3);
+				Club.StarName = R.Str(C, TEXT("starName"), TEXT(""));
+				Club.StarStrength = (int32)R.Int(C, TEXT("starStrength"), 0);
+				Club.StarAge = (int32)R.Int(C, TEXT("starAge"), 0);
+				Club.StarGoals = (int32)R.Int(C, TEXT("starGoals"), 0);
+				Club.bHasStriker = R.Bool(C, TEXT("hasStriker"), false);
+				Club.StrikerName = R.Str(C, TEXT("strikerName"), TEXT(""));
+				Club.StrikerGoals = (int32)R.Int(C, TEXT("strikerGoals"), 0);
 				Club.Played = (int32)R.Int(C, TEXT("p"), 0);
 				Club.Won = (int32)R.Int(C, TEXT("w"), 0);
 				Club.Drawn = (int32)R.Int(C, TEXT("d"), 0);

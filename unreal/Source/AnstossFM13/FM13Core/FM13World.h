@@ -243,6 +243,29 @@ public:
 	bool ExerciseLoanBuyOption(int32 PlayerId, FString& OutReason);
 	void TickIncomingLoans();                          // nach jedem Spieltag
 	void RunDeadlineDay(const FString& Fenster);       // "sommer" oder "winter", einmal je Fenster
+	// Wechsel zwischen KI-Vereinen (js/ai-clubs.js): Sterne, Fenster am Spieltag 2 und 19, Ticker
+	struct FFM13AiNews
+	{
+		int32 Season = 0;
+		int32 Matchday = 0;
+		FString Player;
+		EFM13Position Pos = EFM13Position::ST;
+		int32 Strength = 0;
+		FString From;
+		FString To;             // leer bei Karriereende
+		int64 Fee = 0;
+		bool bRetired = false;
+		int32 FromLeague = 0;
+		int32 ToLeague = 0;
+	};
+	TArray<FFM13AiNews> AiNews;                         // neueste zuerst, hoechstens 30
+	bool IsAiClub(const FFM13Club& C) const;
+	void EnsureAiStars();
+	void AddAiNews(const FFM13AiNews& Eintrag);
+	FFM13AiNews AiStarNews(int32 L, int32 I) const;
+	void TickAiTransfers();                             // Fenster-Spieltage 2 und 19, nach dem Spieltag
+	void AgeAiStars();                                  // Saisonende: altern, Karriereende mit 34
+	void CreditAiLeagueGoals(FFM13Club& C, int32 Tore); // jedes Tor geht an den Star, die Sturmspitze oder einen Mitspieler
 	bool TriggerRandomAIOffer();                       // Deadline-Day: zufaelliger Spieler, zufaelliger Klub
 
 	// Transferpoker (js/transfer-poker.js)
