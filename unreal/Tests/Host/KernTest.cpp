@@ -203,8 +203,11 @@ static void TestKaderAktionen()
 	W.Money = 0;
 	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Vereinskonto")), "Ohne Geld kein Kauf");
 	W.Money = -1;
-	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Transfersperre")), "Im Minus Transfersperre");
+	for (int32 t = 0; t < 6; ++t) W.CheckInsolvencyRisk();
+	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Transfersperre")), "Ab sechs Spieltagen im Minus Transfersperre");
 	W.Money = 100000000;
+	W.CheckInsolvencyRisk();
+	PRUEFE(!W.HasTransferEmbargo(), "Im Plus endet die Insolvenz-Sperre");
 	W.WageBudget = W.WagesPerMatchday();
 	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Gehaltsbudget")), "Gehaltsbudget begrenzt Kaeufe");
 	W.WageBudget = 100000000;
@@ -212,8 +215,8 @@ static void TestKaderAktionen()
 	const int32 Id = W.Squad[0].Id;
 	PRUEFE(W.SellPlayer(Id, Grund) && W.Money > 0, "Verkauf bringt Geld");
 	PRUEFE(!W.FindPlayer(Id), "Verkaufter Spieler weg");
-	while (W.Squad.Num() > FM13::MinSquadSize) W.SellPlayer(W.Squad.Last().Id, Grund);
-	PRUEFE(!W.SellPlayer(W.Squad[0].Id, Grund), "Mindestkader bleibt");
+	while (W.Squad.Num() > 11) W.SellPlayer(W.Squad.Last().Id, Grund);
+	PRUEFE(!W.SellPlayer(W.Squad[0].Id, Grund), "Mindestkader von 11 bleibt");
 	FFM13Player& P = W.Squad[1];
 	P.ContractYears = 1;
 	const int32 AltLohn = P.Wage;
@@ -1293,6 +1296,40 @@ static void TestTransferRegeln()
 }
 
 // Medizincheck (js/medical-check.js): Befund, Gebuehr, Preisnachlass und Auswirkung nach der Unterschrift
+static void TestVerkaufUndInsolvenz()
+{
+	std::printf("Verkauf 80 %%, Zwangsverkauf, Punktabzug\n");
+	FFM13World W;
+	W.NewGame(TEXT("Verkauf"), 141, 0);
+	FString G;
+	const FFM13Player P = W.Squad[2];
+	const int64 Sum = FM13Transfers::JsRunden((double)P.MarketValue * 0.80);
+	const int64 Prov = W.AgentFee(P, Sum);
+	const int64 Geld = W.Money, Budget = W.TransferBudget;
+	PRUEFE(W.SellPlayer(P.Id, G), "Verkauf klappt: %s", *G);
+	PRUEFE(W.Money == Geld + Sum - Prov, "Verkauf bucht 80 %% abzueglich Beraterprovision");
+	PRUEFE(W.TransferBudget == Budget + FM13Transfers::JsRunden((double)Sum * 0.80), "Transferbudget waechst um 80 %% des Erloes");
+	// Insolvenz: zehn Tage im Minus verkaufen den teuersten Spieler zu 60 %%
+	W.Money = -1;
+	const int32 Anz = W.Squad.Num();
+	int64 Teuerster = 0;
+	for (const FFM13Player& X : W.Squad) Teuerster = FMath::Max(Teuerster, X.MarketValue);
+	for (int32 t = 0; t < 10; ++t) W.CheckInsolvencyRisk();
+	PRUEFE(W.ForcedSalesCount == 1 && W.Squad.Num() == Anz - 1, "Zehn Tage im Minus: ein Zwangsverkauf");
+	PRUEFE(W.Money > -1, "Zwangsverkauf bringt Geld");
+	PRUEFE(W.NegativeStreak == 10, "Streak zaehlt weiter");
+	// Punktabzug: 15 Tage im Minus, eigener Verein hat 5 Siege = 15 Punkte
+	for (FFM13Club& C : W.Leagues[W.LeagueLevel].Clubs) if (C.bOwn) C.Won = 5;
+	// Der Zwangsverkauf bringt Geld aufs Konto und setzt die Serie zurueck: fuer den Abzug bleibt das Konto jeden Tag im Minus
+	for (int32 t = 0; t < 5; ++t) { W.Money = -1; W.CheckInsolvencyRisk(); }
+	int32 Punkte = -1;
+	for (const FFM13Club& C : W.Leagues[W.LeagueLevel].Clubs) if (C.bOwn) Punkte = C.Points();
+	PRUEFE(Punkte == 12, "15 Tage im Minus: 3 Punkte Abzug (%d)", Punkte);
+	W.Money = 1;
+	W.CheckInsolvencyRisk();
+	PRUEFE(W.NegativeStreak == 0 && !W.bInsolvenzEmbargo, "Im Plus endet alles");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2471,6 +2508,7 @@ int main()
 	TestTransferpoker();
 	TestTransferRegeln();
 	TestMedizincheck();
+	TestVerkaufUndInsolvenz();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

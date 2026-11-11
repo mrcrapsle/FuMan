@@ -218,7 +218,7 @@ public:
 	FFM13League& OwnLeague() { return Leagues[LeagueLevel]; }
 	int64 WagesPerMatchday() const;
 	int64 SquadValue() const;
-	bool HasTransferEmbargo() const { return Money < 0 || bFfpEmbargo; }   // isTransferEmbargoActive(): Insolvenz oder Financial Fairplay
+	bool HasTransferEmbargo() const { return bInsolvenzEmbargo || bFfpEmbargo; }   // isTransferEmbargoActive(): Insolvenz-Sperre (ab 6 Spieltagen im Minus) oder Financial Fairplay
 	bool FitsWageBudget(int64 ExtraWage) const { return WagesPerMatchday() + ExtraWage <= WageBudget; }
 
 	void RefreshMarket();
@@ -339,7 +339,8 @@ public:
 	int32 MarketIndexOf(int32 PlayerId) const;
 	bool TickPokerRival(int32 MarktIndex);            // true, wenn der Spieler zum Rivalen gegangen ist
 	bool BuyPlayer(int32 MarketIndex, FString& OutReason);
-	bool SellPlayer(int32 PlayerId, FString& OutReason);
+	bool SellPlayer(int32 PlayerId, FString& OutReason, bool bChemieBestaetigt = false);   // sellPlayer(): 80 % Marktwert, Beraterprovision; bChemieBestaetigt = zweiter Klick bei eingespielter Elf
+	void CheckInsolvencyRisk();                       // checkInsolvencyRisk() (js/finances.js): jeden Spieltag nach den Finanzen
 	bool RenewContract(int32 PlayerId, int32 Years, FString& OutReason);
 	int32 RenewalWage(const FFM13Player& P) const;
 	int64 RenewalSigningFee(const FFM13Player& P, int32 Years) const;   // Handgeld der Verlaengerung
@@ -406,6 +407,9 @@ public:
 	TArray<int64> FfpHistory;        // Saisonergebnisse, hoechstens drei
 	int32 FfpStrikes = 0;            // Verstoesse in Folge
 	bool bFfpEmbargo = false;        // Transfersperre durch das Financial Fairplay
+	bool bInsolvenzEmbargo = false;  // game.transferEmbargo: ab 6 Spieltagen im Minus, weg sobald das Konto im Plus ist
+	int32 NegativeStreak = 0;        // game.negativeStreak: Spieltage in Folge im Minus
+	int32 ForcedSalesCount = 0;      // game.forcedSalesCount: Zwangsverkaeufe
 	int32 PendingFfpDeduction = 0;   // Punktabzug fuer die neue Saison, nach dem Tabellen-Neustart
 	bool bHasFfpResult = false;
 	FFM13FfpResult FfpLastResult;

@@ -118,7 +118,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A), Transferbudget, Wechselfenster, Rückkauf-Ausübung, Gerüchte-Angebote, Leihspieler mit Kaufoption, Deadline-Day, Beraterprovision, freie Spieler, Tauschgeschäft im Poker, KI-Stern-Transfers. Offen: Scout-Rabatt (ohne Scout-Personal im Kern) |
+| `transfermarket.js` | 1016 | teilweise | Transfermarkt, KI-Angebote | Markt, Kauf, Verkauf, KI-Angebote (Runde A), Transferbudget, Wechselfenster, Rückkauf-Ausübung, Gerüchte-Angebote, Leihspieler mit Kaufoption, Deadline-Day, Beraterprovision, freie Spieler, Tauschgeschäft im Poker, KI-Stern-Transfers. Direktverkauf wie sellPlayer(): 80 % Marktwert, Beraterprovision, Transferbudget, Kabinen-Freundschaft, Zweit-Klick bei eingespielter Elf. Offen: Scout-Rabatt (ohne Scout-Personal im Kern), Verhandlungsfuchs-Perk, Vereinslegenden und Publikumsliebling beim Abgang |
 | `transfer-poker.js` | 288 | teilweise | Transferpoker: Spieler vom Transfermarkt werden einem echten KI-Verein abgekauft. Der |  |
 | `transfer-strategy.js` | 131 | portiert | Transferstrategie mit dem Vorstand (Phase 25.18): zu Saisonbeginn (Spieltag 1-3, Karte |  |
 | `medical-check.js` | 96 | portiert | Medizincheck bei Transfers (Phase 22.5): jeder Spieler auf dem Transfermarkt hat einen |  |
@@ -144,7 +144,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `finances.js` | 1012 | teilweise | Buchungen, Kontoauszug | Book, Kontoauszug (Finanzzentrale offen) |
+| `finances.js` | 1012 | teilweise | Buchungen, Kontoauszug, Insolvenz | Book, Kontoauszug, Insolvenzkette (checkInsolvencyRisk: Warnung ab 3 Tagen, Transfersperre ab 6, Zwangsverkauf 60 % alle 10, Punktabzug alle 15 Tage). Offen: Steuerberater und Krisenfest-Perk (Perks im Kern noch nicht da), Finanzzentrale, Kreditraten |
 | `financial-charts.js` | 225 | offen | FINANZ-DASHBOARD-CHARTS |  |
 | `ffp.js` | 132 | portiert | Financial Fairplay |  |
 | `media-rights.js` | 244 | teilweise | TV-Geld | TvMoney 1:1, Raten und Restausschüttung (Medienverträge offen) |

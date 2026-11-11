@@ -589,6 +589,9 @@ namespace FM13Save
 		W.Field(TEXT("ffpStrikes"), S.FfpStrikes);
 		W.FieldBool(TEXT("ffpEmbargo"), S.bFfpEmbargo);
 		W.Field(TEXT("ffpPending"), S.PendingFfpDeduction);
+		W.Field(TEXT("negativeStreak"), S.NegativeStreak);
+		W.FieldBool(TEXT("insolvenzEmbargo"), S.bInsolvenzEmbargo);
+		W.Field(TEXT("forcedSales"), S.ForcedSalesCount);
 		W.FieldBool(TEXT("ffpHasResult"), S.bHasFfpResult);
 		W.Field(TEXT("ffpResSeason"), S.FfpLastResult.Season);
 		W.Field(TEXT("ffpResNet"), S.FfpLastResult.Net);
@@ -1346,6 +1349,9 @@ namespace FM13Save
 		W.FfpStrikes = (int32)R.Int(Root, TEXT("ffpStrikes"), 0);
 		W.bFfpEmbargo = R.Bool(Root, TEXT("ffpEmbargo"), false);
 		W.PendingFfpDeduction = (int32)R.Int(Root, TEXT("ffpPending"), 0);
+		W.NegativeStreak = (int32)R.Int(Root, TEXT("negativeStreak"), 0);
+		W.bInsolvenzEmbargo = R.Bool(Root, TEXT("insolvenzEmbargo"), false);
+		W.ForcedSalesCount = (int32)R.Int(Root, TEXT("forcedSales"), 0);
 		W.bHasFfpResult = R.Bool(Root, TEXT("ffpHasResult"), false);
 		W.FfpLastResult.Season = (int32)R.Int(Root, TEXT("ffpResSeason"), 0);
 		W.FfpLastResult.Net = R.Int(Root, TEXT("ffpResNet"), 0);

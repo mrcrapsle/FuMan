@@ -63,7 +63,6 @@ namespace
 		return Elf;
 	}
 
-	int64 RoundTo(int64 Value, int64 Step) { return FMath::RoundToInt64((double)Value / (double)Step) * Step; }
 }
 
 // ---------- Neues Spiel ----------
@@ -298,6 +297,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
+	CheckInsolvencyRisk();   // wie in js/match-live.js: jeder Spieltag nach den Finanzen
 	TickSponsor();
 
 	RecentStyles.Add(TacticStyle);
@@ -1131,17 +1131,100 @@ bool FFM13World::BuyPlayer(int32 MarketIndex, FString& OutReason)
 	return true;
 }
 
-bool FFM13World::SellPlayer(int32 PlayerId, FString& OutReason)
+// sellPlayer() (js/transfermarket.js): Sofortverkauf zu 80 % des Marktwerts, Beraterprovision
+// wird abgezogen, Kader darf nicht unter 11 fallen. Eingespielte Elf: erst der zweite Klick
+// (bChemieBestaetigt) verkauft, wie die Warnung im Browserspiel.
+bool FFM13World::SellPlayer(int32 PlayerId, FString& OutReason, bool bChemieBestaetigt)
 {
 	const int32 Idx = Squad.IndexOfByPredicate([PlayerId](const FFM13Player& P) { return P.Id == PlayerId; });
 	if (Idx < 0) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
-	if (Squad.Num() <= FM13::MinSquadSize) { OutReason = TEXT("Mindestens 16 Spieler muessen bleiben."); return false; }
+	if (Squad.Num() <= 11) { OutReason = TEXT("Der Kader darf nicht unter 11 Spieler fallen."); return false; }
 	const FFM13Player P = Squad[Idx];
-	const int64 Erloes = RoundTo((int64)((double)P.MarketValue * 0.9), 5000);
-	Book(FString(TEXT("Verkauf: ")) + P.Name, Erloes);
+
+	// checkHighChemistryBeforeSale(): nur Startelf, und nur bei mindestens zwei Partnern ab Eingespieltheit 15
+	if (!bChemieBestaetigt && StartingEleven().Contains(PlayerId))
+	{
+		FString Namen;
+		int32 Partner = 0;
+		for (int32 Oid : StartingEleven())
+		{
+			if (Oid == PlayerId) continue;
+			const int32 A = FMath::Min(PlayerId, Oid), B = FMath::Max(PlayerId, Oid);
+			int32 Wert = 0;
+			for (int32 k = 0; k < PairA.Num(); ++k) if (PairA[k] == A && PairB[k] == B) { Wert = PairValue[k]; break; }
+			if (Wert < 15) continue;
+			Partner++;
+			if (const FFM13Player* X = FindPlayer(Oid)) Namen += (Namen.IsEmpty() ? TEXT("") : TEXT(", ")) + X->Name;
+		}
+		if (Partner >= 2)
+		{
+			OutReason = FString::Printf(TEXT("%s ist stark eingespielt mit %s. Mit dem Bestaetigen-Schalter trotzdem verkaufen."), *P.Name, *Namen);
+			return false;
+		}
+	}
+
+	const int64 Sum = FM13Transfers::JsRunden((double)P.MarketValue * 0.80);   // Math.round(marketValue * 0.80)
+	const int64 Provision = AgentFee(P, Sum);                                  // getAgentFee()
+	Book(FString(TEXT("Spielerverkauf: ")) + P.Name, Sum - Provision);
+	TransferBudget += FM13Transfers::JsRunden((double)Sum * 0.80);             // game.transferBudget += Math.round(sum * 0.8)
+	// checkFriendshipDeparture(): der beste Freund verliert Moral und die Freundschaft
+	if (P.FriendId != 0)
+	{
+		if (FFM13Player* Freund = FindPlayer(P.FriendId))
+		{
+			Freund->Morale = FMath::Max(10, Freund->Morale - 12);
+			Freund->FriendId = 0;
+			AddMessage(TEXT("Kabinen-Freundschaft zerbrochen"), Freund->Name + TEXT(" ist sichtlich mitgenommen vom Abgang seines besten Freundes ") + P.Name + TEXT(" - die Moral leidet kurzzeitig."));
+		}
+	}
 	Squad.RemoveAt(Idx);
+	ManualLineup.RemoveAll([PlayerId](int32 Id) { return Id == PlayerId; });
 	IncomingOffers.RemoveAll([PlayerId](const FFM13IncomingOffer& O) { return !O.bYouth && O.PlayerId == PlayerId; });
 	return true;
+}
+
+// checkInsolvencyRisk() (js/finances.js): jeden Spieltag nach den Finanzen. Ein Tag im Minus
+// zaehlt hoch, ab 3 gibt es eine Warnung, ab 6 die Transfersperre (bis das Konto wieder im Plus ist),
+// alle 10 Tage ein Zwangsverkauf des teuersten Spielers (60 % Marktwert), alle 15 Tage 3 Punkte Abzug.
+void FFM13World::CheckInsolvencyRisk()
+{
+	if (Money < 0) NegativeStreak++;
+	else { NegativeStreak = 0; bInsolvenzEmbargo = false; return; }
+	const int32 Streak = NegativeStreak;
+
+	if (Streak == 3)
+		AddMessage(TEXT("Finanzwarnung"), TEXT("Der Vorstand beobachtet die andauernden roten Zahlen mit wachsender Sorge."));
+	if (Streak == 6 && !bInsolvenzEmbargo)
+	{
+		bInsolvenzEmbargo = true;
+		AddMessage(TEXT("Transfersperre verhaengt"), TEXT("Wegen anhaltender Zahlungsprobleme verhaengt der Vorstand eine Transfersperre, bis das Konto wieder im Plus ist."));
+	}
+	if (Streak > 0 && Streak % 10 == 0 && Squad.Num() > 11)
+	{
+		// hoechster Marktwert; bei Gleichstand gewinnt der Erste in der Kaderreihenfolge (stabile Sortierung)
+		int32 Bester = -1;
+		for (int32 i = 0; i < Squad.Num(); ++i) if (Bester < 0 || Squad[i].MarketValue > Squad[Bester].MarketValue) Bester = i;
+		if (Bester >= 0)
+		{
+			const FFM13Player P = Squad[Bester];
+			const int64 Wert = FM13Transfers::JsRunden((double)P.MarketValue * 0.60);   // ohne Steuerberater, ohne Krisenfest-Perk
+			Squad.RemoveAt(Bester);
+			ManualLineup.RemoveAll([&P](int32 Id) { return Id == P.Id; });
+			Book(FString(TEXT("Zwangsverkauf: ")) + P.Name, Wert);
+			ForcedSalesCount++;
+			AddMessage(TEXT("Zwangsverkauf!"), FString::Printf(TEXT("Der Vorstand hat %s notgedrungen fuer %lld verkauft (unter Marktwert)."), *P.Name, (long long)Wert));
+		}
+	}
+	if (Streak > 0 && Streak % 15 == 0 && Leagues.IsValidIndex(LeagueLevel))
+	{
+		for (FFM13Club& C : Leagues[LeagueLevel].Clubs)
+		{
+			if (!C.bOwn) continue;
+			// points = max(0, points - 3): wirksam ist nur, was noch da ist
+			C.PointDeduction += FMath::Min(3, FMath::Max(0, C.Points()));
+			AddMessage(TEXT("Punktabzug"), TEXT("Wegen anhaltender Zahlungsunfaehigkeit verhaengt der Verband einen Abzug von 3 Punkten."));
+		}
+	}
 }
 
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin
