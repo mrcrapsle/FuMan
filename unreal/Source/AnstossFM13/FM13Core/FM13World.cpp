@@ -639,6 +639,15 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	ResolveWinterTalk(Rank);
 	PrepareMemberAssembly(Rank);
 	if (Outcome == EFM13SeasonOutcome::Relegated) RelegatedIntoSeason = Season + 1;
+	LastSeasonRank = Rank;
+	RelegationWages = 0;
+	if (Outcome == EFM13SeasonOutcome::Relegated)
+	{
+		RelegationWages = ApplyRelegationWageClause();
+		// Fallschirmgeld (js/media-rights.js): 25 % des TV-Grundbetrags der verlassenen Liga
+		const int64 Fallschirm = FM13Transfers::JsRunden((double)FM13Economy::LeagueBaseTvMoney(LeagueLevel) * 0.25 / 1000.0) * 1000;
+		if (Fallschirm > 0) { Book(TEXT("Fallschirmgeld (TV)"), Fallschirm); AddMessage(TEXT("Fallschirmgeld"), FString::Printf(TEXT("Die alte Liga zahlt dem Absteiger einmalig %lld aus dem TV-Topf."), (long long)Fallschirm)); }
+	}
 	if (Outcome == EFM13SeasonOutcome::Promoted) { BoardSat = FMath::Min(100, BoardSat + 15); Fans = FMath::Min(100, Fans + 10); }
 	if (Outcome == EFM13SeasonOutcome::Relegated) { BoardSat = FMath::Max(10, BoardSat - 15); Fans = FMath::Max(0, Fans - 10); }
 	if (Rank == 1) { BoardSat = FMath::Min(100, BoardSat + 5); Fans = FMath::Min(100, Fans + 5); }
@@ -1135,10 +1144,39 @@ bool FFM13World::SellPlayer(int32 PlayerId, FString& OutReason)
 	return true;
 }
 
+// getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin
 int32 FFM13World::RenewalWage(const FFM13Player& P) const
 {
-	const int32 Markt = FM13Economy::Wage(P.MarketValue, P.Strength);
-	return (int32)(FMath::RoundToInt64(FMath::Max(P.Wage, Markt) * 1.1 / 50.0) * 50);
+	const double Markt = (double)FM13Economy::Wage(P.MarketValue, P.Strength);
+	const bool bStamm = StartingEleven().Contains(P.Id);
+	int32 Staerker = 0;   // Top 3 nach Staerke; bei Gleichstand zaehlt die Kaderreihenfolge (stabile Sortierung)
+	for (const FFM13Player& X : Squad)
+	{
+		if (X.Id == P.Id) break;
+		if (X.Strength >= P.Strength) Staerker++;
+	}
+	bool bNach = false;
+	for (const FFM13Player& X : Squad)
+	{
+		if (X.Id == P.Id) { bNach = true; continue; }
+		if (bNach && X.Strength > P.Strength) Staerker++;
+	}
+	const bool bTop3 = Staerker < 3;
+	double Faktor = bTop3 ? 1.25 : (bStamm ? 1.1 : 0.95);
+	if (P.Age >= 31) Faktor -= 0.1;
+	if (P.Morale < 40) Faktor += 0.1;
+	else if (P.Morale >= 80) Faktor -= 0.05;
+	const double Untergrenze = (bStamm && P.Age < 31) ? (double)P.Wage : (double)P.Wage * 0.85;
+	int64 Gehalt = FM13Transfers::JsRunden(FMath::Max(Untergrenze, Markt * Faktor) / 10.0) * 10;
+	if (!P.PreOfferClub.IsEmpty()) Gehalt = FM13Transfers::JsRunden((double)Gehalt * 1.15 / 10.0) * 10;   // er weiss, was er wert ist
+	return (int32)Gehalt;
+}
+
+// Handgeld je Vertragsjahr: vier Spieltagsgehaelter, mindestens 1.500, auf 100 gerundet (CONTRACT_HANDGELD_MATCHDAYS)
+int64 FFM13World::RenewalSigningFee(const FFM13Player& P, int32 Years) const
+{
+	const int64 ProJahr = FMath::Max<int64>(1500, FM13Transfers::JsRunden((double)RenewalWage(P) * 4.0 / 100.0) * 100);
+	return ProJahr * Years;
 }
 
 bool FFM13World::RenewContract(int32 PlayerId, int32 Years, FString& OutReason)
@@ -1147,8 +1185,13 @@ bool FFM13World::RenewContract(int32 PlayerId, int32 Years, FString& OutReason)
 	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
 	if (Years < 1 || Years > 5) { OutReason = TEXT("Laufzeit 1 bis 5 Jahre."); return false; }
 	if (P->ContractYears >= 3) { OutReason = TEXT("Der Vertrag laeuft noch lange genug."); return false; }
+	if (!P->PreSignedClub.IsEmpty()) { OutReason = FString::Printf(TEXT("%s hat schon einen Vorvertrag bei %s unterschrieben."), *P->Name, *P->PreSignedClub); return false; }
 	const int32 NeuLohn = RenewalWage(*P);
+	const int64 Handgeld = RenewalSigningFee(*P, Years);
+	const int64 Kosten = Handgeld + AgentFee(*P, Handgeld);
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Handgeld nicht gedeckt: %lld noetig."), (long long)Kosten); return false; }
 	if (!FitsWageBudget(NeuLohn - P->Wage)) { OutReason = TEXT("Die Gehaltserhoehung sprengt das Gehaltsbudget."); return false; }
+	Book(FString::Printf(TEXT("Vertragsverlaengerung: %s"), *P->Name), -Kosten);
 	P->Wage = NeuLohn;
 	P->ContractYears = Years;
 	return true;
@@ -1232,13 +1275,23 @@ void FFM13World::PlanSeason()
 	for (const FFM13Club& C : L.Clubs) if (!C.bOwn && C.Strength > Eigen) ++Besser;
 	SeasonTarget = FMath::Clamp(Besser + 1 + 2, 1, FM13::TeamsPerLeague - 2);
 
-	// Gehaltsbudget (vereinfacht getWageBudgetFloor/applyCashSurplusBudgets in js/season-end.js):
-	// 70 % der erwarteten Einnahmen pro Spieltag, nie unter den laufenden Gehältern
-	const int32 Zuschauer = FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, 9, TicketPrice);
-	const int64 Einnahmen = (int64)FMath::Max(Sponsor.Base, 500) + FM13Economy::TvMoney(LeagueLevel, 9) / FM13::MatchdaysPerSeason
-		+ (int64)Zuschauer * TicketPrice / 2;
-	const int64 Reserve = FMath::Max<int64>(0, Money) / (FM13::MatchdaysPerSeason * 3); // ein Drittel des Polsters verteilt auf drei Saisons
-	WageBudget = FMath::Max<int64>(WagesPerMatchday(), Einnahmen * 7 / 10 + Reserve);
+	// Gehaltsbudget wie js/season-end.js: Liga-Wert x Platzfaktor, mindestens die Untergrenze und im Jahr
+	// nach dem Abstieg 90 % der gekuerzten Gehaelter; dazu Ruecklagen ueber der Reserve
+	if (LastSeasonRank <= 0)
+	{
+		// Karrierestart (js/state.js, js/career.js): Liga-Wert; mindestens die laufenden Gehaelter plus 5 % Spielraum
+		// (wie getWageBudgetFloor ohne Verlustsaison), sonst waere in der Bundesliga keine Verpflichtung moeglich
+		WageBudget = FMath::Max<int64>(LeagueWageBudget(LeagueLevel), (int64)std::ceil((double)WagesPerMatchday() * 1.05 / 1000.0) * 1000);
+	}
+	else
+	{
+		const double Platzfaktor = LastSeasonRank <= 4 ? 1.3 : (LastSeasonRank <= 10 ? 1.0 : 0.8);
+		const int64 Liga = FM13Transfers::JsRunden((double)LeagueWageBudget(LeagueLevel) * Platzfaktor / 100.0) * 100;
+		const int64 Abstieg = (int64)std::ceil((double)RelegationWages * 0.9 / 1000.0) * 1000;
+		WageBudget = FMath::Max<int64>(Liga, FMath::Max<int64>(WageBudgetFloor(), Abstieg));
+		ApplyCashSurplusBudgets();
+		RelegationWages = 0;
+	}
 	AddMessage(TEXT("Saisonziel"), FString::Printf(TEXT("Der Vorstand erwartet mindestens Platz %d. Gehaltsbudget: %lld Euro pro Spieltag."), SeasonTarget, (long long)WageBudget));
 }
 
@@ -5419,4 +5472,63 @@ void FFM13World::TickSaisonkollektion()
 		Saisonkollektion.bAktiv = false;
 		AddMessage(TEXT("Saisonale Kollektion beendet"), TEXT("Der Verkaufsschub der saisonalen Kollektion ist ausgelaufen."));
 	}
+}
+
+// ---------- Gehaltsbudget (js/season-end.js, js/squad.js) ----------
+
+int64 FFM13World::LeagueWageBudget(int32 Level)
+{
+	static const int64 Budgets[] = { 1575000, 520000, 110000, 36000, 11000, 8000 };   // LEAGUE_WAGE_BUDGET
+	return Budgets[FMath::Clamp(Level, 0, 5)];
+}
+
+// getRenewalWageBuffer(): Erhoehungen der Spieler, deren Vertrag in der neuen Saison auslaeuft.
+// Die Planung laeuft hier nach dem Herunterzaehlen der Vertraege, deshalb Restlaufzeit 1 statt 2.
+int64 FFM13World::RenewalWageBuffer() const
+{
+	int64 Summe = 0;
+	for (const FFM13Player& P : Squad) if (P.ContractYears == 1) Summe += FMath::Max(0, RenewalWage(P) - P.Wage);
+	return Summe;
+}
+
+int64 FFM13World::WageBudgetFloor() const
+{
+	const int64 Summe = WagesPerMatchday();
+	auto Auf1000 = [](double X) { return (int64)std::ceil(X / 1000.0) * 1000; };
+	if (Money < 0) return Auf1000((double)Summe);                       // Konto im Minus: eingefroren
+	// Bilanz der gerade beendeten Saison (EvaluateFinancialFairplay hat sie festgehalten)
+	const int64 SaisonNetto = bHasFfpResult ? FfpLastResult.Net : 0;
+	const bool bOhneVerlust = SaisonNetto >= 0 || Money >= Summe * 34;
+	const double Deckel = (double)LeagueWageBudget(LeagueLevel) * 1.5;   // WAGE_FLOOR_GROWTH_CAP
+	if ((double)Summe >= Deckel) return Auf1000((double)(Summe + (Money >= Summe * 17 ? RenewalWageBuffer() : 0)));
+	const double Spielraum = bOhneVerlust ? (double)Summe * 0.05 : 0.0;
+	return Auf1000((double)Summe + Spielraum + (double)RenewalWageBuffer());
+}
+
+// applyRelegationWageClause(): alle Gehaelter sinken um 40 %, mindestens 150, auf 50 gerundet
+int64 FFM13World::ApplyRelegationWageClause()
+{
+	if (Squad.Num() == 0) return 0;
+	const int64 Vorher = WagesPerMatchday();
+	for (FFM13Player& P : Squad)
+	{
+		P.Wage = FMath::Max(150, (int32)(FM13Transfers::JsRunden((double)P.Wage * 0.6 / 50.0) * 50));
+		P.Morale = FMath::Max(10, P.Morale - 3);
+	}
+	const int64 Nachher = WagesPerMatchday();
+	AddMessage(TEXT("Abstiegsklausel greift"), FString::Printf(TEXT("Mit dem Abstieg sinken alle Spielergehaelter vertragsgemaess um 40 %% (%lld auf %lld pro Spieltag). Moral -3."), (long long)Vorher, (long long)Nachher));
+	return Nachher;
+}
+
+// applyCashSurplusBudgets(): Reserve = halbe Saison der Gehaelter, mindestens des halben Budgets
+void FFM13World::ApplyCashSurplusBudgets()
+{
+	const double Reserve = FMath::Max((double)WagesPerMatchday(), (double)WageBudget * 0.5) * 34.0 * 0.5;
+	const double Ueberschuss = FMath::Max(0.0, (double)Money - Reserve);
+	const int64 Transfer = FM13Transfers::JsRunden(Ueberschuss * 0.4 / 50000.0) * 50000;
+	const int64 Gehalt = FM13Transfers::JsRunden(Ueberschuss * 0.1 / 34.0 / 1000.0) * 1000;
+	if (!Transfer && !Gehalt) return;
+	TransferBudget += Transfer;
+	WageBudget += Gehalt;
+	AddMessage(TEXT("Vorstand gibt Ruecklagen frei"), FString::Printf(TEXT("Zusaetzlich %lld Transferbudget und %lld Gehaltsbudget pro Spieltag."), (long long)Transfer, (long long)Gehalt));
 }

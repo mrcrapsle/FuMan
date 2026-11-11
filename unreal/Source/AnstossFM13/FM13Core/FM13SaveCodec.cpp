@@ -439,6 +439,8 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.Field(TEXT("lastSeasonRank"), S.LastSeasonRank);
+		W.Field(TEXT("relegationWages"), S.RelegationWages);
 		W.ArrayKey(TEXT("fanshop"));
 		for (const FFM13World::FFM13Ware& Wa : S.Waren)
 		{
@@ -1165,6 +1167,8 @@ namespace FM13Save
 		}
 		W.ResetOekonomieGrunddaten();
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		W.LastSeasonRank = (int32)R.Int(Root, TEXT("lastSeasonRank"), 0);
+		W.RelegationWages = R.Int(Root, TEXT("relegationWages"), 0);
 		{
 			int32 Index = 0;
 			for (int32 N : R.Items(Root, TEXT("fanshop")))

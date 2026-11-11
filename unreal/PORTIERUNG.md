@@ -150,7 +150,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `media-rights.js` | 244 | teilweise | TV-Geld | TvMoney 1:1, Raten und Restausschüttung (Medienverträge offen) |
 | `sponsors.js` | 835 | teilweise | Sponsoren | Hauptsponsor mit drei Angeboten (Runde A); Ärmel, Ausrüster, Banden offen |
 | `sponsor-renewal.js` | 99 | teilweise | Sponsorverlängerung | Angebote 4 Spieltage vor Vertragsende (Runde A) |
-| `merchandise.js` | 418 | offen | 3-KANAL FANSHOP VERTRIEB |  |
+| `merchandise.js` | 418 | teilweise | 3-KANAL FANSHOP VERTRIEB |  |
 | `industry.js` | 332 | teilweise | Lange Liste: Karten zuklappen (js/abschnitte.js) |  |
 | `commodities.js` | 41 | portiert | DYNAMISCHE ROHSTOFF-BÖRSE (ENGINE) |  |
 | `holding.js` | 103 | portiert | Betriebswert der Holding: Grundwert plus 80 % der in Fabriken gesteckten Summe (Kauf |  |

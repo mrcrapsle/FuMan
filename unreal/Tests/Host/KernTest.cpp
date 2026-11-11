@@ -1326,6 +1326,7 @@ static void TestMedizincheck()
 	A.NewGame(TEXT("Blind"), 142, 0);
 	A.Money = 50000000;
 	A.TransferBudget = 100000000;
+	A.WageBudget = 1000000000;
 	const int32 IdA = A.Market[0].Player.Id;
 	A.OpenPoker(IdA, G);
 	A.Poker.Offer = A.Market[0].AskingPrice;
@@ -1345,6 +1346,7 @@ static void TestMedizincheck()
 	F.NewGame(TEXT("Fenster"), 144, 0);
 	F.Money = 500000000;
 	F.TransferBudget = 500000000;
+	F.WageBudget = 1000000000;
 	PRUEFE(F.IsTransferWindowOpen() && F.TransferBudget == 500000000, "Fenster: am Saisonstart offen");
 	F.Matchday = 5;
 	PRUEFE(!F.IsTransferWindowOpen(), "Fenster: nach Spieltag 3 zu");
@@ -1629,6 +1631,7 @@ static void TestMedizincheck()
 	LW.NewGame(TEXT("Leihe"), 156, 0);
 	LW.Money = 500000000;
 	LW.TransferBudget = 500000000;
+	LW.WageBudget = 1000000000;
 	LW.Matchday = 2;
 	PRUEFE(LW.Loanables.Num() == 3, "Leihspieler: drei Angebote je Markt-Neuaufbau");
 	while (LW.Squad.Num() >= 21) LW.Squad.RemoveAt(LW.Squad.Num() - 1);
@@ -2096,6 +2099,37 @@ static void TestMedizincheck()
 	FFM13World HLd;
 	FString HFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(HSave), HLd, HFehler) && HLd.HoldingGeld == HSave.HoldingGeld && HLd.Waren[0].Lager == HSave.Waren[0].Lager && HLd.B2BAuftraege.Num() == HSave.B2BAuftraege.Num() && HLd.Fabriken[0].Stufe == HSave.Fabriken[0].Stufe, "Holding und Industrie bleiben im Spielstand (%s)", *HFehler);
+	// Gehaltsbudget und Vertragsforderung (js/season-end.js, js/contracts.js), von Hand nachgerechnet
+	PRUEFE(FFM13World::LeagueWageBudget(0) == 1575000 && FFM13World::LeagueWageBudget(5) == 8000 && FFM13World::LeagueWageBudget(9) == 8000, "Liga-Gehaltsbudget je Stufe, begrenzt");
+	FFM13World GB;
+	GB.NewGame(TEXT("Gehaltsbudget"), 175, 5);
+	PRUEFE(GB.WageBudget == 8000, "Karrierestart 6. Liga: Gehaltsbudget 8.000 je Spieltag");
+	GB.Squad.Reset();
+	FFM13Player GP;
+	GP.Id = 9001; GP.Name = TEXT("Testspieler"); GP.Wage = 1000; GP.Morale = 50; GP.ContractYears = 3; GP.Strength = 50; GP.MarketValue = 15000; GP.Age = 25;
+	GB.Squad.Add(GP);
+	GB.Money = -1;
+	PRUEFE(GB.WageBudgetFloor() == 1000, "Untergrenze: Konto im Minus friert die laufenden Gehaelter ein");
+	GB.Money = 1000000;
+	PRUEFE(GB.WageBudgetFloor() == 2000, "Untergrenze: 1.000 plus 5 Prozent Spielraum, auf 1.000 aufgerundet");
+	const int64 GBNach = GB.ApplyRelegationWageClause();
+	PRUEFE(GBNach == 600 && GB.Squad[0].Wage == 600 && GB.Squad[0].Morale == 47, "Abstiegsklausel: Gehalt -40 Prozent, Moral -3");
+	// Ruecklagen: 10 Mio. Konto, Reserve = max(600, 4.000) x 17 = 68.000
+	GB.WageBudget = 8000;
+	GB.TransferBudget = 0;
+	GB.Money = 10000000;
+	GB.ApplyCashSurplusBudgets();
+	PRUEFE(GB.TransferBudget == 3950000 && GB.WageBudget == 8000 + 29000, "Ruecklagen: 40 Prozent ins Transferbudget, 10 Prozent auf 34 Spieltage ins Gehaltsbudget");
+	// Forderung bei der Verlaengerung: einziger Spieler ist Top 3 und Stammspieler, Faktor 1,25
+	const int32 GBMarkt = FM13Economy::Wage(GB.Squad[0].MarketValue, GB.Squad[0].Strength);
+	const int32 GBSoll = (int32)(FM13Transfers::JsRunden(FMath::Max(600.0, (double)GBMarkt * 1.25) / 10.0) * 10);
+	PRUEFE(GB.RenewalWage(GB.Squad[0]) == GBSoll, "Verlaengerung: Marktgehalt x 1,25 fuer die Top 3, nie unter dem alten Gehalt");
+	PRUEFE(GB.RenewalSigningFee(GB.Squad[0], 2) == 2 * FMath::Max<int64>(1500, FM13Transfers::JsRunden((double)GBSoll * 4.0 / 100.0) * 100), "Handgeld: vier Spieltagsgehaelter je Jahr, mindestens 1.500");
+	GB.Squad[0].ContractYears = 1;
+	GB.WageBudget = 1000000;
+	const int64 GBGeld = GB.Money;
+	FString GBGrund;
+	PRUEFE(GB.RenewContract(9001, 2, GBGrund) && GB.Money < GBGeld && GB.Squad[0].Wage == GBSoll, "Verlaengerung bucht das Handgeld und setzt das neue Gehalt (%s)", *GBGrund);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);
@@ -2345,12 +2379,24 @@ static void BotZug(FFM13World& W)
 {
 	FString Grund;
 	const int32 Elf = W.OwnStrength();
+	// Der Bot plant wie ein vorsichtiger Manager: die Gehaelter duerfen hoechstens 80 % der erwarteten
+	// Saisoneinnahmen kosten (TV-Geld nach Tabellenplatz plus Heimspiel-Tickets), umgelegt auf den Spieltag
+	const int64 Saisoneinnahmen = FM13Economy::TvMoney(W.LeagueLevel, FMath::Max(1, W.OwnRank())) + (int64)W.StadiumCapacity * W.TicketPrice * 17 * 6 / 10;
+	const int64 Gehaltsgrenze = Saisoneinnahmen * 8 / 10 / FM13::MatchdaysPerSeason;
+	// Liegen die Gehaelter ueber der Grenze (etwa nach einem Abstieg), geht je Spieltag der teuerste Spieler
+	if (W.WagesPerMatchday() > Gehaltsgrenze && W.Squad.Num() > FM13::MinSquadSize)
+	{
+		int32 Teuer = 0;
+		for (int32 i = 1; i < W.Squad.Num(); ++i) if (W.Squad[i].Wage > W.Squad[Teuer].Wage) Teuer = i;
+		W.SellPlayer(W.Squad[Teuer].Id, Grund);
+	}
 	// Kaufen: bester Spieler, der die Elf verbessert und bezahlbar bleibt
 	int32 Bester = -1;
 	for (int32 i = 0; i < W.Market.Num(); ++i)
 	{
 		const FFM13MarketOffer& O = W.Market[i];
-		const bool bBezahlbar = O.Price <= W.Money * 3 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12;
+		const bool bBezahlbar = O.Price <= W.Money * 3 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12
+			&& W.WagesPerMatchday() + O.Player.Wage <= Gehaltsgrenze;
 		if (bBezahlbar && O.Player.Strength > Elf + 1 && (Bester < 0 || O.Player.Strength > W.Market[Bester].Player.Strength)) Bester = i;
 	}
 	if (Bester >= 0 && W.Squad.Num() >= FM13::MaxSquadSize)
@@ -2363,7 +2409,8 @@ static void BotZug(FFM13World& W)
 	if (Bester >= 0) W.BuyPlayer(Bester, Grund);
 	// Verlängern: wer zur Elf gehört
 	for (FFM13Player& P : W.Squad)
-		if (P.ContractYears <= 1 && P.Strength >= Elf - 3) W.RenewContract(P.Id, 3, Grund);
+		if (P.ContractYears <= 1 && P.Strength >= Elf - 3 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
+			&& W.Money > W.RenewalSigningFee(P, 3) * 3) W.RenewContract(P.Id, 3, Grund);
 	// Talente
 	for (int32 i = W.YouthTalents.Num() - 1; i >= 0; --i)
 		if (W.YouthTalents[i].Strength >= Elf - 6 && W.Squad.Num() < FM13::MaxSquadSize) W.PromoteYouth(i, Grund);

@@ -231,6 +231,14 @@ public:
 	bool bWinterWindowUsed = false;                    // in dieser Saison schon geoeffnet
 	int32 WinterWindowCloseMatchday = 0;               // letzter Spieltag des Winterfensters
 	static int64 LeagueTransferBudget(int32 Level);    // getLeagueTransferBudget(): 25 Mio. bis 40.000
+	// Gehaltsbudget wie js/season-end.js: Liga-Tabelle x Platzfaktor, Untergrenze, Abstiegsklausel, Ruecklagen
+	static int64 LeagueWageBudget(int32 Level);        // getLeagueWageBudget(): 1,575 Mio. bis 8.000 je Spieltag
+	int32 LastSeasonRank = 0;                          // Endplatz der letzten Saison (0 = erste Saison)
+	int64 RelegationWages = 0;                         // gekuerzte Gehaltssumme nach dem Abstieg, nur fuer die naechste Planung
+	int64 RenewalWageBuffer() const;                   // getRenewalWageBuffer()
+	int64 WageBudgetFloor() const;                     // getWageBudgetFloor()
+	int64 ApplyRelegationWageClause();                 // Gehaelter -40 %, Moral -3
+	void ApplyCashSurplusBudgets();                    // 40 % der Ruecklagen ins Transfer-, 10 % ins Gehaltsbudget
 	bool IsSummerWindowOpen() const { return Matchday <= 3; }
 	bool IsTransferWindowOpen() const { return IsSummerWindowOpen() || bWinterWindowActive; }
 	bool TransferWindowGate(FString& OutReason) const;  // Meldung, wenn kein Fenster offen ist
@@ -334,6 +342,7 @@ public:
 	bool SellPlayer(int32 PlayerId, FString& OutReason);
 	bool RenewContract(int32 PlayerId, int32 Years, FString& OutReason);
 	int32 RenewalWage(const FFM13Player& P) const;
+	int64 RenewalSigningFee(const FFM13Player& P, int32 Years) const;   // Handgeld der Verlaengerung
 	bool PromoteYouth(int32 YouthIndex, FString& OutReason);
 	bool ReleaseYouth(int32 YouthIndex, FString& OutReason);
 
