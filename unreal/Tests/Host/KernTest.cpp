@@ -1505,6 +1505,41 @@ static void TestAusstiegsklausel()
 	PRUEFE(W.Squad.Num() == Vorher - 1 && !W.FindPlayer(Id), "Der verkaufte Spieler ist weg");
 }
 
+static void TestWeiterverkauf()
+{
+	std::printf("Weiterverkaufsbeteiligung: 94 Prozent sofort, 15 Prozent vom Weiterverkauf\n");
+	FFM13World W;
+	W.NewGame(TEXT("Weiter"), 141, 0);
+	FString G;
+	W.Money = 0;
+	const FFM13Player P = W.Squad[3];
+	FFM13IncomingOffer O;
+	O.PlayerId = P.Id;
+	O.PlayerName = P.Name;
+	O.Club = TEXT("Testklub");
+	O.Price = 10000000;
+	O.ExpiresMatchday = 99;
+	W.IncomingOffers.Add(O);
+	const int64 Preis = FM13Transfers::JsRunden(10000000.0 * 0.94);
+	const int64 Prov = W.AgentFee(P, Preis);
+	const int32 Vorher = W.Squad.Num();
+	PRUEFE(W.AcceptIncomingOfferWithSellOn(0, G), "Annahme mit Beteiligung klappt: %s", *G);
+	PRUEFE(W.Money == Preis - Prov, "Sofort 94 Prozent abzueglich Provision");
+	PRUEFE(W.Squad.Num() == Vorher - 1 && W.SellOnClauses.Num() == 1, "Spieler weg, Klausel angelegt");
+	PRUEFE(W.SellOnClauses[0].Percent == 15 && W.SellOnClauses[0].OriginalSaleValue == Preis, "15 Prozent, Ausgangswert ist der Verkaufspreis");
+
+	// Auszahlung: irgendwann am Spieltag, dann 1,3- bis 2,5-facher Weiterverkauf, 15 % davon
+	const int64 Geld = W.Money;
+	for (int32 m = 1; m <= 5000 && W.SellOnClauses.Num() > 0; ++m)
+	{
+		W.Matchday = m;
+		W.CheckSellOnClausePayouts();
+	}
+	const int64 Auszahlung = W.Money - Geld;
+	PRUEFE(W.SellOnClauses.Num() == 0, "Der Weiterverkauf loest die Klausel aus");
+	PRUEFE(Auszahlung >= 1700000 && Auszahlung <= 3700000, "Beteiligung im erwarteten Band (%lld)", (long long)Auszahlung);
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2689,6 +2724,7 @@ int main()
 	TestVertragsgespraech();
 	TestAufstiegsbudget();
 	TestAusstiegsklausel();
+	TestWeiterverkauf();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

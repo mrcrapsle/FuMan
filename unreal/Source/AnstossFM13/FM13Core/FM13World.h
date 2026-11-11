@@ -387,6 +387,9 @@ public:
 	// ---------- Angebote ----------
 	bool AcceptSponsorOffer(int32 Index, FString& OutReason);
 	bool AcceptIncomingOffer(int32 Index, FString& OutReason);
+	bool AcceptIncomingOfferWithSellOn(int32 Index, FString& OutReason);   // acceptTransferOfferWithClause(): 94 % sofort, 15 % vom Weiterverkauf
+	void CheckSellOnClausePayouts();                                    // checkSellOnClausePayouts(): jeden Spieltag
+	TArray<FFM13SellOn> SellOnClauses;                                 // game.sellOnClauses
 	// Rueckkauf (js/buyback.js): Verkauf mit Option, Entwicklung beim neuen Verein, Ausuebung im Fenster
 	TArray<FFM13BuybackOption> BuybackOptions;
 	bool AcceptIncomingOfferWithBuyback(int32 Index, FString& OutReason);

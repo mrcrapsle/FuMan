@@ -594,6 +594,9 @@ namespace FM13Save
 		W.Field(TEXT("negativeStreak"), S.NegativeStreak);
 		W.FieldBool(TEXT("insolvenzEmbargo"), S.bInsolvenzEmbargo);
 		W.Field(TEXT("forcedSales"), S.ForcedSalesCount);
+		W.ArrayKey(TEXT("sellOn"));
+		for (const FFM13SellOn& K : S.SellOnClauses) { W.ElementObject(); W.Field(TEXT("name"), K.PlayerName); W.Field(TEXT("club"), K.BuyingClub); W.Field(TEXT("pct"), K.Percent); W.Field(TEXT("orig"), K.OriginalSaleValue); W.EndObject(); }
+		W.EndArray();
 		W.ArrayKey(TEXT("activeLoans"));
 		for (const FFM13World::FFM13Loan& L : S.ActiveLoans)
 		{
@@ -1375,6 +1378,13 @@ namespace FM13Save
 		W.NegativeStreak = (int32)R.Int(Root, TEXT("negativeStreak"), 0);
 		W.bInsolvenzEmbargo = R.Bool(Root, TEXT("insolvenzEmbargo"), false);
 		W.ForcedSalesCount = (int32)R.Int(Root, TEXT("forcedSales"), 0);
+		for (int32 N : R.Items(Root, TEXT("sellOn")))
+		{
+			FFM13SellOn K;
+			K.PlayerName = R.Str(N, TEXT("name"), TEXT("")); K.BuyingClub = R.Str(N, TEXT("club"), TEXT(""));
+			K.Percent = (int32)R.Int(N, TEXT("pct"), 15); K.OriginalSaleValue = R.Int(N, TEXT("orig"), 0);
+			W.SellOnClauses.Add(K);
+		}
 		for (int32 N : R.Items(Root, TEXT("activeLoans")))
 		{
 			FFM13World::FFM13Loan L;

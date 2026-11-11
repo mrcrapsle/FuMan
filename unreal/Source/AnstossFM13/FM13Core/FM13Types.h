@@ -128,6 +128,14 @@ struct FFM13Sponsor
 };
 
 // Angebot eines KI-Vereins für einen eigenen Spieler oder ein Talent (transfermarket.js, youth-sales.js)
+struct FFM13SellOn
+{
+	FString PlayerName;
+	FString BuyingClub;
+	int32 Percent = 15;
+	int64 OriginalSaleValue = 0;
+};
+
 struct FFM13IncomingOffer
 {
 	int32 PlayerId = 0;

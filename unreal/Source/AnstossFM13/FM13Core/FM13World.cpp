@@ -298,6 +298,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
+	CheckSellOnClausePayouts();
 	TickFixedDeposit();
 	TickMoneyHistory();
 	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
@@ -1578,6 +1579,46 @@ void FFM13World::CheckReleaseClauseTriggers()
 		ManualLineup.RemoveAll([&P](int32 Id) { return Id == P.Id; });
 		AddMessage(FString(TEXT("Ausstiegsklausel ausgeloest: ")) + P.Name,
 			Kaeufer + TEXT(" hat die Ausstiegsklausel von ") + P.Name + TEXT(" gezogen und sofort ") + FString::Printf(TEXT("%lld"), (long long)P.ReleaseClause) + TEXT(" ueberwiesen - der Spieler verlaesst den Verein augenblicklich."));
+	}
+}
+
+// ---------- Weiterverkaufsbeteiligung (js/transfermarket.js: acceptTransferOfferWithClause, checkSellOnClausePayouts) ----------
+
+// Der kaufende Verein zahlt 6 % weniger sofort; dafuer bekommt der Verein 15 % von jedem spaeteren Weiterverkauf
+bool FFM13World::AcceptIncomingOfferWithSellOn(int32 Index, FString& OutReason)
+{
+	if (!IncomingOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	const FFM13IncomingOffer O = IncomingOffers[Index];
+	const int64 Preis = FM13Transfers::JsRunden((double)O.Price * 0.94);   // Math.round(offer.currentBid * 0.94)
+	IncomingOffers[Index].Price = Preis;
+	if (!AcceptIncomingOffer(Index, OutReason)) return false;
+	FFM13SellOn K;
+	K.PlayerName = O.PlayerName;
+	K.BuyingClub = O.Club;
+	K.Percent = 15;
+	K.OriginalSaleValue = Preis;
+	SellOnClauses.Add(K);
+	OutReason = FString::Printf(TEXT("%s wechselt fuer %lld zu %s - dazu 15 Prozent von jedem kuenftigen Weiterverkauf."), *K.PlayerName, (long long)Preis, *K.BuyingClub);
+	return true;
+}
+
+// checkSellOnClausePayouts(): jeden Spieltag mit 1,5 % Chance je Klausel. Der Weiterverkaufswert liegt
+// zwischen dem 1,3- und dem 2,5-fachen des Verkaufspreises; die Beteiligung wird sofort gezahlt.
+void FFM13World::CheckSellOnClausePayouts()
+{
+	for (int32 i = SellOnClauses.Num() - 1; i >= 0; --i)
+	{
+		const FFM13SellOn K = SellOnClauses[i];
+		const int32 Kennung = (int32)(K.OriginalSaleValue % 1000003) + i * 7919;
+		const uint32 Salz = (uint32)(Season * 1000 + Matchday);
+		if (FM13Transfers::HashEinheit(Kennung, Salz) >= 0.015) continue;
+		const double Faktor = 1.3 + 1.2 * FM13Transfers::HashEinheit(Kennung, Salz + 1);
+		const int64 Weiterverkauf = FM13Transfers::JsRunden((double)K.OriginalSaleValue * Faktor);
+		const int64 Auszahlung = FM13Transfers::JsRunden((double)Weiterverkauf * (double)K.Percent / 100.0);
+		Book(FString(TEXT("Weiterverkaufsbeteiligung: ")) + K.PlayerName, Auszahlung);
+		AddMessage(TEXT("Weiterverkaufsbeteiligung ausgezahlt!"),
+			K.BuyingClub + TEXT(" hat ") + K.PlayerName + FString::Printf(TEXT(" fuer %lld weiterverkauft - deine %d-Prozent-Beteiligung: %lld!"), (long long)Weiterverkauf, K.Percent, (long long)Auszahlung));
+		SellOnClauses.RemoveAt(i);
 	}
 }
 
