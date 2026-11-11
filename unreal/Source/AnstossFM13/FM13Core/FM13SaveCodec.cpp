@@ -436,6 +436,20 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.Field(TEXT("ffpHist0"), S.FfpHistory.Num() > 0 ? S.FfpHistory[0] : 0);
+		W.Field(TEXT("ffpHist1"), S.FfpHistory.Num() > 1 ? S.FfpHistory[1] : 0);
+		W.Field(TEXT("ffpHist2"), S.FfpHistory.Num() > 2 ? S.FfpHistory[2] : 0);
+		W.Field(TEXT("ffpHistCount"), S.FfpHistory.Num());
+		W.Field(TEXT("ffpStrikes"), S.FfpStrikes);
+		W.FieldBool(TEXT("ffpEmbargo"), S.bFfpEmbargo);
+		W.Field(TEXT("ffpPending"), S.PendingFfpDeduction);
+		W.FieldBool(TEXT("ffpHasResult"), S.bHasFfpResult);
+		W.Field(TEXT("ffpResSeason"), S.FfpLastResult.Season);
+		W.Field(TEXT("ffpResNet"), S.FfpLastResult.Net);
+		W.Field(TEXT("ffpResKum"), S.FfpLastResult.Kumulativ);
+		W.Field(TEXT("ffpResErlaubt"), S.FfpLastResult.Erlaubt);
+		W.Field(TEXT("ffpResCount"), S.FfpLastResult.Ueberwacht);
+		W.FieldBool(TEXT("ffpResVerstoss"), S.FfpLastResult.bVerstoss);
 		W.ArrayKey(TEXT("aiNews"));
 		for (const FFM13World::FFM13AiNews& N : S.AiNews)
 		{
@@ -591,6 +605,7 @@ namespace FM13Save
 				W.Field(TEXT("d"), C.Drawn);
 				W.Field(TEXT("l"), C.Lost);
 				W.Field(TEXT("gf"), C.GoalsFor);
+				W.Field(TEXT("pded"), C.PointDeduction);
 				W.Field(TEXT("ga"), C.GoalsAgainst);
 				W.EndObject();
 			}
@@ -1002,6 +1017,22 @@ namespace FM13Save
 			W.FreeAgents.Add(F);
 		}
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		{
+			const int32 FHC = (int32)FMath::Clamp((int32)R.Int(Root, TEXT("ffpHistCount"), 0), 0, 3);
+			if (FHC > 0) W.FfpHistory.Add(R.Int(Root, TEXT("ffpHist0"), 0));
+			if (FHC > 1) W.FfpHistory.Add(R.Int(Root, TEXT("ffpHist1"), 0));
+			if (FHC > 2) W.FfpHistory.Add(R.Int(Root, TEXT("ffpHist2"), 0));
+		}
+		W.FfpStrikes = (int32)R.Int(Root, TEXT("ffpStrikes"), 0);
+		W.bFfpEmbargo = R.Bool(Root, TEXT("ffpEmbargo"), false);
+		W.PendingFfpDeduction = (int32)R.Int(Root, TEXT("ffpPending"), 0);
+		W.bHasFfpResult = R.Bool(Root, TEXT("ffpHasResult"), false);
+		W.FfpLastResult.Season = (int32)R.Int(Root, TEXT("ffpResSeason"), 0);
+		W.FfpLastResult.Net = R.Int(Root, TEXT("ffpResNet"), 0);
+		W.FfpLastResult.Kumulativ = R.Int(Root, TEXT("ffpResKum"), 0);
+		W.FfpLastResult.Erlaubt = R.Int(Root, TEXT("ffpResErlaubt"), 0);
+		W.FfpLastResult.Ueberwacht = (int32)R.Int(Root, TEXT("ffpResCount"), 0);
+		W.FfpLastResult.bVerstoss = R.Bool(Root, TEXT("ffpResVerstoss"), false);
 		for (int32 N : R.Items(Root, TEXT("aiNews")))
 		{
 			FFM13World::FFM13AiNews A;
@@ -1107,6 +1138,7 @@ namespace FM13Save
 				Club.Drawn = (int32)R.Int(C, TEXT("d"), 0);
 				Club.Lost = (int32)R.Int(C, TEXT("l"), 0);
 				Club.GoalsFor = (int32)R.Int(C, TEXT("gf"), 0);
+				Club.PointDeduction = (int32)R.Int(C, TEXT("pded"), 0);
 				Club.GoalsAgainst = (int32)R.Int(C, TEXT("ga"), 0);
 				L.Clubs.Add(Club);
 			}

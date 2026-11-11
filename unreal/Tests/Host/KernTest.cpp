@@ -1816,6 +1816,45 @@ static void TestMedizincheck()
 	bool KIWechselOk = true;
 	for (const FFM13World::FFM13AiNews& N : KW2.AiNews) if (!N.bRetired && (N.To.IsEmpty() || N.From == N.To || N.Fee <= 0)) KIWechselOk = false;
 	PRUEFE(KIWechselOk, "Fenster 2: Wechsel haben Käufer, Verkäufer und Ablöse");
+	// Financial Fairplay (js/ffp.js): Ausnahmen, Verwarnung, Sperre, Punktabzug, Spielstand
+	FFM13World FF;
+	FF.NewGame(TEXT("FFP"), 162, 0);
+	FF.Money = 500000000;
+	FF.Bookings.Reset();
+	FFM13Booking FBuch;
+	FBuch.Label = TEXT("Stadionausbau"); FBuch.Amount = -90000000; FBuch.Season = FF.Season;
+	FF.Bookings.Add(FBuch);
+	PRUEFE(FF.FfpSeasonNet() == 0, "FFP: Stadionausbau zaehlt nicht als Verlust");
+	FBuch.Label = TEXT("Gehaelter"); FBuch.Amount = -20000000;
+	FF.Bookings.Add(FBuch);
+	PRUEFE(FF.FfpSeasonNet() == -20000000 && FF.FfpAllowedLossPerSeason() == 12800000, "FFP: Verlust zaehlt, erlaubt 20 Prozent der Liga-Basis (12,8 Mio.)");
+	FF.EvaluateFinancialFairplay();
+	PRUEFE(FF.FfpStrikes == 1 && !FF.bFfpEmbargo && FF.FfpLastResult.bVerstoss, "FFP: erste Verwarnung ohne Sperre");
+	FF.Bookings.Reset();
+	FBuch.Season = FF.Season; FBuch.Label = TEXT("Gehaelter"); FBuch.Amount = -20000000; FF.Bookings.Add(FBuch);
+	FF.EvaluateFinancialFairplay();
+	PRUEFE(FF.FfpStrikes == 2 && FF.bFfpEmbargo && FF.HasTransferEmbargo(), "FFP: zweiter Verstoss sperrt Transfers");
+	FF.Bookings.Reset();
+	FBuch.Season = FF.Season; FBuch.Amount = -20000000; FF.Bookings.Add(FBuch);
+	FF.EvaluateFinancialFairplay();
+	PRUEFE(FF.FfpStrikes == 3 && FF.PendingFfpDeduction == 3, "FFP: dritter Verstoss: drei Punkte Abzug vorgemerkt");
+	// Punktabzug nach dem Tabellen-Neustart
+	for (FFM13Club& C : FF.Leagues[FF.LeagueLevel].Clubs) if (C.bOwn) { C.Won = 2; C.Drawn = 0; }
+	FF.ApplyPendingFfpPointDeduction();
+	bool FPunkte = false;
+	for (const FFM13Club& C : FF.Leagues[FF.LeagueLevel].Clubs) if (C.bOwn && C.Points() == 3) FPunkte = true;
+	PRUEFE(FPunkte && FF.PendingFfpDeduction == 0, "FFP: Abzug von drei Punkten (6 auf 3)");
+	// Sauberes Jahr lockert die Sanktionen
+	FF.Bookings.Reset();
+	FF.FfpHistory.Reset();
+	FF.FfpHistory.Add(0); FF.FfpHistory.Add(0);
+	FF.EvaluateFinancialFairplay();
+	PRUEFE(FF.FfpStrikes == 2 && !FF.FfpLastResult.bVerstoss, "FFP: sauberes Jahr lockert eine Stufe");
+	// Spielstand
+	FFM13World FSave = FF;
+	FFM13World FLd;
+	FString FFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(FSave), FLd, FFehler) && FLd.FfpStrikes == FSave.FfpStrikes && FLd.FfpHistory.Num() == FSave.FfpHistory.Num() && FLd.bFfpEmbargo == FSave.bFfpEmbargo, "FFP bleibt im Spielstand (%s)", *FFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

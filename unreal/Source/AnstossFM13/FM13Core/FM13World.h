@@ -218,7 +218,7 @@ public:
 	FFM13League& OwnLeague() { return Leagues[LeagueLevel]; }
 	int64 WagesPerMatchday() const;
 	int64 SquadValue() const;
-	bool HasTransferEmbargo() const { return Money < 0; }
+	bool HasTransferEmbargo() const { return Money < 0 || bFfpEmbargo; }   // isTransferEmbargoActive(): Insolvenz oder Financial Fairplay
 	bool FitsWageBudget(int64 ExtraWage) const { return WagesPerMatchday() + ExtraWage <= WageBudget; }
 
 	void RefreshMarket();
@@ -383,6 +383,27 @@ public:
 	bool IsTransferStrategyOpen() const { return Matchday <= 3 && !bStrategySet; }
 	bool ChooseTransferStrategy(FM13Transfers::EStrategie Choice, FString& OutReason);
 	void TickTransferStrategy();                      // nach jedem Spieltag: nichts gewaehlt -> ausgewogen
+	// Financial Fairplay (js/ffp.js): Verluste ueber drei Saisons, ohne Stadion, Gelaende, Jugend und Finanzierung
+	struct FFM13FfpResult
+	{
+		int32 Season = 0;
+		int64 Net = 0;
+		int64 Kumulativ = 0;
+		int64 Erlaubt = 0;
+		int32 Ueberwacht = 0;
+		bool bVerstoss = false;
+	};
+	TArray<int64> FfpHistory;        // Saisonergebnisse, hoechstens drei
+	int32 FfpStrikes = 0;            // Verstoesse in Folge
+	bool bFfpEmbargo = false;        // Transfersperre durch das Financial Fairplay
+	int32 PendingFfpDeduction = 0;   // Punktabzug fuer die neue Saison, nach dem Tabellen-Neustart
+	bool bHasFfpResult = false;
+	FFM13FfpResult FfpLastResult;
+	static bool FfpExempt(const FString& Label);     // Stadion, Gelaende, Jugend: zaehlen nicht als Verlust
+	int64 FfpSeasonNet() const;                      // Summe der nicht ausgenommenen Buchungen dieser Saison
+	int64 FfpAllowedLossPerSeason() const;           // 20 % der Liga-Basis der TV-Gelder
+	void EvaluateFinancialFairplay();                // Saisonende, vor Season++
+	void ApplyPendingFfpPointDeduction();            // nach dem Tabellen-Neustart
 	void ResolveTransferStrategy(int32 FinalRank);    // Saisonende, vor der Vorstandsversammlung
 	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
 	struct FFM13Rumor

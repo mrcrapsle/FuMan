@@ -11,6 +11,7 @@ namespace FM13Economy
 	int64 MarketValue(int32 Strength, FRandomStream* Rng);
 	int32 Wage(int64 MarketValue, int32 Strength);
 	int64 TvMoney(int32 Level, int32 Rank);
+	int64 LeagueBaseTvMoney(int32 Level);   // Basis der TV-Gelder je Liga (Grundlage fuer das Financial Fairplay)
 
 	// Richtpreis eines Tickets je Liga und die Zuschauerzahl bei gegebenem Preis
 	int32 BaseTicketPrice(int32 Level);

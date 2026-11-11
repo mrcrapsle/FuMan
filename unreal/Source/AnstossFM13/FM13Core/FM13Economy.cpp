@@ -4,7 +4,7 @@ namespace
 {
 	constexpr float MarketValueLowCoeff = 83.f;     // MARKET_VALUE_LOW_COEFF
 	constexpr float MarketValueLowCoeffOld = 450.f; // MARKET_VALUE_LOW_COEFF_OLD
-	const int64 LeagueBaseTvMoney[FM13::NumLeagues] = { 64000000, 8000000, 1000000, 620000, 150000, 100000 };
+	const int64 LeagueBaseTvMoneyTabelle[FM13::NumLeagues] = { 64000000, 8000000, 1000000, 620000, 150000, 100000 };
 }
 
 namespace FM13Economy
@@ -34,9 +34,14 @@ namespace FM13Economy
 		return FMath::Max(150, (int32)(FMath::RoundToInt64(ProSpieltag / 50.0) * 50));
 	}
 
+	int64 LeagueBaseTvMoney(int32 Level)
+	{
+		return (Level >= 0 && Level < FM13::NumLeagues) ? LeagueBaseTvMoneyTabelle[Level] : 100000;
+	}
+
 	int64 TvMoney(int32 Level, int32 Rank)
 	{
-		const int64 Basis = (Level >= 0 && Level < FM13::NumLeagues) ? LeagueBaseTvMoney[Level] : 100000;
+		const int64 Basis = (Level >= 0 && Level < FM13::NumLeagues) ? LeagueBaseTvMoneyTabelle[Level] : 100000;
 		const double Faktor = FMath::Max(0.4, 1.5 - (Rank - 1) * 0.055); // Platz 1: 1,5-fach, Platz 18: ~0,6-fach
 		return FMath::RoundToInt64(Basis * Faktor);
 	}

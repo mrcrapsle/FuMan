@@ -617,6 +617,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	else Wertung = -18;
 	BoardSat = FMath::Clamp(BoardSat + Wertung, 10, 100);
 	ResolveTransferStrategy(Rank);
+	EvaluateFinancialFairplay();
 	if (Outcome == EFM13SeasonOutcome::Promoted) { BoardSat = FMath::Min(100, BoardSat + 15); Fans = FMath::Min(100, Fans + 10); }
 	if (Outcome == EFM13SeasonOutcome::Relegated) { BoardSat = FMath::Max(10, BoardSat - 15); Fans = FMath::Max(0, Fans - 10); }
 	if (Rank == 1) { BoardSat = FMath::Min(100, BoardSat + 5); Fans = FMath::Min(100, Fans + 5); }
@@ -631,6 +632,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	SeasonAwards(S, Rank, Outcome);
 	AgeAiStars();
 	AdvanceLeagues(Rank, Outcome);
+	ApplyPendingFfpPointDeduction();
 	// Transferbudget der neuen Saison: Liga-Budget x Platzierungsfaktor (season-end.js)
 	const double Platzfaktor = Rank <= 4 ? 1.3 : (Rank <= 10 ? 1.0 : 0.8);
 	TransferBudget = FM13Transfers::JsRunden((double)LeagueTransferBudget(LeagueLevel) * Platzfaktor / 1000.0) * 1000;
@@ -3434,9 +3436,7 @@ int32 FFM13World::CountYouthGraduates() const
 
 int64 FFM13World::SeasonProfit() const
 {
-	int64 Summe = 0;
-	for (const FFM13Booking& B : Bookings) if (B.Season == Season) Summe += B.Amount;
-	return Summe;
+	return FfpSeasonNet();
 }
 
 // Saisonende: Abrechnung der Linie gegen das Saisonziel (der Vorstand bewertet, ob das Versprechen gehalten wurde).
@@ -4303,4 +4303,79 @@ void FFM13World::CreditAiLeagueGoals(FFM13Club& C, int32 Tore)
 		if (Wurf < Anteil) C.StarGoals++;
 		else if (Wurf < Anteil + 0.26) C.StrikerGoals++;
 	}
+}
+
+// ---------- Financial Fairplay (js/ffp.js) ----------
+
+// Stadion, Vereinsgelaende und Jugend zaehlen nicht als Verlust. Im C++-Kern heissen die Buchungen so.
+bool FFM13World::FfpExempt(const FString& Label)
+{
+	return Label == TEXT("Stadionausbau") || Label == TEXT("Ausbau Jugendakademie") || Label == TEXT("Ausbau Trainingsplatz");
+}
+
+int64 FFM13World::FfpSeasonNet() const
+{
+	int64 Summe = 0;
+	for (const FFM13Booking& B : Bookings) if (B.Season == Season && !FfpExempt(B.Label)) Summe += B.Amount;
+	return Summe;
+}
+
+int64 FFM13World::FfpAllowedLossPerSeason() const
+{
+	return FM13Transfers::JsRunden((double)FM13Economy::LeagueBaseTvMoney(LeagueLevel) * 0.20);
+}
+
+// evaluateFinancialFairplay(): Saisonende, vor Season++. Verwarnung, dann Transfersperre, dann Punktabzug.
+void FFM13World::EvaluateFinancialFairplay()
+{
+	const int64 Netto = FfpSeasonNet();
+	FfpHistory.Add(Netto);
+	if (FfpHistory.Num() > 3) FfpHistory.RemoveAt(0);
+	int64 Kumulativ = 0;
+	for (int64 N : FfpHistory) Kumulativ += N;
+	const int64 Erlaubt = FfpAllowedLossPerSeason() * FfpHistory.Num();
+	const bool bVerstoss = Kumulativ < -Erlaubt;
+	FfpLastResult = FFM13FfpResult();
+	FfpLastResult.Season = Season;
+	FfpLastResult.Net = Netto;
+	FfpLastResult.Kumulativ = Kumulativ;
+	FfpLastResult.Erlaubt = Erlaubt;
+	FfpLastResult.Ueberwacht = FfpHistory.Num();
+	FfpLastResult.bVerstoss = bVerstoss;
+	bHasFfpResult = true;
+	PendingFfpDeduction = 0;
+
+	if (!bVerstoss)
+	{
+		// Ein sauberes Jahr baut Vertrauen wieder auf
+		if (FfpStrikes > 0) FfpStrikes--;
+		if (FfpStrikes == 0) bFfpEmbargo = false;
+		return;
+	}
+	FfpStrikes++;
+	const int64 Ueberschreitung = -Kumulativ - Erlaubt;
+	if (FfpStrikes == 1)
+	{
+		AddMessage(TEXT("Financial-Fairplay-Verwarnung"), FString::Printf(TEXT("Der Verband hat die Bilanzen der letzten %d Saison(en) geprueft: %lld zu viel Verlust. Es bleibt bei einer Verwarnung - bei anhaltendem Verstoss drohen eine Transfersperre und ein Punktabzug."), FfpHistory.Num(), (long long)Ueberschreitung));
+	}
+	else if (FfpStrikes == 2)
+	{
+		bFfpEmbargo = true;
+		AddMessage(TEXT("Financial-Fairplay: Transfersperre"), TEXT("Wiederholter Verstoss gegen die Ausgabenregeln - Transfersperre, bis die Bilanzen wieder im erlaubten Rahmen liegen."));
+	}
+	else
+	{
+		bFfpEmbargo = true;
+		PendingFfpDeduction = FMath::Min(9, (FfpStrikes - 2) * 3);
+		AddMessage(TEXT("Financial-Fairplay: Punktabzug"), FString::Printf(TEXT("Anhaltender Verstoss - zusaetzlich zur Transfersperre %d Punkte Abzug fuer die neue Saison."), PendingFfpDeduction));
+	}
+}
+
+// applyPendingFfpPointDeduction(): direkt nach dem Tabellen-Neustart, ohne Untergrenze bei 0.
+void FFM13World::ApplyPendingFfpPointDeduction()
+{
+	if (PendingFfpDeduction <= 0) return;
+	if (Leagues.IsValidIndex(LeagueLevel))
+		for (FFM13Club& C : Leagues[LeagueLevel].Clubs) if (C.bOwn) C.PointDeduction += PendingFfpDeduction;
+	PendingFfpDeduction = 0;
 }

@@ -227,10 +227,11 @@ struct FFM13Club
 	int32 Lost = 0;
 	int32 GoalsFor = 0;
 	int32 GoalsAgainst = 0;
+	int32 PointDeduction = 0;   // Punktabzug (Financial Fairplay), gilt fuer die laufende Saison
 
-	int32 Points() const { return Won * 3 + Drawn; }
+	int32 Points() const { return Won * 3 + Drawn - PointDeduction; }
 	int32 GoalDiff() const { return GoalsFor - GoalsAgainst; }
-	void ResetStats() { Played = Won = Drawn = Lost = GoalsFor = GoalsAgainst = 0; }
+	void ResetStats() { Played = Won = Drawn = Lost = GoalsFor = GoalsAgainst = PointDeduction = 0; }
 };
 
 struct FFM13Fixture

@@ -146,7 +146,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 |---|---:|---|---|---|
 | `finances.js` | 1012 | teilweise | Buchungen, Kontoauszug | Book, Kontoauszug (Finanzzentrale offen) |
 | `financial-charts.js` | 225 | offen | FINANZ-DASHBOARD-CHARTS |  |
-| `ffp.js` | 132 | offen | Financial Fairplay |  |
+| `ffp.js` | 132 | portiert | Financial Fairplay |  |
 | `media-rights.js` | 244 | teilweise | TV-Geld | TvMoney 1:1, Raten und Restausschüttung (Medienverträge offen) |
 | `sponsors.js` | 835 | teilweise | Sponsoren | Hauptsponsor mit drei Angeboten (Runde A); Ärmel, Ausrüster, Banden offen |
 | `sponsor-renewal.js` | 99 | teilweise | Sponsorverlängerung | Angebote 4 Spieltage vor Vertragsende (Runde A) |
