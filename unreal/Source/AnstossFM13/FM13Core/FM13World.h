@@ -559,6 +559,12 @@ public:
 		int32 Rohstoff = 0;
 		double RohstoffMenge = 0;  // kg je Stueck
 		int32 Fabrik = 0;
+		int64 Kosten = 0;          // Einkaufspreis Grosshandel
+		int64 Preis = 0;           // Verkaufspreis
+		int64 OptimalPreis = 0;    // Marktoptimum
+		double Beliebtheit = 1.0;
+		int32 LetztVerkauft = 0;
+		int64 LetztUmsatz = 0;
 	};
 	TArray<FFM13Ware> Waren;
 	struct FFM13Produktion
@@ -585,6 +591,45 @@ public:
 	TArray<FFM13Uebernahme> Uebernahmen;
 	int32 RohstoffEreignisBias = 0;   // +1 Knappheit, -1 Ueberangebot, 0 sonst (Preisrichtung nach dem Ereignis)
 	int64 HoldingWert() const;        // getHoldingValuation()
+	// Fanshop (js/merchandise.js). Stände, Megastore, Marketing-Direktor, Ausrüster und Booster fehlen im Kern.
+	struct FFM13MerchEintrag
+	{
+		int32 Season = 0;
+		int32 Matchday = 0;
+		int32 Zuschauer = 0;
+		int64 Umsatz = 0;
+		struct FArtikel { FString Name; int32 Verkauft = 0; int64 Umsatz = 0; int32 Verpasst = 0; };
+		TArray<FArtikel> Artikel;
+	};
+	TArray<FFM13MerchEintrag> MerchVerlauf;      // hoechstens 34 Spieltage
+	TArray<int32> HeimZuschauer;                 // letzte acht Heimspiele
+	int32 AverageHeimZuschauer() const;
+	static double ElastizitaetFaktor(int64 Preis, int64 Optimal);
+	int64 SimulateMerchSales(bool bHome, bool bWin, int32 Zuschauer);   // simulateMerchSales(): Erloes des Spieltags
+	bool BestelleWare(int32 Ware, int32 Menge, FString& OutReason);     // orderMerchBatch()
+	bool SetzeWarenPreis(int32 Ware, int64 Preis);                    // setMerchPrice()
+	struct FFM13LimitedEdition
+	{
+		bool bAktiv = false;
+		FString Name;
+		int32 Lager = 0;
+		int32 Start = 0;
+		int64 Preis = 0;
+		int32 Verkauft = 0;
+		int64 Umsatz = 0;
+	};
+	FFM13LimitedEdition LimitedEdition;
+	bool StarteLimitedEdition(const FString& Name, int32 Stueck, int64 Preis, FString& OutReason);
+	void TickLimitedEdition();
+	struct FFM13Saisonkollektion
+	{
+		bool bAktiv = false;
+		int32 Schub = 0;            // Prozent
+		int32 AblaeuftBei = 0;       // Spieltag
+	};
+	FFM13Saisonkollektion Saisonkollektion;
+	void StarteSaisonkollektion(int32 SchubProzent, int32 Spieltage);
+	void TickSaisonkollektion();
 	bool KaufeFabrik(int32 Index, FString& OutReason);
 	bool AusbaueFabrik(int32 Index, FString& OutReason);
 	bool FusioniereFabrik(int32 Index, FString& OutReason);

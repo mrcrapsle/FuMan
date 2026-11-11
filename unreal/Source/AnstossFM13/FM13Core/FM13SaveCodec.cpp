@@ -439,6 +439,32 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.ArrayKey(TEXT("fanshop"));
+		for (const FFM13World::FFM13Ware& Wa : S.Waren)
+		{
+			W.ElementObject(); W.Field(TEXT("preis"), Wa.Preis); W.Field(TEXT("optimal"), Wa.OptimalPreis);
+			W.Field(TEXT("kosten"), Wa.Kosten); W.Field(TEXT("beliebt"), (int64)FMath::RoundToInt64(Wa.Beliebtheit * 1000000.0));
+			W.Field(TEXT("letztV"), Wa.LetztVerkauft); W.Field(TEXT("letztU"), Wa.LetztUmsatz); W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("merchVerlauf"));
+		for (const FFM13World::FFM13MerchEintrag& E : S.MerchVerlauf)
+		{
+			W.ElementObject(); W.Field(TEXT("season"), E.Season); W.Field(TEXT("md"), E.Matchday);
+			W.Field(TEXT("zuschauer"), E.Zuschauer); W.Field(TEXT("umsatz"), E.Umsatz);
+			W.ArrayKey(TEXT("artikel"));
+			for (const FFM13World::FFM13MerchEintrag::FArtikel& A : E.Artikel)
+			{ W.ElementObject(); W.Field(TEXT("name"), A.Name); W.Field(TEXT("verk"), A.Verkauft); W.Field(TEXT("umsatz"), A.Umsatz); W.Field(TEXT("verp"), A.Verpasst); W.EndObject(); }
+			W.EndArray(); W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("heimZuschauer"));
+		for (int32 Z : S.HeimZuschauer) { W.ElementObject(); W.Field(TEXT("z"), Z); W.EndObject(); }
+		W.EndArray();
+		W.FieldBool(TEXT("leAktiv"), S.LimitedEdition.bAktiv); W.Field(TEXT("leName"), S.LimitedEdition.Name);
+		W.Field(TEXT("leLager"), S.LimitedEdition.Lager); W.Field(TEXT("leStart"), S.LimitedEdition.Start);
+		W.Field(TEXT("lePreis"), S.LimitedEdition.Preis); W.Field(TEXT("leVerk"), S.LimitedEdition.Verkauft); W.Field(TEXT("leUmsatz"), S.LimitedEdition.Umsatz);
+		W.FieldBool(TEXT("skAktiv"), S.Saisonkollektion.bAktiv); W.Field(TEXT("skSchub"), S.Saisonkollektion.Schub); W.Field(TEXT("skEnde"), S.Saisonkollektion.AblaeuftBei);
 		W.Field(TEXT("rngIndustrieSeed"), (int64)S.RngIndustrie.GetCurrentSeed());
 		W.Field(TEXT("holdingGeld"), S.HoldingGeld);
 		W.Field(TEXT("lagerstufe"), S.Lagerstufe);
@@ -1139,6 +1165,49 @@ namespace FM13Save
 		}
 		W.ResetOekonomieGrunddaten();
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		{
+			int32 Index = 0;
+			for (int32 N : R.Items(Root, TEXT("fanshop")))
+			{
+				if (W.Waren.IsValidIndex(Index))
+				{
+					W.Waren[Index].Preis = R.Int(N, TEXT("preis"), W.Waren[Index].Preis);
+					W.Waren[Index].OptimalPreis = R.Int(N, TEXT("optimal"), W.Waren[Index].OptimalPreis);
+					W.Waren[Index].Kosten = R.Int(N, TEXT("kosten"), W.Waren[Index].Kosten);
+					W.Waren[Index].Beliebtheit = (double)R.Int(N, TEXT("beliebt"), 1000000) / 1000000.0;
+					W.Waren[Index].LetztVerkauft = (int32)R.Int(N, TEXT("letztV"), 0);
+					W.Waren[Index].LetztUmsatz = R.Int(N, TEXT("letztU"), 0);
+				}
+				++Index;
+			}
+		}
+		W.MerchVerlauf.Reset();
+		for (int32 N : R.Items(Root, TEXT("merchVerlauf")))
+		{
+			FFM13World::FFM13MerchEintrag E;
+			E.Season = (int32)R.Int(N, TEXT("season"), 0); E.Matchday = (int32)R.Int(N, TEXT("md"), 0);
+			E.Zuschauer = (int32)R.Int(N, TEXT("zuschauer"), 0); E.Umsatz = R.Int(N, TEXT("umsatz"), 0);
+			for (int32 M : R.Items(N, TEXT("artikel")))
+			{
+				FFM13World::FFM13MerchEintrag::FArtikel A;
+				A.Name = R.Str(M, TEXT("name"), TEXT("")); A.Verkauft = (int32)R.Int(M, TEXT("verk"), 0);
+				A.Umsatz = R.Int(M, TEXT("umsatz"), 0); A.Verpasst = (int32)R.Int(M, TEXT("verp"), 0);
+				E.Artikel.Add(A);
+			}
+			W.MerchVerlauf.Add(E);
+		}
+		W.HeimZuschauer.Reset();
+		for (int32 N : R.Items(Root, TEXT("heimZuschauer"))) W.HeimZuschauer.Add((int32)R.Int(N, TEXT("z"), 0));
+		W.LimitedEdition.bAktiv = R.Bool(Root, TEXT("leAktiv"), false);
+		W.LimitedEdition.Name = R.Str(Root, TEXT("leName"), TEXT(""));
+		W.LimitedEdition.Lager = (int32)R.Int(Root, TEXT("leLager"), 0);
+		W.LimitedEdition.Start = (int32)R.Int(Root, TEXT("leStart"), 0);
+		W.LimitedEdition.Preis = R.Int(Root, TEXT("lePreis"), 0);
+		W.LimitedEdition.Verkauft = (int32)R.Int(Root, TEXT("leVerk"), 0);
+		W.LimitedEdition.Umsatz = R.Int(Root, TEXT("leUmsatz"), 0);
+		W.Saisonkollektion.bAktiv = R.Bool(Root, TEXT("skAktiv"), false);
+		W.Saisonkollektion.Schub = (int32)R.Int(Root, TEXT("skSchub"), 0);
+		W.Saisonkollektion.AblaeuftBei = (int32)R.Int(Root, TEXT("skEnde"), 0);
 		W.RngIndustrie.Initialize((int32)R.Int(Root, TEXT("rngIndustrieSeed"), 1));
 		W.HoldingGeld = R.Int(Root, TEXT("holdingGeld"), 50000);
 		W.Lagerstufe = (int32)R.Int(Root, TEXT("lagerstufe"), 1);

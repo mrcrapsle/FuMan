@@ -238,6 +238,8 @@ bool FFM13World::PlayMatchday()
 	TickKonkurrenten();
 	TickUebernahmeAblauf();
 	TickProduktion();
+	TickLimitedEdition();
+	TickSaisonkollektion();
 	TickCommodityMarket();
 	TickImmobilien();
 	TickFriendships();
@@ -417,6 +419,8 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 		if (Betrag > 0) LastReport.Income += Betrag; else LastReport.Expenses -= Betrag;
 	};
 	if (bHome) Buche(TEXT("Ticketeinnahmen"), (int64)Att * TicketPrice);
+	if (bHome && Att > 0) { HeimZuschauer.Add(Att); while (HeimZuschauer.Num() > 8) HeimZuschauer.RemoveAt(0); }
+	Buche(TEXT("Fanshop-Erloes"), SimulateMerchSales(bHome && Att > 0, bWin, Att));
 	Buche(TEXT("Sponsor Grundbetrag"), Sponsor.Base);
 	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), Sponsor.WinBonus);
 	Buche(TEXT("Gehaelter"), -WagesPerMatchday());
@@ -4995,7 +4999,15 @@ void FFM13World::ResetOekonomieGrunddaten()
 	const int32 WarenRoh[25] = { 0, 1, 3, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3 };
 	const double WarenMenge[25] = { 1.0, 0.6, 0.5, 1.2, 1.0, 1.0, 0.7, 1.3, 0.4, 1.8, 0.4, 0.5, 0.4, 1.4, 0.6, 0.5, 0.1, 0.4, 1.5, 0.2, 0.4, 0.5, 0.8, 0.3 };
 	const int32 WarenFabrik[25] = { 0, 1, 3, 2, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3 };
-	for (int32 i = 0; i < 25; ++i) Waren.Add(FFM13Ware{ WarenNamen[i], WarenLager[i], WarenRoh[i], WarenMenge[i], WarenFabrik[i] });
+	// Einkauf, Verkaufspreis und Beliebtheit je Artikel (js/state.js, merchandise)
+	const int64 WarenKosten[25] = { 14, 4, 5, 9, 14, 15, 8, 16, 5, 22, 3, 5, 4, 11, 4, 8, 1, 4, 18, 2, 3, 4, 7, 4 };
+	const int64 WarenPreis[25] = { 65, 18, 22, 35, 65, 69, 34, 55, 22, 79, 14, 19, 16, 39, 18, 29, 8, 15, 59, 9, 13, 16, 25, 18 };
+	const double WarenBeliebt[25] = { 1.0, 1.2, 0.8, 0.45, 0.55, 0.2, 0.6, 0.7, 0.35, 0.15, 0.75, 0.8, 0.6, 0.4, 0.7, 0.35, 1.1, 0.65, 0.3, 0.9, 0.85, 0.7, 0.45, 0.6 };
+	for (int32 i = 0; i < 25; ++i) Waren.Add(FFM13Ware{ WarenNamen[i], WarenLager[i], WarenRoh[i], WarenMenge[i], WarenFabrik[i], WarenKosten[i], WarenPreis[i], WarenPreis[i], WarenBeliebt[i], 0, 0 });
+	MerchVerlauf.Reset();
+	HeimZuschauer.Reset();
+	LimitedEdition = FFM13LimitedEdition();
+	Saisonkollektion = FFM13Saisonkollektion();
 	Produktionen.Reset();
 }
 
@@ -5248,4 +5260,163 @@ bool FFM13World::UeberweisungVonHolding(int64 Betrag, FString& OutReason)
 	HoldingGeld -= Betrag;
 	Book(TEXT("Ueberweisung von der Holding"), Betrag);
 	return true;
+}
+
+// ---------- Fanshop (js/merchandise.js) ----------
+
+namespace
+{
+	int64 MerchRund(double X) { return FM13Transfers::JsRunden(X); }
+}
+
+int32 FFM13World::AverageHeimZuschauer() const
+{
+	if (HeimZuschauer.Num() == 0) return FMath::Max(200, StadiumCapacity);
+	int64 Summe = 0;
+	for (int32 A : HeimZuschauer) Summe += A;
+	return (int32)MerchRund((double)Summe / HeimZuschauer.Num());
+}
+
+// calculateElasticity(): Preis gegen Marktoptimum
+double FFM13World::ElastizitaetFaktor(int64 Preis, int64 Optimal)
+{
+	const double Verhaeltnis = (double)Preis / (double)FMath::Max<int64>(1, Optimal);
+	if (Verhaeltnis <= 0.6) return 1.8;
+	if (Verhaeltnis <= 0.85) return 1.35;
+	if (Verhaeltnis <= 1.15) return 1.0;
+	if (Verhaeltnis <= 1.45) return 0.55;
+	return FMath::Max(0.08, std::pow(1.0 / Verhaeltnis, 2.5));
+}
+
+// simulateMerchSales(): Budgets aus Zuschauern, Stimmung und Reichweite, auf die Artikel verteilt, dann am Lager ausgeliefert
+int64 FFM13World::SimulateMerchSales(bool bHome, bool bWin, int32 Zuschauer)
+{
+	const int32 Schnitt = AverageHeimZuschauer();
+	int32 TopStaerke = 55;
+	for (const FFM13Player& P : Squad) TopStaerke = FMath::Max(TopStaerke, P.Strength);
+	auto Zufall = [this]() { return 0.85 + RngIndustrie.FRand() * 0.3; };   // Spieltag ist nie genau wie der letzte
+	double Stadion = 0.0;
+	if (bHome && Zuschauer > 0) Stadion = (double)Zuschauer * 3.0 * (bWin ? 1.35 : 0.85) * Zufall();
+	const double Stadt = (double)Schnitt * 0.8 * (0.4 + (Fans / 100.0) * 0.9) * Zufall();
+	const double Starfaktor = 1.0 + FMath::Max(0, TopStaerke - 55) * 0.012;
+	const double Online = (double)Schnitt * 0.6 * Starfaktor * (0.4 + (BoardSat / 100.0) * 0.6) * Zufall();
+	double Multi = 1.0;
+	if (Saisonkollektion.bAktiv) Multi = 1.0 + Saisonkollektion.Schub / 100.0;
+	const double StadionB = Stadion * Multi, StadtB = Stadt * Multi, OnlineB = Online * Multi;
+
+	// Gewichte: Beliebtheit mal Preisfaktor
+	TArray<double> Gewichte;
+	double Summe = 0.0;
+	for (const FFM13Ware& W : Waren)
+	{
+		const double G = FMath::Max(0.0, W.Beliebtheit * ElastizitaetFaktor(W.Preis, W.OptimalPreis));
+		Gewichte.Add(G);
+		Summe += G;
+	}
+	auto Verteilen = [this, &Gewichte, Summe](double Budget, int32 Index)
+	{
+		TArray<int32> Stueck;
+		for (int32 i = 0; i < Waren.Num(); ++i)
+		{
+			int32 Anteil = 0;
+			if (Summe > 0.0) Anteil = (int32)MerchRund((Gewichte[i] / Summe) * Budget / (double)FMath::Max<int64>(1, Waren[i].Preis));
+			Stueck.Add(FMath::Max(0, Anteil));
+		}
+		(void)Index;
+		return Stueck;
+	};
+	const TArray<int32> WunschStadion = Verteilen(StadionB, 0);
+	const TArray<int32> WunschStadt = Verteilen(StadtB, 1);
+	const TArray<int32> WunschOnline = Verteilen(OnlineB, 2);
+
+	// Am Lager ausliefern
+	int64 Gesamt = 0;
+	FFM13MerchEintrag Eintrag;
+	Eintrag.Season = Season;
+	Eintrag.Matchday = Matchday;
+	Eintrag.Zuschauer = Zuschauer;
+	for (int32 i = 0; i < Waren.Num(); ++i)
+	{
+		FFM13Ware& W = Waren[i];
+		const int32 Wunsch = WunschStadion[i] + WunschStadt[i] + WunschOnline[i];
+		const int32 Verkauft = FMath::Min(W.Lager, Wunsch);
+		const double Anteil = Wunsch > 0 ? (double)Verkauft / Wunsch : 0.0;
+		(void)MerchRund(WunschStadion[i] * Anteil);
+		W.Lager -= Verkauft;
+		const int64 Umsatz = (int64)Verkauft * W.Preis;
+		W.LetztVerkauft = Verkauft;
+		W.LetztUmsatz = Umsatz;
+		Gesamt += Umsatz;
+		if (Verkauft > 0 || Wunsch > Verkauft)
+		{
+			FFM13MerchEintrag::FArtikel A;
+			A.Name = W.Name; A.Verkauft = Verkauft; A.Umsatz = Umsatz; A.Verpasst = FMath::Max(0, Wunsch - Verkauft);
+			Eintrag.Artikel.Add(A);
+		}
+		Eintrag.Umsatz += Umsatz;
+	}
+	MerchVerlauf.Add(Eintrag);
+	while (MerchVerlauf.Num() > 34) MerchVerlauf.RemoveAt(0);
+	return Gesamt;
+}
+
+// orderMerchBatch(): Grosshandel, Einkaufspreis je Stueck
+bool FFM13World::BestelleWare(int32 Ware, int32 Menge, FString& OutReason)
+{
+	if (!Waren.IsValidIndex(Ware) || Menge <= 0) { OutReason = TEXT("Dieses Produkt gibt es nicht."); return false; }
+	const int64 Kosten = Waren[Ware].Kosten * Menge;
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Kosten); return false; }
+	Book(FString::Printf(TEXT("Grosshandel: %s"), *Waren[Ware].Name), -Kosten);
+	Waren[Ware].Lager += Menge;
+	return true;
+}
+
+bool FFM13World::SetzeWarenPreis(int32 Ware, int64 Preis)
+{
+	if (!Waren.IsValidIndex(Ware)) return false;
+	Waren[Ware].Preis = FMath::Max<int64>(1, Preis);
+	return true;
+}
+
+bool FFM13World::StarteLimitedEdition(const FString& Name, int32 Stueck, int64 Preis, FString& OutReason)
+{
+	if (LimitedEdition.bAktiv && LimitedEdition.Lager > 0) { OutReason = TEXT("Es laeuft noch eine limitierte Edition!"); return false; }
+	LimitedEdition = FFM13LimitedEdition();
+	LimitedEdition.bAktiv = true;
+	LimitedEdition.Name = Name;
+	LimitedEdition.Lager = Stueck;
+	LimitedEdition.Start = Stueck;
+	LimitedEdition.Preis = Preis;
+	return true;
+}
+
+// tickLimitedEditionSales(): Nachfrage aus Fans und Stimmung, ausverkauft ist ausverkauft
+void FFM13World::TickLimitedEdition()
+{
+	if (!LimitedEdition.bAktiv || LimitedEdition.Lager <= 0) return;
+	const int32 Nachfrage = (int32)MerchRund((5.0 + Fans / 8.0) * (BoardSat / 100.0));
+	const int32 Verkauft = FMath::Min(LimitedEdition.Lager, Nachfrage);
+	LimitedEdition.Lager -= Verkauft;
+	LimitedEdition.Verkauft += Verkauft;
+	const int64 Erloes = (int64)Verkauft * LimitedEdition.Preis;
+	LimitedEdition.Umsatz += Erloes;
+	Book(FString::Printf(TEXT("Limitierte Edition: %s"), *LimitedEdition.Name), Erloes);
+	if (LimitedEdition.Lager <= 0 && Verkauft > 0)
+		AddMessage(TEXT("Limitierte Edition ausverkauft"), FString::Printf(TEXT("%s ist komplett ausverkauft - insgesamt %lld Erloes aus %d Stueck."), *LimitedEdition.Name, (long long)LimitedEdition.Umsatz, LimitedEdition.Start));
+}
+
+void FFM13World::StarteSaisonkollektion(int32 SchubProzent, int32 Spieltage)
+{
+	Saisonkollektion.bAktiv = true;
+	Saisonkollektion.Schub = SchubProzent;
+	Saisonkollektion.AblaeuftBei = Matchday + Spieltage;
+}
+
+void FFM13World::TickSaisonkollektion()
+{
+	if (Saisonkollektion.bAktiv && Matchday >= Saisonkollektion.AblaeuftBei)
+	{
+		Saisonkollektion.bAktiv = false;
+		AddMessage(TEXT("Saisonale Kollektion beendet"), TEXT("Der Verkaufsschub der saisonalen Kollektion ist ausgelaufen."));
+	}
 }
