@@ -298,6 +298,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	TickFixedDeposit();
+	TickMoneyHistory();
 	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
 	ProcessLoanInstallments();   // Kreditraten, dann die Insolvenzpruefung (gleiche Reihenfolge wie im Browserspiel)
 	CheckInsolvencyRisk();
@@ -1253,6 +1254,15 @@ void FFM13World::TickFixedDeposit()
 	Book(TEXT("Festgeld: Auszahlung"), Festgeld.Payout);
 	AddMessage(TEXT("Festgeldanlage ausgezahlt!"), FString::Printf(TEXT("Die Festgeldanlage ueber %lld wurde ausgezahlt: %lld."), (long long)Festgeld.Principal, (long long)Festgeld.Payout));
 	bFestgeld = false;
+}
+
+// tickMoneyHistory(): Kontostand je Spieltag, die letzten 20 bleiben fuer den Verlauf
+void FFM13World::TickMoneyHistory()
+{
+	FFM13MoneyPoint P;
+	P.Matchday = Matchday; P.Season = Season; P.Money = Money;
+	MoneyHistory.Add(P);
+	if (MoneyHistory.Num() > 20) MoneyHistory.RemoveAt(0);
 }
 
 // sellPlayer() (js/transfermarket.js): Sofortverkauf zu 80 % des Marktwerts, Beraterprovision

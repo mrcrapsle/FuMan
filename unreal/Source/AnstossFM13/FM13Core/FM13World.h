@@ -432,6 +432,9 @@ public:
 	};
 	FFM13Festgeld Festgeld;                        // game.financeCentralState.fixedDeposit
 	bool bFestgeld = false;                        // true = eine Festgeldanlage laeuft
+	struct FFM13MoneyPoint { int32 Matchday = 0; int32 Season = 0; int64 Money = 0; };
+	TArray<FFM13MoneyPoint> MoneyHistory;          // financeCentralState.moneyHistory: letzte 20 Spieltage
+	void TickMoneyHistory();                       // tickMoneyHistory()
 	bool OpenFixedDeposit(int64 Amount, int32 Matchdays, FString& OutReason);   // openFixedDeposit()
 	void TickFixedDeposit();                       // tickFixedDeposit(): jeden Spieltag
 	bool TakeLoanTier(const FString& Key, int64 Amount, FString& OutReason);   // takeLoanTier()

@@ -608,6 +608,9 @@ namespace FM13Save
 		W.FieldBool(TEXT("festgeldAktiv"), S.bFestgeld);
 		W.Field(TEXT("festgeldBetrag"), S.Festgeld.Principal); W.Field(TEXT("festgeldAuszahlung"), S.Festgeld.Payout);
 		W.Field(TEXT("festgeldRest"), S.Festgeld.MatchdaysLeft); W.Field(TEXT("festgeldLaufzeit"), S.Festgeld.TotalMatchdays);
+		W.ArrayKey(TEXT("moneyHistory"));
+		for (const FFM13World::FFM13MoneyPoint& P : S.MoneyHistory) { W.ElementObject(); W.Field(TEXT("md"), P.Matchday); W.Field(TEXT("season"), P.Season); W.Field(TEXT("money"), P.Money); W.EndObject(); }
+		W.EndArray();
 		W.FieldBool(TEXT("ffpHasResult"), S.bHasFfpResult);
 		W.Field(TEXT("ffpResSeason"), S.FfpLastResult.Season);
 		W.Field(TEXT("ffpResNet"), S.FfpLastResult.Net);
@@ -1382,6 +1385,12 @@ namespace FM13Save
 		W.bFestgeld = R.Bool(Root, TEXT("festgeldAktiv"), false);
 		W.Festgeld.Principal = R.Int(Root, TEXT("festgeldBetrag"), 0); W.Festgeld.Payout = R.Int(Root, TEXT("festgeldAuszahlung"), 0);
 		W.Festgeld.MatchdaysLeft = (int32)R.Int(Root, TEXT("festgeldRest"), 0); W.Festgeld.TotalMatchdays = (int32)R.Int(Root, TEXT("festgeldLaufzeit"), 0);
+		for (int32 N : R.Items(Root, TEXT("moneyHistory")))
+		{
+			FFM13World::FFM13MoneyPoint Punkt;
+			Punkt.Matchday = (int32)R.Int(N, TEXT("md"), 0); Punkt.Season = (int32)R.Int(N, TEXT("season"), 0); Punkt.Money = R.Int(N, TEXT("money"), 0);
+			W.MoneyHistory.Add(Punkt);
+		}
 		W.bHasFfpResult = R.Bool(Root, TEXT("ffpHasResult"), false);
 		W.FfpLastResult.Season = (int32)R.Int(Root, TEXT("ffpResSeason"), 0);
 		W.FfpLastResult.Net = R.Int(Root, TEXT("ffpResNet"), 0);

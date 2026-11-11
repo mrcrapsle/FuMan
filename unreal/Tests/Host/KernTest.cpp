@@ -1400,6 +1400,9 @@ static void TestFestgeld()
 	PRUEFE(!W.bFestgeld && W.Money == 100070, "Auszahlung nach zehn Spieltagen (%lld)", (long long)W.Money);
 	W.Money = 100000;
 	PRUEFE(W.OpenFixedDeposit(1000, 20, G) && W.Festgeld.Payout == 1120, "Ab 20 Spieltagen 12 %% Zins");
+	W.MoneyHistory.Reset();
+	for (int32 t = 0; t < 21; ++t) W.TickMoneyHistory();
+	PRUEFE(W.MoneyHistory.Num() == 20 && W.MoneyHistory.Last().Money == W.Money, "Kontoverlauf: 20 Spieltage, letzter Stand ist das Konto");
 }
 
 static void TestMedizincheck()
