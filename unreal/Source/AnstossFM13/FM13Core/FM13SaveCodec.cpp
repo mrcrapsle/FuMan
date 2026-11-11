@@ -87,6 +87,9 @@ namespace
 		W.Field(TEXT("preOfferClub"), P.PreOfferClub);
 		W.Field(TEXT("preOfferDeadline"), P.PreOfferDeadline);
 		W.Field(TEXT("preSignedClub"), P.PreSignedClub);
+		W.FieldBool(TEXT("hasAgent"), P.bHasAgent);
+		W.Field(TEXT("agentIndex"), (int64)P.AgentIndex);
+		W.Field(TEXT("agentFeeMicro"), (int64)FMath::RoundToInt64(P.AgentFeePct * 1000000.0));
 		W.Field(TEXT("apps"), P.Appearances);
 		W.Field(TEXT("mv"), P.MarketValue);
 		W.Field(TEXT("wage"), P.Wage);
@@ -433,6 +436,33 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.Field(TEXT("freeNegPlayer"), S.FreeNegotiation.PlayerId);
+		W.Field(TEXT("freeNegFee"), S.FreeNegotiation.CounterFee);
+		W.Field(TEXT("swapId"), S.Poker.SwapId);
+		W.ArrayKey(TEXT("agentRelations"));
+		for (int32 I = 0; I < S.AgentRelationKeys.Num(); ++I)
+		{
+			W.ElementObject();
+			W.Field(TEXT("agent"), S.AgentRelationKeys[I]);
+			W.Field(TEXT("level"), S.AgentRelationVals[I]);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.ArrayKey(TEXT("freeAgents"));
+		for (const FFM13World::FFM13FreeAgent& F : S.FreeAgents)
+		{
+			W.ElementObject();
+			W.Key(TEXT("player")); W.bFirst = true;
+			{
+				FWriter Inner;
+				WritePlayer(Inner, F.Player);
+				W.Out += Inner.Out;
+			}
+			W.bFirst = false;
+			W.Field(TEXT("signOnFee"), F.SignOnFee);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.ArrayKey(TEXT("loanables"));
 		for (const FFM13Loanable& L : S.Loanables)
 		{
@@ -630,6 +660,9 @@ namespace
 		P.PreOfferClub = R.Str(Obj, TEXT("preOfferClub"), TEXT(""));
 		P.PreOfferDeadline = (int32)R.Int(Obj, TEXT("preOfferDeadline"), 0);
 		P.PreSignedClub = R.Str(Obj, TEXT("preSignedClub"), TEXT(""));
+		P.bHasAgent = R.Bool(Obj, TEXT("hasAgent"), false);
+		P.AgentIndex = (uint8)R.Int(Obj, TEXT("agentIndex"), 0);
+		P.AgentFeePct = (double)R.Int(Obj, TEXT("agentFeeMicro"), 0) / 1000000.0;
 		P.Appearances = (int32)R.Int(Obj, TEXT("apps"), 0);
 		P.MarketValue = R.Int(Obj, TEXT("mv"), 15000);
 		P.Wage = (int32)R.Int(Obj, TEXT("wage"), 250);
@@ -926,6 +959,21 @@ namespace FM13Save
 			W.Rumors.Add(G);
 		}
 		W.PreContractPoolSeason = (int32)R.Int(Root, TEXT("preContractPoolSeason"), 0);
+		W.FreeNegotiation.PlayerId = (int32)R.Int(Root, TEXT("freeNegPlayer"), 0);
+		W.FreeNegotiation.CounterFee = R.Int(Root, TEXT("freeNegFee"), 0);
+		W.Poker.SwapId = (int32)R.Int(Root, TEXT("swapId"), 0);
+		for (int32 N : R.Items(Root, TEXT("agentRelations")))
+		{
+			W.AgentRelationKeys.Add((int32)R.Int(N, TEXT("agent"), 0));
+			W.AgentRelationVals.Add((int32)R.Int(N, TEXT("level"), 0));
+		}
+		for (int32 N : R.Items(Root, TEXT("freeAgents")))
+		{
+			FFM13World::FFM13FreeAgent F;
+			F.Player = ReadPlayer(R, R.Find(N, TEXT("player")));
+			F.SignOnFee = R.Int(N, TEXT("signOnFee"), 0);
+			W.FreeAgents.Add(F);
+		}
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
 		for (int32 N : R.Items(Root, TEXT("loanables")))
 		{

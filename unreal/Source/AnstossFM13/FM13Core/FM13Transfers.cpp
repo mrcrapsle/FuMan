@@ -1,11 +1,21 @@
 #include "FM13Transfers.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <cmath>
 
 namespace FM13Transfers
 {
 	int64 JsRunden(double X) { return (int64)std::floor(X + 0.5); }
+
+	double HashEinheit(int32 Kennung, uint32 Salz)
+	{
+		std::uint64_t Z = (std::uint64_t)(std::uint32_t)Kennung * 0x9E3779B97F4A7C15ull + (std::uint64_t)Salz * 0xBF58476D1CE4E5B9ull;
+		Z = (Z ^ (Z >> 30)) * 0xBF58476D1CE4E5B9ull;
+		Z = (Z ^ (Z >> 27)) * 0x94D049BB133111EBull;
+		Z = Z ^ (Z >> 31);
+		return (double)(Z >> 11) / 9007199254740992.0;
+	}
 
 	FFM13MedBefund WuerfleBefund(int32 Alter, double Zufall, double ZufallAnzahl, double ZufallWochen)
 	{

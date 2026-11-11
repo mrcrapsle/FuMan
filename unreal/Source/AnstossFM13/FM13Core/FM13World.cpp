@@ -127,6 +127,13 @@ FFM13Player FFM13World::CreatePlayer(EFM13Position Pos, int32 MinStr, int32 MaxS
 	P.Trait = Rng.FRand() < 0.35f ? (uint8)(1 + Rng.RandRange(0, 7)) : 0; // js/entities.js: 35 % haben einen Trait
 	P.Nation = FM13Locker::NationFromRoll(RngKabine.RandRange(0, 9));
 	P.DailyForm = 50 + Rng.RandRange(-10, 9); // Startwert wie js/entities.js
+	// Berater ab Staerke 62 (js/entities.js), aus der Kennung abgeleitet: der Hauptzufall bleibt gleich
+	if (P.Strength >= 62 && FM13Transfers::HashEinheit(P.Id, 1) < 0.3 + (double)FMath::Max(0, P.Strength - 62) * 0.01)
+	{
+		P.bHasAgent = true;
+		P.AgentIndex = (uint8)FMath::Clamp((int32)(FM13Transfers::HashEinheit(P.Id, 2) * 8.0), 0, 7);
+		P.AgentFeePct = 0.03 + FM13Transfers::HashEinheit(P.Id, 3) * 0.05;
+	}
 	return P;
 }
 
@@ -1066,6 +1073,7 @@ void FFM13World::RefreshMarket()
 		SetMarketTerms(O);
 		Market.Add(O);
 	}
+	RefreshFreeAgents();
 	RefreshLoanables();
 }
 
@@ -1073,17 +1081,12 @@ bool FFM13World::BuyPlayer(int32 MarketIndex, FString& OutReason)
 {
 	if (!Market.IsValidIndex(MarketIndex)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
 	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
-	const FFM13MarketOffer O = Market[MarketIndex];
 	if (!TransferWindowGate(OutReason)) return false;
-	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
-	if (Money < O.Price) { OutReason = TEXT("Nicht genug Geld auf dem Konto."); return false; }
-	if (TransferBudget < O.Price) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)O.Price, (long long)TransferBudget); return false; }
-	if (!FitsWageBudget(O.Player.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
-	Book(FString(TEXT("Transfer: ")) + O.Player.Name, -O.Price);
-	TransferBudget -= O.Price;
-	Squad.Add(O.Player);
+	FFM13MarketOffer& O = Market[MarketIndex];
+	const FFM13MedBefund Befund = EnsureMedical(O);
+	if (!FinalizePurchase(O.Player, O.Price, O.Player.Wage, 0, Befund, O.SellerClub, OutReason)) return false;
 	Market.RemoveAt(MarketIndex);
-	AddMessage(TEXT("Neuzugang"), O.Player.Name + TEXT(" unterschreibt fuer drei Jahre."));
+	AddMessage(TEXT("Neuzugang"), Squad.Last().Name + TEXT(" unterschreibt fuer drei Jahre."));
 	return true;
 }
 
@@ -1578,8 +1581,11 @@ bool FFM13World::AcceptIncomingOffer(int32 Index, FString& OutReason)
 		const int32 i = Squad.IndexOfByPredicate([&O](const FFM13Player& P) { return P.Id == O.PlayerId; });
 		if (i < 0) { OutReason = TEXT("Der Spieler ist nicht mehr im Verein."); IncomingOffers.RemoveAt(Index); return false; }
 		if (Squad.Num() <= FM13::MinSquadSize) { OutReason = TEXT("Mindestens 16 Spieler muessen bleiben."); return false; }
+		// completeOfferSale(): der Berater kassiert, ins Transferbudget fliessen 85 % des Erloes
+		const int64 Provision = AgentFee(Squad[i], O.Price);
+		Book(FString::Printf(TEXT("Verkauf an %s: %s"), *O.Club, *O.PlayerName), O.Price - Provision);
+		TransferBudget += FM13Transfers::JsRunden((double)O.Price * 0.85);
 		Squad.RemoveAt(i);
-		Book(FString::Printf(TEXT("Verkauf an %s: %s"), *O.Club, *O.PlayerName), O.Price);
 	}
 	Records.RecordTransferFee = FMath::Max(Records.RecordTransferFee, O.Price);
 	IncomingOffers.RemoveAll([&O](const FFM13IncomingOffer& X) { return X.PlayerId == O.PlayerId && X.bYouth == O.bYouth; });
@@ -3155,20 +3161,14 @@ bool FFM13World::SignPokerDeal(FString& OutReason)
 	const int32 Idx = MarketIndexOf(Poker.PlayerId);
 	if (!Poker.bActive || Idx < 0 || !Poker.AgreedFee) { OutReason = TEXT("Die Ablöse ist noch nicht vereinbart."); return false; }
 	if (!TransferWindowGate(OutReason)) return false;
-	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
 	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
-	if (Money < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Poker.AgreedFee); return false; }
-	if (TransferBudget < Poker.AgreedFee) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)Poker.AgreedFee, (long long)TransferBudget); return false; }
-	if (!FitsWageBudget(Poker.WageDemand)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	const FFM13MarketOffer& O = Market[Idx];
 	const FFM13MedBefund Befund = EnsureMedical(Market[Idx]);
-	FFM13Player P = Market[Idx].Player;
-	P.Wage = (int32)Poker.WageDemand;
-	Book(FString(TEXT("Spielerkauf: ")) + P.Name, -Poker.AgreedFee);
-	TransferBudget -= Poker.AgreedFee;
-	Squad.Add(P);
-	ApplyMedicalOnArrival(Squad.Last(), Befund);
+	FFM13Player Kauf = O.Player;
+	Kauf.Wage = (int32)Poker.WageDemand;
+	if (!FinalizePurchase(Kauf, Poker.AgreedFee, Poker.WageDemand, Poker.SwapId, Befund, O.SellerClub, OutReason)) return false;
 	Market.RemoveAt(Idx);
-	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt fuer %lld (Gehalt %lld pro Spieltag)."), *P.Name, (long long)Poker.AgreedFee, (long long)Poker.WageDemand));
+	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt fuer %lld (Gehalt %lld pro Spieltag)."), *Kauf.Name, (long long)Poker.AgreedFee, (long long)Poker.WageDemand));
 	ClosePoker();
 	return true;
 }
@@ -3951,4 +3951,164 @@ void FFM13World::RunDeadlineDay(const FString& Fenster)
 	for (const FString& Zeile : Ticker) Text += FString(TEXT("- ")) + Zeile + TEXT("\n");
 	AddMessage(FString::Printf(TEXT("DEADLINE-DAY (%s)"), Fenster == TEXT("winter") ? TEXT("Winter") : TEXT("Sommer")),
 		Text.Len() ? Text : FString(TEXT("Die Wechselperiode schliesst - ruhiger letzter Tag.")));
+}
+
+// ---------- Berater, freie Spieler, Tausch (js/transfer-poker.js, js/entities.js, js/transfermarket.js) ----------
+
+namespace
+{
+	const TCHAR* AgentNamen[] = { TEXT("Klaus Berger"), TEXT("Sandra Voigt"), TEXT("Marco Lindner"), TEXT("Julia Sommer"), TEXT("Thomas Krause"), TEXT("Nina Falk"), TEXT("Ruediger Stahl"), TEXT("Petra Wolff") };
+}
+
+FString FFM13World::AgentName(int32 AgentIndex)
+{
+	return AgentNamen[FMath::Clamp(AgentIndex, 0, 7)];
+}
+
+int32 FFM13World::AgentRelationLevelIndex(int32 AgentIndex) const
+{
+	return AgentRelationKeys.IndexOfByPredicate([AgentIndex](int32 K) { return K == AgentIndex; });
+}
+
+int32 FFM13World::AgentRelation(int32 AgentIndex) const
+{
+	const int32 I = AgentRelationLevelIndex(AgentIndex);
+	return I >= 0 ? AgentRelationVals[I] : 0;
+}
+
+// getAgentFee(): Provision je Geldtransfer, eine gepflegte Beziehung senkt sie (0,1 Prozentpunkte je Stufe)
+int64 FFM13World::AgentFee(const FFM13Player& P, int64 Basis) const
+{
+	if (!P.bHasAgent) return 0;
+	const double Satz = FMath::Max(0.01, P.AgentFeePct - AgentRelation(P.AgentIndex) * 0.001);
+	return FM13Transfers::JsRunden((double)Basis * Satz);
+}
+
+// improveAgentRelationship(): kostet 3.000 plus 500 je Stufe, Stufe plus 5, hoechstens 30
+bool FFM13World::ImproveAgentRelation(int32 AgentIndex, FString& OutReason)
+{
+	const int32 Stufe = AgentRelation(AgentIndex);
+	const int64 Kosten = 3000 + (int64)Stufe * 500;
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld"), (long long)Kosten); return false; }
+	Book(FString(TEXT("Beratervertrauen: ")) + AgentName(AgentIndex), -Kosten);
+	const int32 Neu = FMath::Min(30, Stufe + 5);
+	const int32 I = AgentRelationLevelIndex(AgentIndex);
+	if (I >= 0) AgentRelationVals[I] = Neu;
+	else { AgentRelationKeys.Add(AgentIndex); AgentRelationVals.Add(Neu); }
+	return true;
+}
+
+// finalizePlayerPurchase(): alle Pruefungen an einer Stelle, dann Abschluss.
+bool FFM13World::FinalizePurchase(const FFM13Player& Kauf, int64 Ablose, int64 Gehalt, int32 TauschId, const FFM13MedBefund& Befund, const FString& Verkaeufer, FString& OutReason)
+{
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre: das Konto ist im Minus."); return false; }
+	const int32 TauschIdx = TauschId ? Squad.IndexOfByPredicate([TauschId](const FFM13Player& P) { return P.Id == TauschId; }) : -1;
+	if (TauschId && (TauschIdx < 0 || !IsSwapCandidate(Squad[TauschIdx], Kauf, Verkaeufer)))
+	{ OutReason = TEXT("Dieser Spieler kommt fuer den Tausch nicht (mehr) in Frage."); return false; }
+	const FFM13Player* Tausch = TauschIdx >= 0 ? &Squad[TauschIdx] : nullptr;
+	const int64 Anrechnung = Tausch ? SwapValue(*Tausch, Kauf, Verkaeufer, Ablose) : 0;
+	const int64 Bar = Ablose - Anrechnung;
+	// Der Tauschspieler zaehlt wie ein Verkauf: sein Berater kassiert auf die Anrechnung
+	const int64 Beraterkosten = AgentFee(Kauf, Ablose) + (Tausch ? AgentFee(*Tausch, Anrechnung) : 0);
+	const int64 BudgetBedarf = Bar + FM13Transfers::JsRunden((double)Anrechnung * 0.15);
+	const int64 Gesamt = Bar + Beraterkosten;
+	if (Money < Gesamt) { OutReason = FString::Printf(TEXT("Vereinskonto reicht nicht: %lld noetig."), (long long)Gesamt); return false; }
+	if (TransferBudget < BudgetBedarf) { OutReason = FString::Printf(TEXT("Transferbudget reicht nicht: %lld noetig, %lld verfuegbar."), (long long)BudgetBedarf, (long long)TransferBudget); return false; }
+	const int64 Lohnsumme = WagesPerMatchday() - (Tausch ? Tausch->Wage : 0);
+	if (Lohnsumme + Gehalt > WageBudget) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+
+	Book(FString(TEXT("Spielerkauf: ")) + Kauf.Name, -Gesamt);
+	TransferBudget -= BudgetBedarf;
+	if (Tausch)
+	{
+		const FFM13Player Weg = *Tausch;
+		Squad.RemoveAt(TauschIdx);
+		ManualLineup.RemoveAll([&Weg](int32 Id) { return Id == Weg.Id; });
+		ManualBench.RemoveAll([&Weg](int32 Id) { return Id == Weg.Id; });
+		AddMessage(TEXT("Tausch"), FString::Printf(TEXT("%s geht zu %s - angerechnet auf die Ablöse für %s: %lld, bar gezahlt: %lld."), *Weg.Name, *Verkaeufer, *Kauf.Name, (long long)Anrechnung, (long long)Bar));
+	}
+	FFM13Player P = Kauf;
+	P.Wage = (int32)Gehalt;
+	Squad.Add(P);
+	ApplyMedicalOnArrival(Squad.Last(), Befund);
+	return true;
+}
+
+// isSwapCandidate(): Tauschspieler jung genug, gesund, nicht geliehen, und der Verkaeufer braucht ihn
+bool FFM13World::IsSwapCandidate(const FFM13Player& Tausch, const FFM13Player& Kauf, const FString& Verkaeufer) const
+{
+	if (Tausch.Age > 30 || Tausch.InjuredMatchdays > 0) return false;
+	if (IncomingLoans.ContainsByPredicate([&Tausch](const FFM13IncomingLoan& L) { return L.PlayerId == Tausch.Id; })) return false;
+	if (Squad.Num() <= 17) return false;   // SWAP_MIN_SQUAD
+	EFM13Playstyle Stil;
+	const int32 VereinsStaerke = Verkaeufer.IsEmpty() ? Kauf.Strength : ClubStrength(Verkaeufer, Stil);
+	const int32 Minimum = FMath::Max(Kauf.Strength - 10, VereinsStaerke - 4);   // SWAP_MAX_GAP, SWAP_CLUB_GAP
+	return Tausch.Strength >= Minimum;
+}
+
+int64 FFM13World::SwapValue(const FFM13Player& Tausch, const FFM13Player& Kauf, const FString& Verkaeufer, int64 Ablose) const
+{
+	if (!IsSwapCandidate(Tausch, Kauf, Verkaeufer)) return 0;
+	return FMath::Min<int64>(Ablose, FM13Transfers::JsRunden((double)Tausch.MarketValue * 0.85 / 1000.0) * 1000);
+}
+
+bool FFM13World::SetPokerSwap(int32 PlayerId, FString& OutReason)
+{
+	if (!Poker.bActive) { OutReason = TEXT("Keine Verhandlung offen."); return false; }
+	Poker.SwapId = PlayerId;
+	return true;
+}
+
+// Freie Spieler: vier je Markt-Neuaufbau, Handgeld sechs Gehaelter. Wuerfelt mit dem Transfer-Zufall.
+void FFM13World::RefreshFreeAgents()
+{
+	FreeAgents.Reset();
+	const int32 MinStaerke = 50 + (3 - LeagueLevel) * 9;
+	const int32 MaxStaerke = MinStaerke + 9;
+	FRandomStream Haupt = Rng;
+	Rng = RngTransfer;
+	for (int32 i = 0; i < 4; ++i)
+	{
+		FFM13FreeAgent F;
+		const int32 W = RngTransfer.RandRange(0, 3);
+		F.Player = CreatePlayer((EFM13Position)W, FMath::Max(40, MinStaerke - 4), MaxStaerke - 2, 19, 31);
+		F.Player.MarketValue = 0;
+		F.Player.ContractYears = 1;
+		F.SignOnFee = FM13Transfers::JsRunden((double)F.Player.Wage * 6.0);
+		FreeAgents.Add(F);
+	}
+	RngTransfer = Rng;
+	Rng = Haupt;
+	FreeNegotiation = FFM13FreeNegotiation();
+}
+
+// signFreeAgent(): zaehe Charaktere fordern manchmal ein Gegenangebot, das zweite Mal wird akzeptiert.
+bool FFM13World::SignFreeAgent(int32 Index, FString& OutReason)
+{
+	if (!FreeAgents.IsValidIndex(Index)) { OutReason = TEXT("Dieser Spieler ist nicht mehr zu haben."); return false; }
+	if (HasTransferEmbargo()) { OutReason = TEXT("Transfersperre aktiv."); return false; }
+	const FFM13FreeAgent F = FreeAgents[Index];
+	const double Zaehigkeit = FM13Poker::Zaehigkeit(F.Player.Character);
+	if (FreeNegotiation.PlayerId != F.Player.Id)
+	{
+		const double Chance = FMath::Min(0.75, 0.25 * Zaehigkeit);
+		if (RngTransfer.FRand() < Chance)
+		{
+			FreeNegotiation.PlayerId = F.Player.Id;
+			FreeNegotiation.CounterFee = FM13Transfers::JsRunden((double)F.SignOnFee * (1.15 + (Zaehigkeit - 1.0) * 0.3));
+			OutReason = FString::Printf(TEXT("%s verlangt ein Gegenangebot: %lld statt %lld Handgeld. Nochmal wählen zum Akzeptieren."), *F.Player.Name, (long long)FreeNegotiation.CounterFee, (long long)F.SignOnFee);
+			return false;
+		}
+	}
+	const int64 Handgeld = FreeNegotiation.PlayerId == F.Player.Id ? FreeNegotiation.CounterFee : F.SignOnFee;
+	if (Money < Handgeld) { OutReason = FString::Printf(TEXT("Handgeld nicht gedeckt: %lld noetig."), (long long)Handgeld); return false; }
+	if (!FitsWageBudget(F.Player.Wage)) { OutReason = TEXT("Das Gehalt sprengt das Gehaltsbudget des Vorstands."); return false; }
+	if (Squad.Num() >= FM13::MaxSquadSize) { OutReason = TEXT("Der Kader ist voll (30 Spieler)."); return false; }
+	Book(FString(TEXT("Handgeld Vereinslose: ")) + F.Player.Name, -Handgeld);
+	FFM13Player P = F.Player;
+	Squad.Add(P);
+	FreeAgents.RemoveAt(Index);
+	FreeNegotiation = FFM13FreeNegotiation();
+	AddMessage(TEXT("Neuzugang"), FString::Printf(TEXT("%s unterschreibt ablösefrei (Handgeld %lld)."), *P.Name, (long long)Handgeld));
+	return true;
 }

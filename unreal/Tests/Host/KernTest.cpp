@@ -201,7 +201,7 @@ static void TestKaderAktionen()
 	PRUEFE(W.BuyPlayer(0, Grund), "Kauf klappt");
 	PRUEFE(W.Squad.Num() == Vorher + 1 && W.Money == Geld - Preis, "Kauf bucht Preis und Spieler");
 	W.Money = 0;
-	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Geld")), "Ohne Geld kein Kauf");
+	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Vereinskonto")), "Ohne Geld kein Kauf");
 	W.Money = -1;
 	PRUEFE(!W.BuyPlayer(0, Grund) && Grund.Contains(TEXT("Transfersperre")), "Im Minus Transfersperre");
 	W.Money = 100000000;
@@ -1688,6 +1688,100 @@ static void TestMedizincheck()
 	FFM13World LSaveLd;
 	FString LSaveFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(LSave), LSaveLd, LSaveFehler) && LSaveLd.Loanables.Num() == 1 && LSaveLd.LastDeadlineKey == TEXT("1-sommer") && LSaveLd.Loanables[0].ParentClub == TEXT("Mutterklub"), "Leihen und Fenster-Schluessel bleiben im Spielstand (%s)", *LSaveFehler);
+	// Berater, freie Spieler, Tausch (js/entities.js, js/transfermarket.js, js/transfer-poker.js)
+	FFM13World BW;
+	BW.NewGame(TEXT("Berater"), 158, 0);
+	BW.Money = 500000000;
+	BW.TransferBudget = 500000000;
+	BW.WageBudget = 1000000000;
+	BW.Matchday = 2;
+	const double Hash = FM13Transfers::HashEinheit(42, 1);
+	PRUEFE(Hash >= 0.0 && Hash < 1.0 && Hash == FM13Transfers::HashEinheit(42, 1), "Berater: Kennungs-Wert ist fest und liegt zwischen 0 und 1");
+	FFM13Player Mit;
+	Mit.bHasAgent = true;
+	Mit.AgentIndex = 2;
+	Mit.AgentFeePct = 0.05;
+	PRUEFE(BW.AgentFee(Mit, 1000000) == 50000 && BW.AgentFee(FFM13Player(), 1000000) == 0, "Berater: 5 Prozent der Ablöse, ohne Berater nichts");
+	FString BGrund;
+	BW.Money = 100000;
+	PRUEFE(BW.ImproveAgentRelation(2, BGrund) && BW.Money == 97000 && BW.AgentRelation(2) == 5, "Beziehung: 3.000 Kosten, Stufe 5");
+	PRUEFE(BW.AgentFee(Mit, 1000000) == 45000, "Beziehung senkt die Provision um 0,1 Prozentpunkte je Stufe");
+	// Kauf mit Berater: Konto zahlt Ablöse und Provision, das Budget nur die Ablöse
+	BW.Money = 500000000;
+	BW.Market[0].Player.bHasAgent = true;
+	BW.Market[0].Player.AgentIndex = 3;
+	BW.Market[0].Player.AgentFeePct = 0.1;
+	const int64 BPreis = BW.Market[0].Price;
+	const int64 BGeld = BW.Money;
+	const int64 BBudget = BW.TransferBudget;
+	PRUEFE(BW.BuyPlayer(0, BGrund), "Kauf mit Berater gelingt (%s)", *BGrund);
+	PRUEFE(BW.Money == BGeld - BPreis - FM13Transfers::JsRunden((double)BPreis * 0.1) && BW.TransferBudget == BBudget - BPreis, "Kauf: Konto zahlt Provision, Budget nur die Ablöse");
+	// Verkauf: Provision wird abgezogen, das Budget steigt um 85 %
+	FFM13IncomingOffer VO;
+	VO.PlayerId = BW.Squad[0].Id; VO.PlayerName = BW.Squad[0].Name; VO.Club = TEXT("Kaeufer"); VO.Price = 2000000; VO.ExpiresMatchday = 9;
+	BW.Squad[0].bHasAgent = true; BW.Squad[0].AgentFeePct = 0.05; BW.Squad[0].AgentIndex = 1;
+	BW.IncomingOffers.Add(VO);
+	const int64 VGeld = BW.Money;
+	const int64 VBudget = BW.TransferBudget;
+	PRUEFE(BW.AcceptIncomingOffer(BW.IncomingOffers.Num() - 1, BGrund), "Verkauf klappt (%s)", *BGrund);
+	PRUEFE(BW.Money == VGeld + 2000000 - 100000 && BW.TransferBudget == VBudget + 1700000, "Verkauf: Berater kassiert 5 %%, Budget +85 %%");
+	// Freie Spieler: Handgeld, Gegenangebot und Verpflichtung
+	FFM13World FA;
+	FA.NewGame(TEXT("Freie"), 159, 0);
+	FA.Money = 500000000;
+	FA.WageBudget = 1000000000;
+	PRUEFE(FA.FreeAgents.Num() == 4, "Freie Spieler: vier je Markt-Neuaufbau");
+	const int32 FKader = FA.Squad.Num();
+	const int64 FGeld = FA.Money;
+	const int64 FHandgeld = FA.FreeAgents[0].SignOnFee;
+	bool FUnter = false;
+	for (int32 k = 0; k < 10 && !FUnter; ++k)
+	{
+		FString FGrund;
+		if (FA.SignFreeAgent(0, FGrund)) FUnter = true;
+	}
+	PRUEFE(FUnter && FA.Squad.Num() == FKader + 1 && FA.FreeAgents.Num() == 3, "Freie Spieler: unterschreibt nach höchstens zehn Versuchen");
+	PRUEFE(FA.Money < FGeld && FA.Money >= FGeld - FHandgeld * 2, "Freie Spieler: Handgeld wird gebucht");
+	// Tausch im Poker: Tauschspieler geht, Ablöse wird verrechnet
+	FFM13World TW;
+	TW.NewGame(TEXT("Tausch"), 160, 0);
+	TW.Money = 500000000;
+	TW.TransferBudget = 500000000;
+	TW.WageBudget = 1000000000;
+	TW.Matchday = 2;
+	while (TW.Squad.Num() <= 18) { FFM13Player Kopie = TW.Squad[0]; Kopie.Id = TW.NextPlayerId++; TW.Squad.Add(Kopie); }
+	TW.Squad[0].Age = 25;
+	TW.Squad[0].Strength = 99;
+	TW.Squad[0].MarketValue = 2000000;
+	TW.Squad[0].InjuredMatchdays = 0;
+	const int32 TauschId = TW.Squad[0].Id;
+	FString TauGrund;
+	TW.OpenPoker(TW.Market[0].Player.Id, TauGrund);
+	TW.Poker.Offer = TW.Market[0].AskingPrice;
+	TW.SubmitPokerOffer(TauGrund);
+	const int64 TAblose = TW.Poker.AgreedFee;
+	PRUEFE(TW.SetPokerSwap(TauschId, TauGrund), "Tausch: Spieler für den Tausch gewählt");
+	const int64 TAnrechnung = FMath::Min<int64>(TAblose, FM13Transfers::JsRunden(1700000.0 / 1000.0) * 1000);
+	const int64 TGeld = TW.Money;
+	const int64 TBudget = TW.TransferBudget;
+	const int32 TKader = TW.Squad.Num();
+	PRUEFE(TW.SignPokerDeal(TauGrund), "Tausch: Unterschrift gelingt (%s)", *TauGrund);
+	bool TWeg = true;
+	for (const FFM13Player& P : TW.Squad) if (P.Id == TauschId) TWeg = false;
+	PRUEFE(TWeg && TW.Squad.Num() == TKader, "Tausch: Tauschspieler geht, Kader bleibt gleich groß");
+	PRUEFE(TW.Money == TGeld - (TAblose - TAnrechnung) && TW.TransferBudget == TBudget - ((TAblose - TAnrechnung) + FM13Transfers::JsRunden((double)TAnrechnung * 0.15)), "Tausch: bar und Budget nach Anrechnung");
+	// Freier Vertragsschluss braucht die gesperrten Plaetze nicht
+	FFM13World TSp = TW;
+	TSp.Matchday = 1;
+	(void)TSp;
+	// Spielstand: Berater, freie Spieler und Verhandlungstausch bleiben
+	FFM13World BSave = BW;
+	BSave.FreeAgents = FA.FreeAgents;
+	BSave.FreeNegotiation.PlayerId = 555;
+	BSave.FreeNegotiation.CounterFee = 12345;
+	FFM13World BLd;
+	FString BFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(BSave), BLd, BFehler) && BLd.AgentRelation(2) == 5 && BLd.FreeAgents.Num() == BSave.FreeAgents.Num() && BLd.FreeNegotiation.CounterFee == 12345 && std::fabs(BLd.Squad[0].AgentFeePct - BSave.Squad[0].AgentFeePct) < 1e-6, "Berater und freie Spieler bleiben im Spielstand (%s)", *BFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

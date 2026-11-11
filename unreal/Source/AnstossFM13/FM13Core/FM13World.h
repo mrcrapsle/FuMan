@@ -260,6 +260,7 @@ public:
 		int64 AgreedFee = 0;         // 0 = noch keine Einigung
 		int64 WageDemand = 0;        // Gehalt je Spieltag, das der Spieler will
 		bool bWageTalked = false;
+		int32 SwapId = 0;            // Tauschspieler aus dem eigenen Kader (0 = keiner)
 		TArray<FString> Log;
 	};
 	FFM13PokerState Poker;
@@ -270,6 +271,34 @@ public:
 	bool AcceptPokerAsking(FString& OutReason);
 	bool HagglePokerWage(FString& OutReason);
 	bool SignPokerDeal(FString& OutReason);
+	// Gemeinsamer Abschluss fuer Sofortkauf und Verhandlung (js/transfer-poker.js: finalizePlayerPurchase)
+	bool FinalizePurchase(const FFM13Player& Kauf, int64 Ablose, int64 Gehalt, int32 TauschId, const FFM13MedBefund& Befund, const FString& Verkaeufer, FString& OutReason);
+	int64 AgentFee(const FFM13Player& P, int64 Basis) const;          // getAgentFee()
+	int32 AgentRelation(int32 AgentIndex) const;                       // game.agentRelationships
+	bool ImproveAgentRelation(int32 AgentIndex, FString& OutReason);   // improveAgentRelationship()
+	static FString AgentName(int32 AgentIndex);
+	int32 AgentRelationLevelIndex(int32 AgentIndex) const;
+	TArray<int32> AgentRelationKeys;                                   // Index je Eintrag von AgentRelationVals
+	TArray<int32> AgentRelationVals;
+	// Freie Spieler ohne Ablöse (js/transfermarket.js: freeAgentPlayers)
+	struct FFM13FreeAgent
+	{
+		FFM13Player Player;
+		int64 SignOnFee = 0;
+	};
+	TArray<FFM13FreeAgent> FreeAgents;
+	struct FFM13FreeNegotiation
+	{
+		int32 PlayerId = 0;
+		int64 CounterFee = 0;
+	};
+	FFM13FreeNegotiation FreeNegotiation;                              // offenes Gegenangebot
+	void RefreshFreeAgents();
+	bool SignFreeAgent(int32 Index, FString& OutReason);
+	// Tauschgeschäft im Poker (js/transfer-poker.js: getSwapValue, isSwapCandidate)
+	bool IsSwapCandidate(const FFM13Player& Tausch, const FFM13Player& Kauf, const FString& Verkaeufer) const;
+	int64 SwapValue(const FFM13Player& Tausch, const FFM13Player& Kauf, const FString& Verkaeufer, int64 Ablose) const;
+	bool SetPokerSwap(int32 PlayerId, FString& OutReason);
 	// Medizincheck (js/medical-check.js): nach der Abloese-Einigung, kostet 3 % der Abloese
 	bool RunMedicalCheck(FString& OutReason);
 	FFM13MedBefund& EnsureMedical(FFM13MarketOffer& O);  // wuerfelt den Befund beim ersten Bedarf

@@ -78,6 +78,9 @@ struct FFM13Player
 	FString PreOfferClub;       // Vorvertrags-Angebot eines anderen Vereins (leer = keins)
 	int32 PreOfferDeadline = 0; // Spieltag, bis zu dem verlaengert werden muss
 	FString PreSignedClub;      // bei diesem Verein unterschrieben: geht zum Saisonende
+	bool bHasAgent = false;     // Berater (js/entities.js: agent), ab Staerke 62 mit steigender Wahrscheinlichkeit
+	uint8 AgentIndex = 0;       // Name aus FM13World::AgentNames
+	double AgentFeePct = 0.0;   // Provision je Geldtransfer, 3 bis 8 %
 	FString MeilensteinDebut, MeilensteinTor, MeilensteinElf; // Saison/Spieltag des ersten Profidebuets, Tores, Elf-Nominierung
 	bool bChronic = false;      // chronische Beschwerden (Medizincheck): Risiko x 1,5
 

@@ -10,6 +10,9 @@ namespace FM13Transfers
 	// JavaScript Math.round: auf die naechste ganze Zahl, Halbe nach oben
 	int64 JsRunden(double X);
 
+	// Gleichmaessig verteilte Zahl zwischen 0 und 1 aus der Kennung (fuer Berater, ohne den Hauptzufall zu verbrauchen)
+	double HashEinheit(int32 Kennung, uint32 Salz);
+
 	// ---------- Medizincheck (js/medical-check.js) ----------
 	// ensureMedicalProfile(): Alter 29+ erhoeht die Quote chronischer Probleme um 0,1
 	FFM13MedBefund WuerfleBefund(int32 Alter, double Zufall, double ZufallAnzahl, double ZufallWochen);
