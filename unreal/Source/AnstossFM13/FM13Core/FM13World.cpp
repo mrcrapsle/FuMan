@@ -230,6 +230,7 @@ bool FFM13World::PlayMatchday()
 	TickIncomingLoans();
 	if (Matchday % 4 == 0) RefreshMarket();
 	TickBoardRoom();
+	TickWinterTalk();
 	TickMemberAssembly();
 	TickFriendships();
 	TickYouthPathway();
@@ -623,6 +624,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	ResolveTransferStrategy(Rank);
 	EvaluateFinancialFairplay();
 	ResolveSaisonWette(Rank);
+	ResolveWinterTalk(Rank);
 	PrepareMemberAssembly(Rank);
 	if (Outcome == EFM13SeasonOutcome::Relegated) RelegatedIntoSeason = Season + 1;
 	if (Outcome == EFM13SeasonOutcome::Promoted) { BoardSat = FMath::Min(100, BoardSat + 15); Fans = FMath::Min(100, Fans + 10); }
@@ -4711,4 +4713,117 @@ void FFM13World::ResolveSaisonWette(int32 MyRank)
 		AddMessage(TEXT("Wette verloren"), FString::Printf(TEXT("Platz %d: die Wette auf Platz %d oder besser ist verloren. Der Vorstand zieht Vertrauen ab."), MyRank, Wette.Platz));
 	}
 	bHasWette = false;
+}
+
+// ---------- Wintergespraech (js/winter-talk.js) ----------
+
+int64 FFM13World::WinterBudgetAmount() const
+{
+	return FM13Transfers::JsRunden((double)LeagueTransferBudget(LeagueLevel) * 0.3 / 1000.0) * 1000;
+}
+
+double FFM13World::WinterBudgetChance() const
+{
+	const int32 Rang = OwnRank();
+	const int32 Erwartet = Expectation.ExpectedRank;
+	const int32 Diff = (Rang > 0 && Erwartet > 0) ? Erwartet - Rang : 0;
+	return FMath::Max(0.1, FMath::Min(0.9, 0.3 + Diff * 0.08 + (BoardSat - 50) / 200.0));
+}
+
+bool FFM13World::IsWinterTalkOpen() const
+{
+	return Matchday >= 18 && Matchday <= 20 && !(bHasWinterTalk && WinterTalk.Season == Season);
+}
+
+bool FFM13World::ChooseWinterTalk(EWinterWeg Weg, FString& OutReason)
+{
+	if (!IsWinterTalkOpen())
+	{
+		OutReason = (bHasWinterTalk && WinterTalk.Season == Season) ? TEXT("Das Wintergespraech hat schon stattgefunden.") : TEXT("Das Wintergespraech gibt es an den Spieltagen 18 bis 20.");
+		return false;
+	}
+	const FFM13Expectation& E0 = GetSeasonExpectation();
+	const int32 Erwartet = E0.ExpectedRank;
+	const int32 Teams = E0.Teams;
+	FFM13WinterTalk T;
+	T.Season = Season;
+	T.Weg = Weg;
+	T.OldGoal = Erwartet;
+	T.Goal = Erwartet;
+	T.RankAtTalk = OwnRank();
+	FString Text;
+	switch (Weg)
+	{
+		case EWinterWeg::Hoch:
+			if (Erwartet <= 1) { OutReason = TEXT("Hoeher als Platz 1 geht es nicht."); return false; }
+			T.Goal = FMath::Max(1, Erwartet - 2);
+			Expectation.ExpectedRank = T.Goal;
+			T.Budget = WinterBudgetAmount();
+			TransferBudget += T.Budget;
+			BoardSat = FMath::Min(100, BoardSat + 5);
+			Text = FString::Printf(TEXT("Neues Ziel Platz %d. Der Vorstand gibt %lld Winterbudget frei."), T.Goal, (long long)T.Budget);
+			break;
+		case EWinterWeg::Runter:
+			if (Erwartet <= 0 || Erwartet >= Teams) { OutReason = TEXT("Tiefer laesst sich das Ziel nicht setzen."); return false; }
+			T.Goal = FMath::Min(Teams, Erwartet + 2);
+			Expectation.ExpectedRank = T.Goal;
+			BoardSat = FMath::Max(10, BoardSat - 4);
+			Text = FString::Printf(TEXT("Neues Ziel Platz %d. Der Vorstand ist enttaeuscht (-4), misst die Saison aber daran."), T.Goal);
+			break;
+		case EWinterWeg::Budget:
+			if (RngTransfer.FRand() < WinterBudgetChance())
+			{
+				T.Budget = WinterBudgetAmount();
+				TransferBudget += T.Budget;
+				Text = FString::Printf(TEXT("Der Vorstand bewilligt %lld Winterbudget."), (long long)T.Budget);
+			}
+			else
+			{
+				BoardSat = FMath::Max(10, BoardSat - 3);
+				Text = TEXT("Abgelehnt - erst die Leistung, dann das Geld (Vorstand -3).");
+			}
+			break;
+		case EWinterWeg::Kurs:
+			BoardSat = FMath::Min(100, BoardSat + 2);
+			Text = TEXT("Ihr bleibt beim Kurs - der Vorstand schaetzt die Ruhe (+2).");
+			break;
+		default:
+			return false;
+	}
+	WinterTalk = T;
+	bHasWinterTalk = true;
+	AddMessage(TEXT("Wintergespraech"), Text);
+	return true;
+}
+
+// Nach jedem Spieltag: nach Spieltag 20 ohne Gespraech verpasst
+void FFM13World::TickWinterTalk()
+{
+	if (Matchday > 20 && Matchday <= FM13::MatchdaysPerSeason && !(bHasWinterTalk && WinterTalk.Season == Season))
+	{
+		WinterTalk = FFM13WinterTalk();
+		WinterTalk.Season = Season;
+		WinterTalk.Weg = EWinterWeg::Verpasst;
+		bHasWinterTalk = true;
+		BoardSat = FMath::Max(10, BoardSat - 2);
+		AddMessage(TEXT("Wintergespraech verpasst"), TEXT("Der Vorstand hat in der Winterpause vergeblich auf dich gewartet (-2)."));
+	}
+}
+
+// Saisonende: ein erhoehtes Ziel wird eingeloest
+void FFM13World::ResolveWinterTalk(int32 FinalRank)
+{
+	if (!bHasWinterTalk || WinterTalk.Season != Season || WinterTalk.Weg != EWinterWeg::Hoch || WinterTalk.Result != 0) return;
+	if (FinalRank <= WinterTalk.Goal)
+	{
+		WinterTalk.Result = 1;
+		BoardSat = FMath::Min(100, BoardSat + 5);
+		AddMessage(TEXT("Winterversprechen gehalten"), FString::Printf(TEXT("Platz %d - das im Winter erhoehte Ziel (Platz %d) ist erreicht. Vorstand +5."), FinalRank, WinterTalk.Goal));
+	}
+	else
+	{
+		WinterTalk.Result = 2;
+		BoardSat = FMath::Max(10, BoardSat - 10);
+		AddMessage(TEXT("Winterversprechen gebrochen"), FString::Printf(TEXT("Platz %d statt des im Winter versprochenen Platzes %d. Vorstand -10."), FinalRank, WinterTalk.Goal));
+	}
 }

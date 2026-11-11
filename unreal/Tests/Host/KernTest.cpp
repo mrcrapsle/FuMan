@@ -1957,6 +1957,60 @@ static void TestMedizincheck()
 	FFM13World MVLd;
 	FString MVFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(MVSave), MVLd, MVFehler) && MVLd.MemberAssembly.Zustimmung == MV.MemberAssembly.Zustimmung && MVLd.Expectation.ExpectedRank == MV.Expectation.ExpectedRank, "Versammlung und Erwartung bleiben im Spielstand (%s)", *MVFehler);
+	// Wintergespraech (js/winter-talk.js)
+	FFM13World WG;
+	WG.NewGame(TEXT("Winter"), 169, 0);
+	WG.Money = 1000000;
+	WG.Matchday = 18;
+	WG.Expectation.Season = WG.Season;
+	WG.Expectation.ExpectedRank = 9;
+	WG.Expectation.Teams = 18;
+	WG.TransferBudget = 0;
+	const int32 WGBoard = WG.BoardSat;
+	FString WGGrund;
+	PRUEFE(WG.IsWinterTalkOpen() && WG.WinterBudgetAmount() == 7500000, "Winter: offen an Spieltag 18, Budget 30 Prozent der Liga-Basis (7,5 Mio.)");
+	PRUEFE(WG.ChooseWinterTalk(FFM13World::EWinterWeg::Hoch, WGGrund) && WG.WinterTalk.Goal == 7 && WG.TransferBudget == 7500000 && WG.BoardSat == FMath::Min(100, WGBoard + 5), "Winter hoch: Ziel Platz 7, Budget frei, Vorstand +5");
+	PRUEFE(!WG.ChooseWinterTalk(FFM13World::EWinterWeg::Kurs, WGGrund) && WGGrund.Contains(TEXT("schon")), "Winter: nur ein Weg je Saison");
+	// Versprechen gehalten: Platz 6 erreicht das Ziel 7
+	FFM13World WGOk = WG;
+	WGOk.ResolveWinterTalk(6);
+	PRUEFE(WGOk.WinterTalk.Result == 1, "Winter: versprochenes Ziel erreicht");
+	// Versprechen gebrochen: Platz 9
+	FFM13World WGNein = WG;
+	WGNein.BoardSat = 50;
+	WGNein.ResolveWinterTalk(9);
+	PRUEFE(WGNein.WinterTalk.Result == 2 && WGNein.BoardSat == 40, "Winter: versprochenes Ziel verfehlt, Vorstand -10");
+	// Runter: Ziel zwei Plaetze tiefer, Vorstand -4
+	FFM13World WGR;
+	WGR.NewGame(TEXT("WinterRunter"), 170, 0);
+	WGR.Matchday = 19;
+	WGR.Expectation.Season = WGR.Season; WGR.Expectation.ExpectedRank = 9; WGR.Expectation.Teams = 18;
+	WGR.BoardSat = 50;
+	PRUEFE(WGR.ChooseWinterTalk(FFM13World::EWinterWeg::Runter, WGGrund) && WGR.Expectation.ExpectedRank == 11 && WGR.BoardSat == 46, "Winter runter: Ziel Platz 11, Vorstand -4");
+	// Verpasst: nach Spieltag 20 ohne Gespraech
+	FFM13World WV;
+	WV.NewGame(TEXT("WinterVerpasst"), 171, 0);
+	WV.Matchday = 21;
+	WV.BoardSat = 50;
+	WV.TickWinterTalk();
+	PRUEFE(WV.WinterTalk.Weg == FFM13World::EWinterWeg::Verpasst && WV.BoardSat == 48, "Winter verpasst: Vorstand -2");
+	// Budget: bewilligt oder abgelehnt, genau eines davon
+	FFM13World WB;
+	WB.NewGame(TEXT("WinterBudget"), 172, 0);
+	WB.Matchday = 18;
+	WB.Expectation.Season = WB.Season; WB.Expectation.ExpectedRank = 9; WB.Expectation.Teams = 18;
+	WB.BoardSat = 50;
+	const int32 WBVor = WB.BoardSat;
+	const int64 WBBudget = WB.TransferBudget;
+	WB.ChooseWinterTalk(FFM13World::EWinterWeg::Budget, WGGrund);
+	const bool WBJa = WB.TransferBudget == WBBudget + 7500000;
+	const bool WBNein = WB.BoardSat == FMath::Max(10, WBVor - 3);
+	PRUEFE(WBJa != WBNein, "Winter Budget: entweder bewilligt oder abgelehnt");
+	// Spielstand
+	FFM13World WSave = WG;
+	FFM13World WLd;
+	FString WFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(WSave), WLd, WFehler) && WLd.bHasWinterTalk && WLd.WinterTalk.Goal == 7 && WLd.TransferBudget == 7500000, "Wintergespraech bleibt im Spielstand (%s)", *WFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

@@ -486,6 +486,26 @@ public:
 	bool bHasWette = false;
 	bool SetSaisonWette(FString& OutReason);
 	void ResolveSaisonWette(int32 MyRank);
+	// Wintergespraech mit dem Vorstand (js/winter-talk.js): Spieltag 18 bis 20, ein Weg je Saison
+	enum class EWinterWeg : uint8 { Keiner, Hoch, Runter, Budget, Kurs, Verpasst };
+	struct FFM13WinterTalk
+	{
+		int32 Season = 0;
+		EWinterWeg Weg = EWinterWeg::Keiner;
+		int32 OldGoal = 0;
+		int32 Goal = 0;
+		int32 RankAtTalk = 0;
+		int64 Budget = 0;        // bewilligtes Winterbudget (0 = keins)
+		int32 Result = 0;        // 0 offen, 1 erreicht, 2 verfehlt
+	};
+	FFM13WinterTalk WinterTalk;
+	bool bHasWinterTalk = false;
+	int64 WinterBudgetAmount() const;                 // 30 % des Liga-Transferbudgets, auf 1.000 gerundet
+	double WinterBudgetChance() const;
+	bool IsWinterTalkOpen() const;
+	bool ChooseWinterTalk(EWinterWeg Weg, FString& OutReason);
+	void TickWinterTalk();                            // nach jedem Spieltag: verpasst
+	void ResolveWinterTalk(int32 FinalRank);          // Saisonende: hoch-Versprechen einloesen
 	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
 	struct FFM13Rumor
 	{

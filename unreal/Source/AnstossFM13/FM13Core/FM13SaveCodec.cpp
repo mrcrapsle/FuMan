@@ -439,6 +439,14 @@ namespace FM13Save
 
 		W.Field(TEXT("preContractPoolSeason"), S.PreContractPoolSeason);
 		W.Field(TEXT("lastDeadlineKey"), S.LastDeadlineKey);
+		W.FieldBool(TEXT("wtHas"), S.bHasWinterTalk);
+		W.Field(TEXT("wtSeason"), S.WinterTalk.Season);
+		W.Field(TEXT("wtWeg"), (int64)S.WinterTalk.Weg);
+		W.Field(TEXT("wtOld"), S.WinterTalk.OldGoal);
+		W.Field(TEXT("wtGoal"), S.WinterTalk.Goal);
+		W.Field(TEXT("wtRank"), S.WinterTalk.RankAtTalk);
+		W.Field(TEXT("wtBudget"), S.WinterTalk.Budget);
+		W.Field(TEXT("wtResult"), S.WinterTalk.Result);
 		W.Field(TEXT("expSeason"), S.Expectation.Season);
 		W.Field(TEXT("expStart"), S.Expectation.StartMoney);
 		W.Field(TEXT("expRank"), S.Expectation.ExpectedRank);
@@ -1066,6 +1074,14 @@ namespace FM13Save
 			W.FreeAgents.Add(F);
 		}
 		W.LastDeadlineKey = R.Str(Root, TEXT("lastDeadlineKey"), TEXT(""));
+		W.bHasWinterTalk = R.Bool(Root, TEXT("wtHas"), false);
+		W.WinterTalk.Season = (int32)R.Int(Root, TEXT("wtSeason"), 0);
+		W.WinterTalk.Weg = (FFM13World::EWinterWeg)FMath::Clamp((int32)R.Int(Root, TEXT("wtWeg"), 0), 0, 5);
+		W.WinterTalk.OldGoal = (int32)R.Int(Root, TEXT("wtOld"), 0);
+		W.WinterTalk.Goal = (int32)R.Int(Root, TEXT("wtGoal"), 0);
+		W.WinterTalk.RankAtTalk = (int32)R.Int(Root, TEXT("wtRank"), 0);
+		W.WinterTalk.Budget = R.Int(Root, TEXT("wtBudget"), 0);
+		W.WinterTalk.Result = (int32)R.Int(Root, TEXT("wtResult"), 0);
 		W.Expectation.Season = (int32)R.Int(Root, TEXT("expSeason"), 0);
 		W.Expectation.StartMoney = R.Int(Root, TEXT("expStart"), 0);
 		W.Expectation.ExpectedRank = (int32)R.Int(Root, TEXT("expRank"), 0);

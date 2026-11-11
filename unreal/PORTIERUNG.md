@@ -176,7 +176,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 |---|---:|---|---|---|
 | `board-room.js` | 138 | portiert | Vorstand: vier Mitglieder, die je einen echten Bereich beurteilen und damit erklären, wohe |  |
 | `member-assembly.js` | 181 | portiert | Mitgliederversammlung: nach jedem Saisonabschluss legt der Verein vor seinen Mitgliedern |  |
-| `winter-talk.js` | 140 | offen | Winterpausen-Gespräch mit dem Vorstand (Phase 22.9): nach der Hinrunde (Spieltag 18-20, |  |
+| `winter-talk.js` | 140 | portiert | Winterpausen-Gespräch mit dem Vorstand (Phase 22.9): nach der Hinrunde (Spieltag 18-20, |  |
 | `media-department.js` | 243 | offen | Medienabteilung: aktive Pressearbeit auf dem einen echten Medienimage |  |
 | `campus-staff.js` | 694 | teilweise | Personal | Wirkung von Co-Trainer, Analyst, Greenkeeper, Ernährungsberater, Athletiktrainer, Physio auf Stärke und Kondition (aus dem Browser-Spielstand). Offen: Einstellen, Ausbau, Verträge, übriges Personal |
 | `crest.js` | 273 | offen | Vereins-Wappen-EDITOR |  |
