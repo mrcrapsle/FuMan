@@ -87,6 +87,7 @@ namespace
 		W.Field(TEXT("preOfferClub"), P.PreOfferClub);
 		W.Field(TEXT("preOfferDeadline"), P.PreOfferDeadline);
 		W.Field(TEXT("preSignedClub"), P.PreSignedClub);
+		W.Field(TEXT("talksBlocked"), P.TalksBlockedSeason); W.Field(TEXT("playtimeSeason"), P.PlaytimeSeason); W.Field(TEXT("playtimeMinApps"), P.PlaytimeMinApps);
 		W.FieldBool(TEXT("hasAgent"), P.bHasAgent);
 		W.FieldBool(TEXT("bon0a"), P.Bonus[0].bAktiv); W.Field(TEXT("bon0t"), P.Bonus[0].Schwelle); W.Field(TEXT("bon0b"), P.Bonus[0].Betrag); W.FieldBool(TEXT("bon0p"), P.bBonusBezahlt[0]);
 		W.FieldBool(TEXT("bon1a"), P.Bonus[1].bAktiv); W.Field(TEXT("bon1t"), P.Bonus[1].Schwelle); W.Field(TEXT("bon1b"), P.Bonus[1].Betrag); W.FieldBool(TEXT("bon1p"), P.bBonusBezahlt[1]);
@@ -870,6 +871,7 @@ namespace
 		P.PreOfferClub = R.Str(Obj, TEXT("preOfferClub"), TEXT(""));
 		P.PreOfferDeadline = (int32)R.Int(Obj, TEXT("preOfferDeadline"), 0);
 		P.PreSignedClub = R.Str(Obj, TEXT("preSignedClub"), TEXT(""));
+		P.TalksBlockedSeason = (int32)R.Int(Obj, TEXT("talksBlocked"), 0); P.PlaytimeSeason = (int32)R.Int(Obj, TEXT("playtimeSeason"), 0); P.PlaytimeMinApps = (int32)R.Int(Obj, TEXT("playtimeMinApps"), 0);
 		P.bHasAgent = R.Bool(Obj, TEXT("hasAgent"), false);
 		P.Bonus[0].bAktiv = R.Bool(Obj, TEXT("bon0a"), false); P.Bonus[0].Schwelle = (int32)R.Int(Obj, TEXT("bon0t"), 0); P.Bonus[0].Betrag = R.Int(Obj, TEXT("bon0b"), 0); P.bBonusBezahlt[0] = R.Bool(Obj, TEXT("bon0p"), false);
 		P.Bonus[1].bAktiv = R.Bool(Obj, TEXT("bon1a"), false); P.Bonus[1].Schwelle = (int32)R.Int(Obj, TEXT("bon1t"), 0); P.Bonus[1].Betrag = R.Int(Obj, TEXT("bon1b"), 0); P.bBonusBezahlt[1] = R.Bool(Obj, TEXT("bon1p"), false);

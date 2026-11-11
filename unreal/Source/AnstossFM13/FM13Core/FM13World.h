@@ -342,6 +342,15 @@ public:
 	bool SellPlayer(int32 PlayerId, FString& OutReason, bool bChemieBestaetigt = false);   // sellPlayer(): 80 % Marktwert, Beraterprovision; bChemieBestaetigt = zweiter Klick bei eingespielter Elf
 	void CheckInsolvencyRisk();                       // checkInsolvencyRisk() (js/finances.js): jeden Spieltag nach den Finanzen
 	bool RenewContract(int32 PlayerId, int32 Years, FString& OutReason);
+	struct FFM13ContractTalk { bool bActive = false; int32 PlayerId = 0; int32 Years = 1; double OfferFactor = 1.0; bool bGarantie = false; int32 Rounds = 0; };
+	FFM13ContractTalk ContractTalk;                // game.contractTalk: offenes Verhandlungsgespraech
+	bool StartContractTalk(int32 PlayerId, FString& OutReason);        // extendContract()
+	bool SetContractTalkYears(int32 Years, FString& OutReason);        // setContractTalkYears()
+	void ToggleContractTalkGuarantee();                                 // toggleContractTalkGuarantee()
+	void CancelContractTalk();                                          // cancelContractTalk()
+	bool CounterContractTalk(FString& OutReason);                       // counterContractTalk(): true = Spieler geht auf 10 % weniger ein
+	bool AcceptContractTalk(FString& OutReason);                        // acceptContractTalk()
+	void CheckPlaytimePromises();                                       // checkPlaytimePromises(): Saisonende
 	int32 RenewalWage(const FFM13Player& P) const;
 	int64 RenewalSigningFee(const FFM13Player& P, int32 Years) const;   // Handgeld der Verlaengerung
 	bool PromoteYouth(int32 YouthIndex, FString& OutReason);

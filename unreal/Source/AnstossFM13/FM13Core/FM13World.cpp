@@ -681,6 +681,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 
 	TickBuybackOptions();
 	JoinPreContractPlayers();
+	CheckPlaytimePromises();
 	++Season;
 	ErneuereB2BAuftraege();
 	OpenMemberAssembly();
@@ -1358,6 +1359,125 @@ void FFM13World::CheckInsolvencyRisk()
 			C.PointDeduction += FMath::Min(3, FMath::Max(0, C.Points()));
 			AddMessage(TEXT("Punktabzug"), TEXT("Wegen anhaltender Zahlungsunfaehigkeit verhaengt der Verband einen Abzug von 3 Punkten."));
 		}
+	}
+}
+
+// ---------- Vertragsgespraeche (js/contracts.js: extendContract, counterContractTalk, acceptContractTalk, checkPlaytimePromises) ----------
+
+// getContractTalkOffer(): Angebot aus Forderung, Garantie (15 Einsaetze, 15 % weniger Gehalt) und Laufzeit
+namespace
+{
+	void TalkAngebot(const FFM13World& W, const FFM13Player& P, const FFM13World::FFM13ContractTalk& T, int64& Gehalt, int64& Handgeld, int64& Berater)
+	{
+		const bool bStamm = W.StartingEleven().Contains(P.Id);
+		const double Garantie = (T.bGarantie && !bStamm) ? 0.85 : 1.0;
+		Gehalt = FM13Transfers::JsRunden((double)W.RenewalWage(P) * T.OfferFactor * Garantie / 10.0) * 10;
+		Handgeld = W.RenewalSigningFee(P, T.Years);
+		Berater = W.AgentFee(P, Handgeld);
+	}
+}
+
+bool FFM13World::StartContractTalk(int32 PlayerId, FString& OutReason)
+{
+	const FFM13Player* P = FindPlayer(PlayerId);
+	if (!P) { OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	if (P->TalksBlockedSeason == Season) { OutReason = FString::Printf(TEXT("%s will diese Saison nicht mehr verhandeln."), *P->Name); return false; }
+	if (!P->PreSignedClub.IsEmpty()) { OutReason = FString::Printf(TEXT("%s hat schon einen Vorvertrag bei %s unterschrieben - er geht am Saisonende."), *P->Name, *P->PreSignedClub); return false; }
+	ContractTalk.bActive = true;
+	ContractTalk.PlayerId = PlayerId;
+	ContractTalk.Years = P->Age >= 30 ? 1 : 2;
+	ContractTalk.OfferFactor = 1.0;
+	ContractTalk.bGarantie = false;
+	ContractTalk.Rounds = 0;
+	return true;
+}
+
+bool FFM13World::SetContractTalkYears(int32 Years, FString& OutReason)
+{
+	if (!ContractTalk.bActive) { OutReason = TEXT("Kein Gespraech offen."); return false; }
+	if (Years < 1 || Years > 5) { OutReason = TEXT("Laufzeit 1 bis 5 Jahre."); return false; }
+	ContractTalk.Years = Years;
+	return true;
+}
+
+void FFM13World::ToggleContractTalkGuarantee()
+{
+	if (ContractTalk.bActive) ContractTalk.bGarantie = !ContractTalk.bGarantie;
+}
+
+void FFM13World::CancelContractTalk()
+{
+	ContractTalk.bActive = false;
+}
+
+// counterContractTalk(): Gegenangebot 10 % unter der Forderung. Zaehe Charaktere sagen oefter nein.
+// Der Wurf kommt aus der Kennung des Spielers, dem Spieltag und dem Stand des Gespraechs (wie HashEinheit
+// bei Beratern), damit der Spielstand reproduzierbar bleibt. Die Chance ist die des Browserspiels.
+bool FFM13World::CounterContractTalk(FString& OutReason)
+{
+	if (!ContractTalk.bActive) { OutReason = TEXT("Kein Gespraech offen."); return false; }
+	FFM13Player* P = FindPlayer(ContractTalk.PlayerId);
+	if (!P) { ContractTalk.bActive = false; OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	const double Zaehigkeit = FM13Poker::Zaehigkeit(P->Character);
+	const double Chance = FMath::Clamp(0.7 - (Zaehigkeit - 1.0) * 1.2 - (1.0 - ContractTalk.OfferFactor) * 2.0, 0.1, 0.9);
+	const uint32 Salz = (uint32)(Season * 100000 + ContractTalk.Rounds * 1000 + (int32)FMath::RoundToInt((float)(ContractTalk.OfferFactor * 100.0)));
+	if (FM13Transfers::HashEinheit(P->Id, Salz) < Chance)
+	{
+		ContractTalk.OfferFactor = FM13Transfers::JsRunden((ContractTalk.OfferFactor - 0.1) * 100.0) / 100.0;
+		OutReason = FString::Printf(TEXT("%s geht auf dein Gegenangebot ein."), *P->Name);
+		return true;
+	}
+	ContractTalk.Rounds++;
+	P->Morale = FMath::Max(10, P->Morale - 4);
+	if (ContractTalk.Rounds >= 2)
+	{
+		P->TalksBlockedSeason = Season;
+		ContractTalk.bActive = false;
+		AddMessage(FString(TEXT("Vertragsgespraeche geplatzt: ")) + P->Name, P->Name + TEXT(" fuehlt sich unterbewertet und will diese Saison nicht mehr ueber einen neuen Vertrag reden."));
+		OutReason = FString::Printf(TEXT("%s bricht die Gespraeche ab - erst naechste Saison wieder."), *P->Name);
+	}
+	else
+	{
+		OutReason = FString::Printf(TEXT("%s lehnt ab und besteht auf seiner Forderung."), *P->Name);
+	}
+	return false;
+}
+
+// acceptContractTalk(): Handgeld und Beraterprovision werden gebucht, das Gehalt gilt ab sofort
+bool FFM13World::AcceptContractTalk(FString& OutReason)
+{
+	if (!ContractTalk.bActive) { OutReason = TEXT("Kein Gespraech offen."); return false; }
+	FFM13Player* P = FindPlayer(ContractTalk.PlayerId);
+	if (!P) { ContractTalk.bActive = false; OutReason = TEXT("Spieler nicht im Kader."); return false; }
+	int64 Gehalt = 0, Handgeld = 0, Berater = 0;
+	TalkAngebot(*this, *P, ContractTalk, Gehalt, Handgeld, Berater);
+	const int64 Kosten = Handgeld + Berater;
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Handgeld nicht gedeckt: %lld noetig."), (long long)Kosten); return false; }
+	if (!FitsWageBudget(Gehalt - P->Wage)) { OutReason = FString::Printf(TEXT("Gehaltsbudget reicht nicht (%lld pro Spieltag)."), (long long)WageBudget); return false; }
+	Book(TEXT("Handgeld und Berater: ") + P->Name, -Kosten);
+	const bool bStamm = StartingEleven().Contains(P->Id);
+	P->Wage = (int32)Gehalt;
+	P->ContractYears += ContractTalk.Years;
+	if (ContractTalk.bGarantie && !bStamm) { P->PlaytimeSeason = Season + 1; P->PlaytimeMinApps = 15; }
+	P->Morale = FMath::Min(100, P->Morale + 5);
+	OutReason = FString::Printf(TEXT("%s verlaengert um %d J. - %lld pro Spieltag."), *P->Name, ContractTalk.Years, (long long)Gehalt);
+	ContractTalk.bActive = false;
+	return true;
+}
+
+// checkPlaytimePromises(): am Saisonende zaehlt die Einsatzgarantie; wer sie verfehlt, verliert 20 Moral
+void FFM13World::CheckPlaytimePromises()
+{
+	for (FFM13Player& P : Squad)
+	{
+		if (P.PlaytimeSeason != Season) continue;
+		if (P.Appearances < P.PlaytimeMinApps)
+		{
+			P.Morale = FMath::Max(10, P.Morale - 20);
+			AddMessage(FString(TEXT("Einsatzgarantie gebrochen: ")) + P.Name, FString::Printf(TEXT("%s kam nur auf %d statt der zugesagten %d Einsaetze und ist schwer enttaeuscht."), *P.Name, P.Appearances, P.PlaytimeMinApps));
+		}
+		P.PlaytimeSeason = 0;
+		P.PlaytimeMinApps = 0;
 	}
 }
 

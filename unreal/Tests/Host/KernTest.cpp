@@ -1405,6 +1405,65 @@ static void TestFestgeld()
 	PRUEFE(W.MoneyHistory.Num() == 20 && W.MoneyHistory.Last().Money == W.Money, "Kontoverlauf: 20 Spieltage, letzter Stand ist das Konto");
 }
 
+static void TestVertragsgespraech()
+{
+	std::printf("Vertragsgespraech: Angebot, Garantie, Gegenangebot, Sperre, Einsatzgarantie\n");
+	FFM13World W;
+	W.NewGame(TEXT("Vertrag"), 141, 0);
+	FString G;
+	W.Money = 100000000;
+	W.WageBudget = 100000000;
+
+	// Annahme ohne Garantie: Gehalt ist die Forderung, Handgeld und Berater werden gebucht
+	const int32 Id = W.Squad[1].Id;
+	PRUEFE(W.StartContractTalk(Id, G), "Gespraech beginnt: %s", *G);
+	PRUEFE(W.ContractTalk.Years == (W.Squad[1].Age >= 30 ? 1 : 2), "Laufzeit-Vorgabe nach Alter");
+	PRUEFE(W.SetContractTalkYears(3, G) && !W.SetContractTalkYears(9, G), "Laufzeit 1 bis 5");
+	const FFM13Player Vor = W.Squad[1];
+	const int64 Forderung = FM13Transfers::JsRunden((double)W.RenewalWage(Vor) * 1.0 / 10.0) * 10;
+	const int64 Handgeld = W.RenewalSigningFee(Vor, 3);
+	const int64 Berater = W.AgentFee(Vor, Handgeld);
+	const int64 Geld = W.Money;
+	PRUEFE(W.AcceptContractTalk(G), "Annahme klappt: %s", *G);
+	PRUEFE(W.Squad[1].Wage == Forderung, "Gehalt ist die Forderung (%d statt %lld)", W.Squad[1].Wage, (long long)Forderung);
+	PRUEFE(W.Squad[1].ContractYears == Vor.ContractYears + 3, "Laufzeit wird verlaengert");
+	PRUEFE(W.Money == Geld - Handgeld - Berater, "Handgeld und Berater werden abgebucht");
+	PRUEFE(!W.ContractTalk.bActive, "Gespraech ist danach beendet");
+	PRUEFE(!W.AcceptContractTalk(G), "Ohne Gespraech keine Annahme");
+
+	// Garantie: 15 % weniger Gehalt und ein Einsatzversprechen fuer die naechste Saison
+	const int32 Id2 = W.Squad[2].Id;
+	const bool bStamm = W.StartingEleven().Contains(Id2);
+	PRUEFE(W.StartContractTalk(Id2, G), "Zweites Gespraech");
+	W.ToggleContractTalkGuarantee();
+	const FFM13Player Vor2 = W.Squad[2];
+	const int64 Forderung2 = FM13Transfers::JsRunden((double)W.RenewalWage(Vor2) * (bStamm ? 1.0 : 0.85) / 10.0) * 10;
+	PRUEFE(W.AcceptContractTalk(G) && W.Squad[2].Wage == Forderung2, "Garantie senkt das Gehalt, Stammspieler nicht");
+	PRUEFE(bStamm ? W.Squad[2].PlaytimeSeason == 0 : (W.Squad[2].PlaytimeSeason == W.Season + 1 && W.Squad[2].PlaytimeMinApps == 15), "Einsatzversprechen fuer die naechste Saison");
+
+	// Einsatzgarantie am Saisonende: verfehlt, dann 20 Moral weniger
+	FFM13Player& P = W.Squad[2];
+	P.PlaytimeSeason = W.Season;
+	P.PlaytimeMinApps = 15;
+	P.Appearances = 0;
+	const int32 Moral = P.Morale;
+	W.CheckPlaytimePromises();
+	PRUEFE(W.Squad[2].Morale == FMath::Max(10, Moral - 20) && W.Squad[2].PlaytimeSeason == 0, "Verfehlte Einsatzgarantie kostet 20 Moral");
+
+	// Gesprachssperre: wer abgebrochen hat, verhandelt diese Saison nicht mehr
+	W.Squad[3].TalksBlockedSeason = W.Season;
+	PRUEFE(!W.StartContractTalk(W.Squad[3].Id, G) && G.Contains(TEXT("nicht mehr verhandeln")), "Sperre bleibt bis zur naechsten Saison");
+
+	// Gegenangebot: jeder Erfolg senkt die Forderung um 10 %, nach zwei Absagen ist Schluss
+	const int32 Id4 = W.Squad[4].Id;
+	PRUEFE(W.StartContractTalk(Id4, G), "Drittes Gespraech");
+	W.ContractTalk.OfferFactor = 0.5;
+	bool bOk = true;
+	for (int32 t = 0; t < 40 && W.ContractTalk.bActive; ++t) W.CounterContractTalk(G);
+	bOk = (W.ContractTalk.bActive && W.ContractTalk.OfferFactor < 1.0) || (!W.ContractTalk.bActive && W.FindPlayer(Id4)->TalksBlockedSeason == W.Season);
+	PRUEFE(bOk, "Gegenangebot wirkt oder bricht nach zwei Absagen ab");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2586,6 +2645,7 @@ int main()
 	TestVerkaufUndInsolvenz();
 	TestKredite();
 	TestFestgeld();
+	TestVertragsgespraech();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

@@ -78,6 +78,9 @@ struct FFM13Player
 	FString PreOfferClub;       // Vorvertrags-Angebot eines anderen Vereins (leer = keins)
 	int32 PreOfferDeadline = 0; // Spieltag, bis zu dem verlaengert werden muss
 	FString PreSignedClub;      // bei diesem Verein unterschrieben: geht zum Saisonende
+	int32 TalksBlockedSeason = 0;   // Gespraeche abgebrochen: in dieser Saison keine neuen
+	int32 PlaytimeSeason = 0;       // Einsatzgarantie gilt fuer diese Saison (0 = keine)
+	int32 PlaytimeMinApps = 0;      // zugesagte Einsaetze
 	// Erfolgsbasierte Boni (js/bonusclauses.js): Typ 0 Tore, 1 Einsaetze, 2 Aufstieg
 	struct FFM13BonusKlausel
 	{
