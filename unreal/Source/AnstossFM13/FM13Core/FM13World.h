@@ -412,6 +412,80 @@ public:
 	void CheckMatchdayBonusClauses(FFM13Player& P);               // nach jedem Spieltag: Tore und Einsaetze
 	void TriggerPromotionBonusClauses();                          // bei vollzogenem Aufstieg
 	void ResolveTransferStrategy(int32 FinalRank);    // Saisonende, vor der Vorstandsversammlung
+	// Platzerwartung der Saison (js/member-assembly.js: seasonExpectation) und Vorstandsstimmung (js/board-room.js)
+	struct FFM13Expectation
+	{
+		int32 Season = 0;
+		int64 StartMoney = 0;
+		int32 ExpectedRank = 0;
+		int32 Teams = 0;
+		int32 LeagueLevel = 0;
+	};
+	FFM13Expectation Expectation;
+	int32 RelegatedIntoSeason = 0;            // nach einem Abstieg: Erwartung mindestens Platz 3
+	void RecordSeasonExpectation();           // Saisonbeginn: Geld und Erwartung nach Kaderstaerke
+	void RecordSeasonExpectationRank();
+	const FFM13Expectation& GetSeasonExpectation();
+	// Mitgliederversammlung (js/member-assembly.js)
+	struct FFM13AssemblyReport
+	{
+		bool bValid = false;
+		int32 Season = 0;
+		int32 FinalRank = 0;
+		int32 ExpectedRank = 0;
+		int32 Teams = 0;
+		int32 LeagueLevel = 0;
+		int64 StartMoney = 0;
+		int32 Fans = 0;
+		int64 FinanceResult = 0;
+		bool bPromoted = false;
+		bool bRelegated = false;
+	};
+	struct FFM13MemberAssembly
+	{
+		bool bOpen = false;             // false: abgehalten
+		FFM13AssemblyReport Report;
+		int32 OpenedMatchday = 1;
+		int32 Season = 0;
+		int32 Speech = 2;               // 0 selbstkritisch, 1 visionaer, 2 zahlen
+		int32 Fee = 1;                  // 0 senken, 1 halten, 2 erhoehen
+		int32 HeldMatchday = 0;
+		int32 Zustimmung = 0;
+		bool bEntlastet = false;
+		int32 BoardDelta = 0;
+		int64 Money = 0;
+		bool bAutomatisch = false;
+	};
+	FFM13AssemblyReport PendingAssemblyReport;
+	FFM13MemberAssembly MemberAssembly;
+	bool bHasMemberAssembly = false;
+	void PrepareMemberAssembly(int32 FinalRank);     // vor dem Ligawechsel
+	void OpenMemberAssembly();                       // nach Season++
+	int32 AssemblyBaseApproval(const FFM13AssemblyReport& R) const;
+	static int32 SpeechEffect(int32 Speech, const FFM13AssemblyReport& R);
+	bool SetAssemblyChoice(bool bSpeech, int32 Value, FString& OutReason);
+	bool HoldMemberAssembly(bool bAutomatisch, FString& OutReason);
+	void TickMemberAssembly();                       // nach jedem Spieltag
+	// Vorstand (js/board-room.js)
+	struct FFM13BoardView
+	{
+		int32 Mood = 0;
+		FString Reason;
+	};
+	void BoardViews(FFM13BoardView Out[4]) const;    // praesident, finanzen, sport, nachwuchs
+	FString BoardName(int32 Rolle) const;
+	TArray<FString> BoardWarned;                     // "Saison-Rolle", je Saison einmal
+	void TickBoardRoom();                            // nach jedem Spieltag
+	// Saisonwette (js/board-room.js): zwei Plaetze besser als der Vorstand
+	struct FFM13SaisonWette
+	{
+		int32 Season = 0;
+		int32 Platz = 0;
+	};
+	FFM13SaisonWette Wette;
+	bool bHasWette = false;
+	bool SetSaisonWette(FString& OutReason);
+	void ResolveSaisonWette(int32 MyRank);
 	// Gerueuchtekueche (js/rumors.js): hoechstens drei offene Geruechte, jede Quelle mit echter Trefferquote
 	struct FFM13Rumor
 	{

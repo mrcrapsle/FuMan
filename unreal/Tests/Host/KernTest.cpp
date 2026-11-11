@@ -1902,6 +1902,61 @@ static void TestMedizincheck()
 	FFM13World BLdW;
 	FString BonFehler;
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(BSaveW), BLdW, BonFehler) && BLdW.FindPlayer(BId)->Bonus[0].Betrag == 120000 && BLdW.FindPlayer(BId)->bBonusBezahlt[0], "Boni bleiben im Spielstand (%s)", *BonFehler);
+	// Mitgliederversammlung, Vorstand, Saisonwette (js/member-assembly.js, js/board-room.js)
+	FFM13World MV;
+	MV.NewGame(TEXT("Versammlung"), 165, 0);
+	MV.Money = 1000000;
+	const int32 MVErw = MV.GetSeasonExpectation().ExpectedRank;
+	PRUEFE(MVErw >= 1 && MVErw <= FM13::TeamsPerLeague, "Platzerwartung liegt zwischen 1 und der Teamzahl");
+	MV.PrepareMemberAssembly(3);
+	MV.Money = 1500000;
+	MV.OpenMemberAssembly();
+	PRUEFE(MV.bHasMemberAssembly && MV.MemberAssembly.bOpen && MV.MemberAssembly.Report.FinanceResult == 500000, "Versammlung einberufen mit Finanzergebnis");
+	FString MVGrund;
+	PRUEFE(MV.SetAssemblyChoice(false, 2, MVGrund) && MV.SetAssemblyChoice(true, 1, MVGrund), "Beitragsantrag und Rede gewählt");
+	const int64 MVGeld = MV.Money;
+	const int32 MVBoard = MV.BoardSat;
+	PRUEFE(MV.HoldMemberAssembly(false, MVGrund) && !MV.MemberAssembly.bOpen, "Versammlung abgehalten");
+	PRUEFE(MV.Money == MVGeld + 120000 && MV.MemberAssembly.Money == 120000, "Beitrag erhöhen bringt 120.000 in der Bundesliga");
+	PRUEFE(MV.MemberAssembly.Zustimmung >= 5 && MV.MemberAssembly.Zustimmung <= 95, "Zustimmung liegt zwischen 5 und 95");
+	const int32 MVZ = MV.MemberAssembly.Zustimmung;
+	const int32 MVErwartet = MVZ >= 70 ? 10 : (MVZ >= 50 ? 5 : -10);
+	PRUEFE(MV.MemberAssembly.BoardDelta == MVErwartet && MV.BoardSat == FMath::Clamp(MVBoard + MVErwartet, 10, 100), "Vorstand folgt der Zustimmung (%d %%)", MVZ);
+	// Unvorbereitet: nach sechs Spieltagen findet sie ohne den Manager statt
+	FFM13World MA;
+	MA.NewGame(TEXT("Automatik"), 166, 0);
+	MA.PrepareMemberAssembly(10);
+	MA.OpenMemberAssembly();
+	MA.Matchday = MA.MemberAssembly.OpenedMatchday + 6;
+	MA.TickMemberAssembly();
+	PRUEFE(!MA.MemberAssembly.bOpen && MA.MemberAssembly.bAutomatisch, "Versammlung nach sechs Spieltagen ohne den Manager");
+	// Vorstand meldet sich bei schlechter Stimmung, einmal je Saison
+	FFM13World VS;
+	VS.NewGame(TEXT("Vorstand"), 167, 0);
+	VS.BoardSat = 20;
+	const int32 VSVorher = VS.Messages.Num();
+	VS.TickBoardRoom();
+	const int32 VSNach = VS.Messages.Num();
+	VS.TickBoardRoom();
+	PRUEFE(VSNach > VSVorher && VS.Messages.Num() == VSNach, "Vorstand: unzufriedenes Mitglied meldet sich einmal je Saison");
+	// Saisonwette: zwei Plaetze besser, gewonnen mit Praemie
+	FFM13World WT;
+	WT.NewGame(TEXT("Wette"), 168, 0);
+	WT.Money = 1000000;
+	WT.Expectation.ExpectedRank = 9;
+	WT.Expectation.Season = WT.Season;
+	FString WGrund;
+	PRUEFE(WT.SetSaisonWette(WGrund) && WT.Wette.Platz == 7, "Wette: Platz zwei besser als die Erwartung");
+	PRUEFE(!WT.SetSaisonWette(WGrund), "Wette: nur einmal je Saison");
+	WT.BoardSat = 50;
+	const int64 WGeld = WT.Money;
+	WT.ResolveSaisonWette(6);
+	PRUEFE(WT.BoardSat == 62 && WT.Money == WGeld + 900000 && !WT.bHasWette, "Wette gewonnen: Prämie 900.000 und Vorstand +12");
+	// Spielstand
+	FFM13World MVSave = MV;
+	FFM13World MVLd;
+	FString MVFehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(MVSave), MVLd, MVFehler) && MVLd.MemberAssembly.Zustimmung == MV.MemberAssembly.Zustimmung && MVLd.Expectation.ExpectedRank == MV.Expectation.ExpectedRank, "Versammlung und Erwartung bleiben im Spielstand (%s)", *MVFehler);
 	// Konto zu klein fuer den Check: nichts wird abgebucht
 	FFM13World K;
 	K.NewGame(TEXT("Knapp"), 143, 0);

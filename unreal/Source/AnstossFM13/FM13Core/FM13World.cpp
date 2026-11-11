@@ -229,6 +229,8 @@ bool FFM13World::PlayMatchday()
 	TickAiTransfers();
 	TickIncomingLoans();
 	if (Matchday % 4 == 0) RefreshMarket();
+	TickBoardRoom();
+	TickMemberAssembly();
 	TickFriendships();
 	TickYouthPathway();
 	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
@@ -620,6 +622,9 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	BoardSat = FMath::Clamp(BoardSat + Wertung, 10, 100);
 	ResolveTransferStrategy(Rank);
 	EvaluateFinancialFairplay();
+	ResolveSaisonWette(Rank);
+	PrepareMemberAssembly(Rank);
+	if (Outcome == EFM13SeasonOutcome::Relegated) RelegatedIntoSeason = Season + 1;
 	if (Outcome == EFM13SeasonOutcome::Promoted) { BoardSat = FMath::Min(100, BoardSat + 15); Fans = FMath::Min(100, Fans + 10); }
 	if (Outcome == EFM13SeasonOutcome::Relegated) { BoardSat = FMath::Max(10, BoardSat - 15); Fans = FMath::Max(0, Fans - 10); }
 	if (Rank == 1) { BoardSat = FMath::Min(100, BoardSat + 5); Fans = FMath::Min(100, Fans + 5); }
@@ -650,6 +655,8 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	TickBuybackOptions();
 	JoinPreContractPlayers();
 	++Season;
+	OpenMemberAssembly();
+	RecordSeasonExpectationRank();
 	Matchday = 1;
 	OwnSeasonGoals.Reset();
 	Stress = (int32)FMath::RoundToInt((float)Stress / 2.f + 0.001f); // Sommerpause halbiert den Stress
@@ -4449,4 +4456,259 @@ void FFM13World::CheckMatchdayBonusClauses(FFM13Player& P)
 void FFM13World::TriggerPromotionBonusClauses()
 {
 	for (FFM13Player& P : Squad) if (P.Bonus[2].bAktiv) PayOutBonusClause(P, 2);
+}
+
+// ---------- Platzerwartung, Mitgliederversammlung, Vorstand, Saisonwette (js/member-assembly.js, js/board-room.js) ----------
+
+namespace
+{
+	const double AssemblyLeagueFactor[6] = { 1.0, 0.7, 0.45, 0.3, 0.2, 0.12 };   // ASSEMBLY_LEAGUE_FACTOR
+	const int32 AssemblyAutoAfter = 6;     // Spieltage, bis die Versammlung ohne den Manager stattfindet
+	const TCHAR* BoardFirst[10] = { TEXT("Klaus"), TEXT("Petra"), TEXT("Bernd"), TEXT("Anke"), TEXT("Helmut"), TEXT("Sabine"), TEXT("Wolfgang"), TEXT("Ute"), TEXT("Dieter"), TEXT("Monika") };
+	const TCHAR* BoardLast[10] = { TEXT("Brenner"), TEXT("Hofmann"), TEXT("Kessler"), TEXT("Lang"), TEXT("Seifert"), TEXT("Albrecht"), TEXT("Vogt"), TEXT("Kraemer"), TEXT("Busch"), TEXT("Wendel") };
+	// Beitragsantrag: Fans, Zustimmung, Geld (je nach Liga skaliert)
+	struct FBeitrag { int32 Fans; int32 Zustimmung; int64 Geld; };
+	const FBeitrag Beitraege[3] = { { 3, 4, -60000 }, { 0, 0, 0 }, { -4, -6, 120000 } };
+	int32 Clamp100(int32 X) { return FMath::Clamp(X, 0, 100); }
+}
+
+FString FFM13World::BoardName(int32 Rolle) const
+{
+	// Namen aus der Vereinslaenge, wie im Browserspiel (feste Zuordnung je Verein)
+	const int32 Seed = ClubName.Len();
+	const int32 Vorname = (Seed + Rolle * 3) % 10;
+	const int32 Nachname = (Seed * 2 + Rolle * 5) % 10;
+	return FString::Printf(TEXT("%s %s"), BoardFirst[Vorname], BoardLast[Nachname]);
+}
+
+void FFM13World::RecordSeasonExpectationRank()
+{
+	// Erwartung: Platz der Elf-Staerke in der aktuellen Liga
+	const int32 Teams = Leagues.IsValidIndex(LeagueLevel) ? Leagues[LeagueLevel].Clubs.Num() : 0;
+	TArray<int32> Staerken;
+	for (const FFM13Player& P : Squad) Staerken.Add(P.Strength);
+	// absteigend sortieren (Einfuegesortierung), die besten elf zaehlen
+	TArray<int32> Sortiert;
+	for (int32 X : Staerken)
+	{
+		int32 Pos = Sortiert.Num();
+		while (Pos > 0 && Sortiert[Pos - 1] < X) --Pos;
+		Sortiert.Insert(X, Pos);
+	}
+	const int32 N = FMath::Min(11, Sortiert.Num());
+	int64 Summe = 0;
+	for (int32 i = 0; i < N; ++i) Summe += Sortiert[i];
+	const double Eigen = N ? (double)Summe / N : 0.0;
+	int32 Besser = 0;
+	if (Leagues.IsValidIndex(LeagueLevel))
+		for (const FFM13Club& C : Leagues[LeagueLevel].Clubs) if (!C.bOwn && (double)C.Strength > Eigen) Besser++;
+	Expectation.Season = Season;
+	Expectation.LeagueLevel = LeagueLevel;
+	Expectation.Teams = Teams;
+	Expectation.ExpectedRank = 1 + Besser;
+	// Nach einem Abstieg wird Platz 3 erwartet: die Liga hat dort eigene Aufsteiger-Kandidaten
+	if (RelegatedIntoSeason == Season) Expectation.ExpectedRank = FMath::Max(Expectation.ExpectedRank, 3);
+}
+
+void FFM13World::RecordSeasonExpectation()
+{
+	Expectation = FFM13Expectation();
+	Expectation.Season = Season;
+	Expectation.StartMoney = Money;
+	RecordSeasonExpectationRank();
+}
+
+const FFM13World::FFM13Expectation& FFM13World::GetSeasonExpectation()
+{
+	if (Expectation.Season != Season) RecordSeasonExpectation();
+	return Expectation;
+}
+
+// prepareMemberAssembly(): Bilanz der abgelaufenen Saison festhalten, vor dem Ligawechsel
+void FFM13World::PrepareMemberAssembly(int32 FinalRank)
+{
+	const FFM13Expectation& E = GetSeasonExpectation();
+	PendingAssemblyReport = FFM13AssemblyReport();
+	PendingAssemblyReport.bValid = true;
+	PendingAssemblyReport.Season = Season;
+	PendingAssemblyReport.FinalRank = FinalRank;
+	PendingAssemblyReport.ExpectedRank = E.ExpectedRank;
+	PendingAssemblyReport.Teams = E.Teams;
+	PendingAssemblyReport.LeagueLevel = LeagueLevel;
+	PendingAssemblyReport.StartMoney = E.StartMoney;
+	PendingAssemblyReport.Fans = Fans;
+}
+
+// openMemberAssembly(): nach Season++, Finanzergebnis abschliessen, Versammlung einberufen
+void FFM13World::OpenMemberAssembly()
+{
+	const FFM13AssemblyReport R0 = PendingAssemblyReport;
+	PendingAssemblyReport = FFM13AssemblyReport();
+	Expectation = FFM13Expectation();
+	Expectation.Season = Season;
+	Expectation.StartMoney = Money;
+	if (!R0.bValid) return;
+	FFM13AssemblyReport R = R0;
+	R.FinanceResult = Money - R0.StartMoney;
+	R.bPromoted = LeagueLevel < R0.LeagueLevel;
+	R.bRelegated = LeagueLevel > R0.LeagueLevel;
+	MemberAssembly = FFM13MemberAssembly();
+	MemberAssembly.bOpen = true;
+	MemberAssembly.Report = R;
+	MemberAssembly.OpenedMatchday = 1;
+	MemberAssembly.Season = Season;
+	bHasMemberAssembly = true;
+	AddMessage(TEXT("Mitgliederversammlung einberufen"), FString::Printf(TEXT("Die Mitglieder erwarten deinen Bericht zur Saison %d (Platz %d, erwartet Platz %d). Bereite Rede und Beitragsantrag vor."), R.Season, R.FinalRank, R.ExpectedRank));
+}
+
+// assemblyBaseApproval(): Stimmung der Mitglieder aus der tatsaechlichen Saison
+int32 FFM13World::AssemblyBaseApproval(const FFM13AssemblyReport& R) const
+{
+	double A = 55.0;
+	A += FMath::Clamp((R.ExpectedRank - R.FinalRank) * 4, -25, 25);
+	if (R.bPromoted) A += 15.0;
+	if (R.bRelegated) A -= 20.0;
+	A += R.FinanceResult >= 0 ? 5.0 : -8.0;
+	A += (R.Fans - 60) / 4.0;
+	return (int32)FMath::FloorToInt(A);
+}
+
+int32 FFM13World::SpeechEffect(int32 Speech, const FFM13AssemblyReport& R)
+{
+	const bool bGut = R.FinalRank <= R.ExpectedRank || R.bPromoted;
+	if (Speech == 0) return bGut ? -3 : 6;    // selbstkritisch
+	if (Speech == 1) return bGut ? 7 : -6;    // visionaer
+	return R.FinanceResult >= 0 ? 3 : -2;     // zahlen
+}
+
+bool FFM13World::SetAssemblyChoice(bool bSpeech, int32 Value, FString& OutReason)
+{
+	if (!bHasMemberAssembly || !MemberAssembly.bOpen) { OutReason = TEXT("Keine offene Mitgliederversammlung."); return false; }
+	if (bSpeech) { if (Value < 0 || Value > 2) return false; MemberAssembly.Speech = Value; }
+	else { if (Value < 0 || Value > 2) return false; MemberAssembly.Fee = Value; }
+	return true;
+}
+
+// holdMemberAssembly(): Zustimmung, Vorstandsfolge, Beitrag
+bool FFM13World::HoldMemberAssembly(bool bAutomatisch, FString& OutReason)
+{
+	if (!bHasMemberAssembly || !MemberAssembly.bOpen) { OutReason = TEXT("Keine offene Mitgliederversammlung."); return false; }
+	const FFM13AssemblyReport& R = MemberAssembly.Report;
+	const FBeitrag& B = Beitraege[MemberAssembly.Fee];
+	const double Faktor = AssemblyLeagueFactor[FMath::Clamp(LeagueLevel, 0, 5)];
+	const int64 Betrag = FM13Transfers::JsRunden((double)B.Geld * Faktor / 1000.0) * 1000;
+	if (Betrag < 0 && Money < -Betrag) { OutReason = FString::Printf(TEXT("Nicht genug Geld fuer die Beitragssenkung (%lld)."), (long long)-Betrag); return false; }
+
+	const int32 Zustimmung = (int32)FM13Transfers::JsRunden(FMath::Max(5.0, FMath::Min(95.0, (double)(AssemblyBaseApproval(R) + SpeechEffect(MemberAssembly.Speech, R) + B.Zustimmung + (bAutomatisch ? -5 : 0)))));
+	const bool bEntlastet = Zustimmung >= 50;
+	// Nicht entlastet kostet einheitlich 10
+	const int32 BoardDelta = Zustimmung >= 70 ? 10 : (bEntlastet ? 5 : -10);
+	BoardSat = FMath::Clamp(BoardSat + BoardDelta, 10, 100);
+	Fans = Clamp100(Fans + B.Fans);
+	if (Betrag != 0) Book(TEXT("Mitgliedsbeitraege"), Betrag);
+
+	MemberAssembly.bOpen = false;
+	MemberAssembly.HeldMatchday = Matchday;
+	MemberAssembly.Zustimmung = Zustimmung;
+	MemberAssembly.bEntlastet = bEntlastet;
+	MemberAssembly.BoardDelta = BoardDelta;
+	MemberAssembly.Money = Betrag;
+	MemberAssembly.bAutomatisch = bAutomatisch;
+	AddMessage(bEntlastet ? TEXT("Mitgliederversammlung: entlastet") : TEXT("Mitgliederversammlung: nicht entlastet"),
+		FString::Printf(TEXT("%s%d%% Zustimmung. Vorstandszufriedenheit %+d."), bAutomatisch ? TEXT("Die Versammlung fand ohne deine Vorbereitung statt. ") : TEXT(""), Zustimmung, BoardDelta));
+	return true;
+}
+
+// Nach jedem Spieltag: unvorbereitete Versammlung findet nach sechs Spieltagen ohne den Manager statt.
+void FFM13World::TickMemberAssembly()
+{
+	GetSeasonExpectation();
+	if (bHasMemberAssembly && MemberAssembly.bOpen && Matchday - MemberAssembly.OpenedMatchday >= AssemblyAutoAfter)
+	{
+		FString Grund;
+		HoldMemberAssembly(true, Grund);
+	}
+}
+
+// Monatlich: Vorstandsmitglieder mit Stimmung unter 30 melden sich, je Saison und Rolle einmal.
+void FFM13World::BoardViews(FFM13BoardView Out[4]) const
+{
+	const FFM13Expectation& E = Expectation;
+	const int32 Rang = OwnRank();
+	// Praesident
+	Out[0].Mood = BoardSat;
+	Out[0].Reason = BoardSat >= 60 ? TEXT("Zufrieden mit der Gesamtentwicklung.") : (BoardSat >= 35 ? TEXT("Erwartet eine Steigerung.") : TEXT("Stellt deine Arbeit offen infrage."));
+	// Finanzvorstand
+	const int64 Delta = E.Season == Season ? Money - E.StartMoney : 0;
+	const int64 Basis = FMath::Max<int64>(20000, FMath::Abs(E.StartMoney) > 0 ? FMath::Abs(E.StartMoney) : 100000);
+	const double Schwung = FMath::Max(-30.0, FMath::Min(30.0, (double)Delta / (double)Basis * 60.0));
+	Out[1].Mood = FMath::Clamp((int32)FM13Transfers::JsRunden(55.0 + Schwung), 0, 100);
+	Out[1].Reason = FString::Printf(TEXT("%s von %lld seit Saisonbeginn."), Delta >= 0 ? TEXT("Plus") : TEXT("Minus"), (long long)FMath::Abs(Delta));
+	// Sportvorstand
+	if (Rang > 0 && E.ExpectedRank > 0 && Matchday > 3)
+	{
+		Out[2].Mood = FMath::Clamp((int32)FM13Transfers::JsRunden(55.0 + (double)(E.ExpectedRank - Rang) * 6.0), 0, 100);
+		Out[2].Reason = FString::Printf(TEXT("Platz %d, erwartet war Platz %d."), Rang, E.ExpectedRank);
+	}
+	else
+	{
+		Out[2].Mood = 55;
+		Out[2].Reason = TEXT("Wartet die ersten Spieltage ab.");
+	}
+	// Nachwuchsleiter: Talente in der Jugend (die Akademie-Rangliste fehlt im C++-Kern)
+	const int32 Talente = YouthTalents.Num();
+	Out[3].Mood = FMath::Clamp((int32)FM13Transfers::JsRunden(35.0 + Talente * 5.0), 0, 100);
+	Out[3].Reason = FString::Printf(TEXT("%d Talent(e) in der Jugend."), Talente);
+}
+
+void FFM13World::TickBoardRoom()
+{
+	FFM13BoardView V[4];
+	BoardViews(V);
+	const TCHAR* Titel[4] = { TEXT("Praesident"), TEXT("Finanzvorstand"), TEXT("Sportvorstand"), TEXT("Nachwuchsleiter") };
+	const TCHAR* Rat[4] = { TEXT("erwaegt Konsequenzen, wenn sich nichts aendert."), TEXT("fordert einen Sparkurs - Gehaelter und laufende Kosten pruefen."), TEXT("verlangt bessere Ergebnisse - Aufstellung und Training ueberdenken."), TEXT("wuenscht mehr Talente in der Jugendabteilung.") };
+	for (int32 R = 0; R < 4; ++R)
+	{
+		const FString Schluessel = FString::Printf(TEXT("%d-%d"), Season, R);
+		if (V[R].Mood >= 30 || BoardWarned.Contains(Schluessel)) continue;
+		BoardWarned.Add(Schluessel);
+		AddMessage(FString::Printf(TEXT("%s %s ist unzufrieden"), Titel[R], *BoardName(R)), FString::Printf(TEXT("%s %s %s"), *V[R].Reason, *BoardName(R), Rat[R]));
+	}
+	// Schluessel alter Saisons werfen
+	for (int32 i = BoardWarned.Num() - 1; i >= 0; --i)
+	{
+		const FString Praefix = FString::Printf(TEXT("%d-"), Season);
+		if (BoardWarned[i].Left(Praefix.Len()) != Praefix) BoardWarned.RemoveAt(i);
+	}
+}
+
+// setzeSaisonWette(): zwei Plaetze besser als die Erwartung, Platz mindestens 1
+bool FFM13World::SetSaisonWette(FString& OutReason)
+{
+	const FFM13Expectation& E = GetSeasonExpectation();
+	if (E.ExpectedRank <= 0) { OutReason = TEXT("Ohne Saisonziel des Vorstands gibt es keine Wette."); return false; }
+	if (bHasWette && Wette.Season == Season) { OutReason = TEXT("Die Wette laeuft in dieser Saison schon."); return false; }
+	Wette.Season = Season;
+	Wette.Platz = FMath::Max(1, E.ExpectedRank - 2);
+	bHasWette = true;
+	return true;
+}
+
+// resolveSaisonWette(): Gewonnen gibt Praemie und Vertrauen, verloren zieht der Vorstand Vertrauen ab
+void FFM13World::ResolveSaisonWette(int32 MyRank)
+{
+	if (!bHasWette || Wette.Season != Season) return;
+	if (MyRank > 0 && MyRank <= Wette.Platz)
+	{
+		const int64 Praemie = (int64)(FM13::NumLeagues - LeagueLevel) * 150000;
+		BoardSat = FMath::Min(100, BoardSat + 12);
+		Book(TEXT("Saisonwette gewonnen"), Praemie);
+		AddMessage(TEXT("Wette gewonnen"), FString::Printf(TEXT("Platz %d: die Wette auf Platz %d oder besser ist aufgegangen. Der Vorstand zahlt %lld."), MyRank, Wette.Platz, (long long)Praemie));
+	}
+	else
+	{
+		BoardSat = FMath::Max(0, BoardSat - 10);
+		AddMessage(TEXT("Wette verloren"), FString::Printf(TEXT("Platz %d: die Wette auf Platz %d oder besser ist verloren. Der Vorstand zieht Vertrauen ab."), MyRank, Wette.Platz));
+	}
+	bHasWette = false;
 }
