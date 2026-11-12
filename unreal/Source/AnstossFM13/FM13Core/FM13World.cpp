@@ -959,10 +959,12 @@ void FFM13World::YouthIntake(FFM13SeasonSummary& S)
 	const int32 Anzahl = 1 + YouthAcademyLevel;
 	for (int32 n = 0; n < Anzahl && YouthTalents.Num() < 12; ++n)
 	{
-		FFM13Player T = CreatePlayer((EFM13Position)Rng.RandRange(0, 3), Basis - 14 + YouthAcademyLevel * 2, Basis - 6 + YouthAcademyLevel * 2, 16, 17);
+		// Internat: +2 Stärke je Stufe (youth.js: internatLvl * 2), Potenzial-Wurf +0,06 je Stufe
+		const int32 Internat = CampusInternat;
+		FFM13Player T = CreatePlayer((EFM13Position)Rng.RandRange(0, 3), Basis - 14 + YouthAcademyLevel * 2 + Internat * 2, Basis - 6 + YouthAcademyLevel * 2 + Internat * 2, 16, 17);
 		T.Potential = FMath::Min(99, T.Strength + Rng.RandRange(8, 15 + YouthAcademyLevel * 4));
-		// Potenzialstufe: Zufall, Akademie (0,04 je Stufe ueber der ersten) - assignYouthPotentialTier()
-		T.PotentialTier = FM13Youth::Stufe(RngJugend.FRand() + (YouthAcademyLevel - 1) * 0.04);
+		// Potenzialstufe: Zufall, Akademie (0,04 je Stufe ueber der ersten), Internat (0,06 je Stufe) - assignYouthPotentialTier()
+		T.PotentialTier = FM13Youth::Stufe(RngJugend.FRand() + (YouthAcademyLevel - 1) * 0.04 + Internat * 0.06);
 		T.bPotentialRevealed = false;
 		T.Wage = 0;
 		T.ContractYears = 0;
@@ -1855,6 +1857,7 @@ void FFM13World::TickStadiumConstruction()
 		P.TageRest--;
 		if (P.TageRest > 0) continue;
 		if (P.Typ == 2) bFlutlicht = true;
+		if (P.Typ == 3) CampusInternat = FMath::Min(5, CampusInternat + 1);
 		for (FFM13StadiumBlock& B : StadiumBlocks)
 		{
 			if (B.Key != P.Block) continue;
@@ -1912,11 +1915,12 @@ FFM13World::FFM13LizenzStatus FFM13World::DfbLicensingStatus() const
 	Pruefe(Req.MinKapazitaet > 0, Kap >= Req.MinKapazitaet, Kap + Bau >= Req.MinKapazitaet,
 		FString::Printf(TEXT("Stadionkapazitaet: %d / %d"), Kap, Req.MinKapazitaet));
 	Pruefe(Req.bFlutlicht, bFlutlicht, FlutlichImBau(), TEXT("Flutlichtanlage fehlt"));
-	S.MinKapazitaet = Req.MinKapazitaet; S.MinReserve = Req.MinReserve; S.bFlutlichNoetig = Req.bFlutlicht;
+	S.MinKapazitaet = Req.MinKapazitaet; S.MinReserve = Req.MinReserve; S.bFlutlichNoetig = Req.bFlutlicht; S.MinInternat = Req.MinInternat;
 	Pruefe(Req.MinReserve > 0, Money >= Req.MinReserve, false,
 		FString::Printf(TEXT("Finanzreserve: %lld / %lld"), (long long)Money, (long long)Req.MinReserve));
-	// Jugendinternat (Campusgebaeude) ist im Kern noch nicht portiert: Stufe 0
-	Pruefe(Req.MinInternat > 0, false, false, FString::Printf(TEXT("Jugendinternat: Stufe 0 / %d"), Req.MinInternat));
+	// Jugendinternat: Stufe plus laufende Baustellen (getLicenceBuildsInProgress)
+	Pruefe(Req.MinInternat > 0, CampusInternat >= Req.MinInternat, CampusInternat + InternatImBau() >= Req.MinInternat,
+		FString::Printf(TEXT("Jugendinternat: Stufe %d / %d"), CampusInternat, Req.MinInternat));
 	return S;
 }
 
@@ -1956,6 +1960,32 @@ bool FFM13World::BuildFlutlicht(FString& OutReason)
 	Auftrag.Block = TEXT("flutlicht");
 	Auftrag.Kosten = FM13Transfers::JsRunden(3500000.0 * Faktor / 10000.0) * 10000;
 	return StarteBaustelle(Auftrag, TEXT("Flutlicht-Masten"), OutReason);
+}
+
+// getCampusStufenKosten() (js/campus-staff.js): Basis 9 Mio. x Stufe x Liga-Faktor, mindestens 250.000 Euro
+int64 FFM13World::CampusInternatKosten(int32 Stufe) const
+{
+	const double Roh = FM13Transfers::JsRunden(9000000.0 * (double)Stufe * StadionKostenFaktor(LeagueLevel));
+	return FMath::Max<int64>(250000, Roh);
+}
+
+// upgradeCampusBuilding() fuer das Internat: Baustelle wie beim Stadion, Stufe steigt nach der Bauzeit
+bool FFM13World::UpgradeCampusInternat(FString& OutReason)
+{
+	if (CampusInternat >= 5) { OutReason = TEXT("Maximalstufe bereits erreicht!"); return false; }
+	FFM13StadiumBaustelle Auftrag;
+	Auftrag.Typ = 3;
+	Auftrag.Block = TEXT("internat");
+	Auftrag.Kosten = CampusInternatKosten(CampusInternat + 1);
+	return StarteBaustelle(Auftrag, FString::Printf(TEXT("Jugendinternat & Schule (Stufe %d)"), CampusInternat + 1), OutReason);
+}
+
+// Laufende Internat-Baustellen (getLicenceBuildsInProgress: campusBuilding internat)
+int32 FFM13World::InternatImBau() const
+{
+	int32 Summe = 0;
+	for (const FFM13StadiumBaustelle& P : StadiumBaustellen) if (P.Typ == 3) Summe++;
+	return Summe;
 }
 
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin

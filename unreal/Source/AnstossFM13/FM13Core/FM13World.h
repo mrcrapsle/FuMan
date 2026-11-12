@@ -49,7 +49,7 @@ public:
 	int32 TicketAverage() const;                                                      // mittlerer Preis (Eingang der Zuschauerformel)
 	int64 TicketRevenue(int32 Att) const;                                             // matchRevenue je Kategorie
 	bool SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& OutReason);      // Regler 35 bis 400 Prozent des Marktpreises
-	struct FFM13StadiumBaustelle { int32 Typ = 0; FString Block; int32 Seats = 0; int32 Infra = 0; int64 Kosten = 0; int32 TageRest = 0; int32 Gesamttage = 0; };   // Typ 0 Rangerweiterung, 1 Komfort
+	struct FFM13StadiumBaustelle { int32 Typ = 0; FString Block; int32 Seats = 0; int32 Infra = 0; int64 Kosten = 0; int32 TageRest = 0; int32 Gesamttage = 0; };   // Typ 0 Rangerweiterung, 1 Komfort, 2 Flutlicht, 3 Jugendinternat
 	TArray<FFM13StadiumBaustelle> StadiumBaustellen;                                 // game.stadiumConstructionQueue
 	int32 BauTage(int64 Kosten) const;
 	int64 BlockAusbauKosten(const FFM13StadiumBlock& B) const;
@@ -62,9 +62,12 @@ public:
 	struct FFM13Nachfrist { bool bAktiv = false; int32 Ziel = -1; int32 Frist = 0; };
 	FFM13Nachfrist DfbNachfrist;                    // game.dfbGracePeriod
 	void TickDfbNachfrist();                        // checkDfbLicenseDeadlines(): jeden Spieltag
-	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; int32 MinKapazitaet = 0; int64 MinReserve = 0; bool bFlutlichNoetig = false; };
+	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; int32 MinKapazitaet = 0; int64 MinReserve = 0; bool bFlutlichNoetig = false; int32 MinInternat = 0; };
 	bool FlutlichImBau() const;
 	bool BuildFlutlicht(FString& OutReason);                                              // specialInstall flutlicht: 3,5 Mio. je Liga-Faktor
+	int64 CampusInternatKosten(int32 Stufe) const;                                        // getCampusStufenKosten: 9 Mio. x Stufe x Liga-Faktor, mind. 250.000
+	bool UpgradeCampusInternat(FString& OutReason);                                       // Stufe bauen (Typ 3), hoechstens Stufe 5
+	int32 InternatImBau() const;                                                          // laufende Internat-Baustellen
 	int32 BauPlaetze() const;
 	FFM13LizenzStatus DfbLicensingStatus() const;                                      // checkDfbLicensingStatus()
 	int32 PendingSeats = 0;             // laufender Ausbau
@@ -100,6 +103,7 @@ public:
 	int32 Stress = 15;                              // Privatleben: Stress des Managers, -0,03 Stärke je Punkt
 	bool bTactician = false;                        // Perk Taktiker: +3
 	int32 CampusTrainingGround = 0;                 // Campus: Trainingsgelände mit Flutlicht, +1 je Stufe
+	int32 CampusInternat = 0;                       // Campus: Jugendinternat & Schule, Stufe 0 bis 5 (campusBuildings.internat.lvl)
 	FString TackleHardness = TEXT("normal");        // Zweikampfhärte: hart, normal, vorsichtig
 	int32 CaptainId = 0;                            // Kapitän (0 = keiner)
 	int32 YouthCoachId = 0;                        // Jugendtrainer aus dem Profikader (0 = keiner)

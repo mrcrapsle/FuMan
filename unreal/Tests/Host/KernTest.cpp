@@ -1627,6 +1627,57 @@ static void TestDfbLizenz()
 	PRUEFE(W.DfbLicensingStatus().ZielLiga == -1, "In der hoechsten Liga gibt es kein Ziel");
 }
 
+static void TestCampusInternat()
+{
+	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Internat"), 151, 0);
+	FString G;
+	// 1. Bundesliga (Faktor 1): Stufe 1 = 9 Mio., Stufe 2 = 18 Mio.
+	W.LeagueLevel = 0;
+	PRUEFE(W.CampusInternatKosten(1) == 9000000 && W.CampusInternatKosten(2) == 18000000, "Kosten je Stufe 9 Mio. x Stufe");
+	// 2. Bundesliga (Faktor 0,55): Stufe 1 = 4.950.000
+	W.LeagueLevel = 1;
+	PRUEFE(W.CampusInternatKosten(1) == 4950000, "2. Liga: Faktor 0,55 (%lld)", (long long)W.CampusInternatKosten(1));
+	// Untergrenze 250.000 in der niedrigsten Liga (Faktor 0,035 -> 315.000; Stufe 0 -> Untergrenze)
+	W.LeagueLevel = 5;
+	PRUEFE(W.CampusInternatKosten(1) == 315000 && W.CampusInternatKosten(0) == 250000, "Landesliga: Faktor 0,035, Untergrenze 250.000");
+	// Bau: 4.950.000 bezahlt, Bauzeit 12 Spieltage, dann Stufe 1
+	W.LeagueLevel = 1;
+	W.Money = 100000000;
+	const int64 Geld = W.Money;
+	PRUEFE(W.UpgradeCampusInternat(G) && W.Money == Geld - 4950000, "Internat-Ausbau kostet beim Auftrag (%s)", *G);
+	PRUEFE(W.InternatImBau() == 1 && W.CampusInternat == 0, "Waehrend des Baus noch Stufe 0");
+	PRUEFE(!W.UpgradeCampusInternat(G) && G.Contains(TEXT("Baustelle")), "Zweite Internat-Baustelle wird abgelehnt");
+	for (int32 t = 0; t < 11; ++t) W.TickStadiumConstruction();
+	PRUEFE(W.CampusInternat == 0, "Nach 11 Spieltagen noch nicht fertig");
+	W.TickStadiumConstruction();
+	PRUEFE(W.CampusInternat == 1 && W.InternatImBau() == 0, "Nach 12 Spieltagen Stufe 1");
+	// Maximalstufe
+	W.CampusInternat = 5;
+	PRUEFE(!W.UpgradeCampusInternat(G) && G.Contains(TEXT("Maximalstufe")), "Stufe 5 ist die Obergrenze");
+	// Lizenz 2. -> 1. Bundesliga braucht Stufe 2 (plus Flutlicht, Kapazitaet, Reserve)
+	W.LeagueLevel = 1;
+	W.CampusInternat = 1;
+	W.bFlutlicht = true;
+	W.Money = 1000000;
+	FFM13World::FFM13LizenzStatus S = W.DfbLicensingStatus();
+	PRUEFE(S.Fehlend.Num() == 1 && S.Auflagen.Num() == 0, "Stufe 1 von 2: Internat fehlt");
+	W.StadiumBaustellen.Empty();
+	FFM13World::FFM13StadiumBaustelle P;
+	P.Typ = 3; P.Block = TEXT("internat"); P.Kosten = 4950000; P.TageRest = 12; P.Gesamttage = 12;
+	W.StadiumBaustellen.Add(P);
+	S = W.DfbLicensingStatus();
+	PRUEFE(S.Fehlend.Num() == 0 && S.Auflagen.Num() == 1, "Internat-Baustelle zaehlt als Auflage im Bau");
+	// Speichern und Laden erhalten die Stufe
+	FFM13World V;
+	V.NewGame(TEXT("Internat"), 151, 0);
+	V.CampusInternat = 3;
+	FString Fehler;
+	FFM13World L;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(V), L, Fehler) && L.CampusInternat == 3, "Stufe 3 bleibt beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestDfbNachfrist()
 {
 	std::printf("DFB-Nachfrist: drei Spieltage, danach verfaellt der Aufstieg\n");
@@ -2781,6 +2832,9 @@ static void BotZug(FFM13World& W)
 		const int64 Puffer = L.MinReserve + W.WagesPerMatchday() * 6;
 		if (L.bFlutlichNoetig && !W.bFlutlicht && !W.FlutlichImBau() && W.Money > Puffer + 3500000)
 			W.BuildFlutlicht(Grund);
+		// Jugendinternat fuer die Lizenz: Stufe plus Baustelle erreicht das Mindestniveau
+		if (W.CampusInternat + W.InternatImBau() < L.MinInternat && W.Money > Puffer + W.CampusInternatKosten(W.CampusInternat + 1))
+			W.UpgradeCampusInternat(Grund);
 		for (int32 n = 0; n < 6 && W.StadiumTotal() + W.BauPlaetze() < L.MinKapazitaet; ++n)
 		{
 			int32 Guenstig = -1;
@@ -2856,6 +2910,7 @@ int main()
 	TestStadionDaten();
 	TestStadionBaustellen();
 	TestDfbLizenz();
+	TestCampusInternat();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

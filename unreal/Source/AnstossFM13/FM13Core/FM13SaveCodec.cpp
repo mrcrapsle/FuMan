@@ -304,6 +304,7 @@ namespace FM13Save
 		W.Field(TEXT("promotionBoostLevel"), S.PromotionBoostLevel);
 		W.Field(TEXT("promotionBoostSeason"), S.PromotionBoostSeason);
 		W.Field(TEXT("campusReha"), S.CampusReha);
+		W.Field(TEXT("campusInternat"), S.CampusInternat);
 		W.ArrayKey(TEXT("council"));
 		for (int32 Id : S.CouncilIds) W.ElementInt(Id);
 		W.EndArray();
@@ -1079,6 +1080,7 @@ namespace FM13Save
 		W.PromotionBoostLevel = (int32)R.Int(Root, TEXT("promotionBoostLevel"), -1);
 		W.PromotionBoostSeason = (int32)R.Int(Root, TEXT("promotionBoostSeason"), 0);
 		W.CampusReha = FMath::Clamp((int32)R.Int(Root, TEXT("campusReha"), 0), 0, 5);
+		W.CampusInternat = FMath::Clamp((int32)R.Int(Root, TEXT("campusInternat"), 0), 0, 5);
 		W.WageBudgetCap = R.Int(Root, TEXT("wageBudgetCap"), 0);
 		W.LastMeetingSeason = (int32)R.Int(Root, TEXT("lastMeetingSeason"), 0);
 		W.PoachSlot = (int32)R.Int(Root, TEXT("poachSlot"), -1);

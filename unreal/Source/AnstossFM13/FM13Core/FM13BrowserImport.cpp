@@ -339,6 +339,7 @@ namespace FM13BrowserImport
 		W.CampusTrainingGround = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("trainingground")), TEXT("lvl"), 0), 0, 5);
 		W.TackleHardness = R.Str(G, TEXT("tackleHardness"), TEXT("normal"));
 		W.CampusReha = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("reha")), TEXT("lvl"), 0), 0, 5);
+		W.CampusInternat = FMath::Clamp((int32)R.Int(R.Find(R.Find(Root, TEXT("campusBuildings")), TEXT("internat")), TEXT("lvl"), 0), 0, 5);
 		// Wochenplan: Objekt mit den Tagen mo bis so
 		const int32 Plan = R.Find(G, TEXT("weeklyTrainingPlan"));
 		static const TCHAR* Tage[7] = { TEXT("mo"), TEXT("di"), TEXT("mi"), TEXT("do"), TEXT("fr"), TEXT("sa"), TEXT("so") };
