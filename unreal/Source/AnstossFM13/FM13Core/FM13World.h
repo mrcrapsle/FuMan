@@ -62,7 +62,9 @@ public:
 	struct FFM13Nachfrist { bool bAktiv = false; int32 Ziel = -1; int32 Frist = 0; };
 	FFM13Nachfrist DfbNachfrist;                    // game.dfbGracePeriod
 	void TickDfbNachfrist();                        // checkDfbLicenseDeadlines(): jeden Spieltag
-	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; };
+	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; int32 MinKapazitaet = 0; int64 MinReserve = 0; bool bFlutlichNoetig = false; };
+	bool FlutlichImBau() const;
+	bool BuildFlutlicht(FString& OutReason);                                              // specialInstall flutlicht: 3,5 Mio. je Liga-Faktor
 	int32 BauPlaetze() const;
 	FFM13LizenzStatus DfbLicensingStatus() const;                                      // checkDfbLicensingStatus()
 	int32 PendingSeats = 0;             // laufender Ausbau

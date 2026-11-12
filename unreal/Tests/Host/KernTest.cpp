@@ -2774,6 +2774,26 @@ static void BotZug(FFM13World& W)
 	if (W.Money > W.YouthAcademyUpgradeCost() * 4) W.UpgradeYouthAcademy(Grund);
 	const int32 Auslastung = W.LastReport.bHome && W.StadiumTotal() > 0 ? W.LastReport.Attendance * 100 / W.StadiumTotal() : 0;
 	if (Auslastung >= 98 && W.Money > FM13Economy::StadiumExpansionCost(2000) * 5) W.ExpandStadium(2000, Grund);
+	// Aufstiegskandidat (Platz 6 oder besser): Lizenzauflagen der naechsthoeheren Liga bauen, Reserve und sechs Wochen Gehalt bleiben
+	if (W.LeagueLevel > 0 && W.OwnRank() <= 6)
+	{
+		const FFM13World::FFM13LizenzStatus L = W.DfbLicensingStatus();
+		const int64 Puffer = L.MinReserve + W.WagesPerMatchday() * 6;
+		if (L.bFlutlichNoetig && !W.bFlutlicht && !W.FlutlichImBau() && W.Money > Puffer + 3500000)
+			W.BuildFlutlicht(Grund);
+		for (int32 n = 0; n < 6 && W.StadiumTotal() + W.BauPlaetze() < L.MinKapazitaet; ++n)
+		{
+			int32 Guenstig = -1;
+			for (int32 i = 0; i < W.StadiumBlocks.Num(); ++i)
+			{
+				const FFM13World::FFM13StadiumBlock& B = W.StadiumBlocks[i];
+				if (B.Expansions >= 5 || B.AddSeats <= 0) continue;
+				if (Guenstig < 0 || (double)W.BlockAusbauKosten(B) / B.AddSeats < (double)W.BlockAusbauKosten(W.StadiumBlocks[Guenstig]) / W.StadiumBlocks[Guenstig].AddSeats) Guenstig = i;
+			}
+			if (Guenstig < 0 || W.Money - W.BlockAusbauKosten(W.StadiumBlocks[Guenstig]) < Puffer) break;
+			if (!W.ExpandBlock(W.StadiumBlocks[Guenstig].Key, Grund)) break;
+		}
+	}
 }
 
 static void TestBotKarriere()

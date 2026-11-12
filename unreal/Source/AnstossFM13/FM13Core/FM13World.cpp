@@ -1854,6 +1854,7 @@ void FFM13World::TickStadiumConstruction()
 		FFM13StadiumBaustelle& P = StadiumBaustellen[i];
 		P.TageRest--;
 		if (P.TageRest > 0) continue;
+		if (P.Typ == 2) bFlutlicht = true;
 		for (FFM13StadiumBlock& B : StadiumBlocks)
 		{
 			if (B.Key != P.Block) continue;
@@ -1910,7 +1911,8 @@ FFM13World::FFM13LizenzStatus FFM13World::DfbLicensingStatus() const
 	};
 	Pruefe(Req.MinKapazitaet > 0, Kap >= Req.MinKapazitaet, Kap + Bau >= Req.MinKapazitaet,
 		FString::Printf(TEXT("Stadionkapazitaet: %d / %d"), Kap, Req.MinKapazitaet));
-	Pruefe(Req.bFlutlicht, bFlutlicht, false, TEXT("Flutlichtanlage fehlt"));
+	Pruefe(Req.bFlutlicht, bFlutlicht, FlutlichImBau(), TEXT("Flutlichtanlage fehlt"));
+	S.MinKapazitaet = Req.MinKapazitaet; S.MinReserve = Req.MinReserve; S.bFlutlichNoetig = Req.bFlutlicht;
 	Pruefe(Req.MinReserve > 0, Money >= Req.MinReserve, false,
 		FString::Printf(TEXT("Finanzreserve: %lld / %lld"), (long long)Money, (long long)Req.MinReserve));
 	// Jugendinternat (Campusgebaeude) ist im Kern noch nicht portiert: Stufe 0
@@ -1935,6 +1937,25 @@ void FFM13World::TickDfbNachfrist()
 		DfbNachfrist.bAktiv = false;
 		AddMessage(TEXT("DFB-Nachfrist verstrichen"), TEXT("Die Nachfrist ist ohne Erfolg verstrichen - der Aufstieg verfaellt fuer diese Saison."));
 	}
+}
+
+// Flutlicht im Bau? (Auflage im Bau gilt als erfuellbar)
+bool FFM13World::FlutlichImBau() const
+{
+	for (const FFM13StadiumBaustelle& P : StadiumBaustellen) if (P.Typ == 2) return true;
+	return false;
+}
+
+// specialInstall flutlicht (js/stadium.js: getSpecialInstallCost): 3,5 Mio. x Liga-Faktor, auf 10.000 gerundet
+bool FFM13World::BuildFlutlicht(FString& OutReason)
+{
+	if (bFlutlicht) { OutReason = TEXT("Das Flutlicht steht schon."); return false; }
+	const double Faktor = FMath::Max(0.2, StadionKostenFaktor(LeagueLevel));
+	FFM13StadiumBaustelle Auftrag;
+	Auftrag.Typ = 2;
+	Auftrag.Block = TEXT("flutlicht");
+	Auftrag.Kosten = FM13Transfers::JsRunden(3500000.0 * Faktor / 10000.0) * 10000;
+	return StarteBaustelle(Auftrag, TEXT("Flutlicht-Masten"), OutReason);
 }
 
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin
