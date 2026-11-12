@@ -1560,6 +1560,39 @@ static void TestStadionDaten()
 	PRUEFE(W.SetTicketPrices(15, 30, 90, G) && W.TicketSteh == 15 && W.TicketSitz == 30, "Gueltige Preise werden uebernommen");
 }
 
+static void TestStadionBaustellen()
+{
+	std::printf("Stadion-Baustellen: Kosten beim Auftrag, Bauzeit, Rangerweiterung, Komfort\n");
+	FFM13World W;
+	W.NewGame(TEXT("Bau"), 141, 0);
+	W.LeagueLevel = 0;
+	FString G;
+	W.Money = 100000000;
+	const int32 Kap = W.StadiumTotal();
+	const int64 Geld = W.Money;
+	PRUEFE(W.ExpandBlock(TEXT("haupt"), G), "Rangerweiterung klappt: %s", *G);
+	PRUEFE(W.Money == Geld - 8000000, "Die Kosten (8 Mio.) werden sofort abgebucht");
+	PRUEFE(W.StadiumBaustellen.Num() == 1 && W.StadiumTotal() == Kap, "Waehrend des Baus keine neuen Plaetze");
+	PRUEFE(!W.ExpandBlock(TEXT("haupt"), G) && G.Contains(TEXT("Baustelle")), "Zweite Baustelle im selben Block wird abgelehnt");
+	// Bauzeit: 8 Mio. / 400.000 = 20 Spieltage
+	for (int32 t = 0; t < 19; ++t) W.TickStadiumConstruction();
+	PRUEFE(W.StadiumTotal() == Kap, "Nach 19 Spieltagen noch nicht fertig");
+	W.TickStadiumConstruction();
+	PRUEFE(W.StadiumTotal() == Kap + 500 && W.StadiumBaustellen.Num() == 0, "Nach 20 Spieltagen: +500 Plaetze");
+	PRUEFE(W.StadiumBlocks[0].Expansions == 1, "Eine Ausbaustufe gezaehlt");
+	// Zweite Stufe kostet das Doppelte
+	const int64 Geld2 = W.Money;
+	PRUEFE(W.ExpandBlock(TEXT("haupt"), G) && W.Money == Geld2 - 16000000, "Zweite Stufe kostet 16 Mio.");
+	// Komfort: Fressbude 300.000 Euro in der 1. Bundesliga, Bauzeit 10 Spieltage
+	const int64 Geld3 = W.Money;
+	PRUEFE(W.UpgradeBlockInfra(TEXT("gegen"), 0, G) && W.Money == Geld3 - 300000, "Fressbude kostet 300.000 Euro");
+	for (int32 t = 0; t < 10; ++t) W.TickStadiumConstruction();
+	PRUEFE(W.StadiumBlocks[4].FoodLvl == 1, "Fressbude ist nach 10 Spieltagen fertig");
+	// Nicht gedeckt
+	W.Money = 1000;
+	PRUEFE(!W.ExpandBlock(TEXT("kurve"), G) && G.Contains(TEXT("nicht gedeckt")), "Ohne Geld kein Ausbau");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2746,6 +2779,7 @@ int main()
 	TestAusstiegsklausel();
 	TestWeiterverkauf();
 	TestStadionDaten();
+	TestStadionBaustellen();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

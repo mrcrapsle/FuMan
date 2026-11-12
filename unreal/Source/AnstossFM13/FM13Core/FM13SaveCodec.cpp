@@ -189,6 +189,16 @@ namespace FM13Save
 		W.Field(TEXT("stehPromille"), (int64)FMath::RoundToInt((float)(S.StehShare * 1000.0)));
 		W.Field(TEXT("sitzPromille"), (int64)FMath::RoundToInt((float)(S.SitzShare * 1000.0)));
 		W.Field(TEXT("vipPromille"), (int64)FMath::RoundToInt((float)(S.VipShare * 1000.0)));
+		W.ArrayKey(TEXT("baustellen"));
+		for (const FFM13World::FFM13StadiumBaustelle& P : S.StadiumBaustellen)
+		{
+			W.ElementObject();
+			W.Field(TEXT("typ"), (int64)P.Typ); W.Field(TEXT("block"), P.Block); W.Field(TEXT("seats"), (int64)P.Seats);
+			W.Field(TEXT("infra"), (int64)P.Infra); W.Field(TEXT("kosten"), P.Kosten);
+			W.Field(TEXT("rest"), (int64)P.TageRest); W.Field(TEXT("gesamt"), (int64)P.Gesamttage);
+			W.EndObject();
+		}
+		W.EndArray();
 		W.Field(TEXT("pendingSeats"), S.PendingSeats);
 		W.Field(TEXT("pendingSeatsMatchdays"), S.PendingSeatsMatchdays);
 		W.Field(TEXT("ticketSteh"), S.TicketSteh); W.Field(TEXT("ticketSitz"), S.TicketSitz);

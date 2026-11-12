@@ -297,6 +297,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
+	TickStadiumConstruction();
 	TickFixedDeposit();
 	TickMoneyHistory();
 	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
@@ -1741,6 +1742,114 @@ bool FFM13World::SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& Out
 bool FFM13World::SetTicketPrice(int32 Price, FString& OutReason)
 {
 	return SetTicketPrices(Price, TicketSitz, TicketVip, OutReason);   // UE-Schnittstelle: nur der Stehplatzpreis
+}
+
+// ---------- Baustellen des Stadions (js/stadium.js: queueStadiumConstruction, tickStadiumConstruction, expandBlock, upgradeBlockInfra) ----------
+
+namespace
+{
+	// STADIUM_COST_SCALE (js/stadium.js): Kostenfaktor je Liga
+	double StadionKostenFaktor(int32 Liga)
+	{
+		static const double Faktor[6] = { 1.0, 0.55, 0.28, 0.14, 0.07, 0.035 };
+		return Faktor[FMath::Clamp(Liga, 0, 5)];
+	}
+}
+
+// getConstructionDays(): mindestens 10 Spieltage, je 400.000 Euro ein weiterer Tag
+int32 FFM13World::BauTage(int64 Kosten) const
+{
+	return FMath::Max(10, (int32)FM13Transfers::JsRunden((double)Kosten / 400000.0));
+}
+
+// Kosten der naechsten Rangerweiterung (selectStadiumBlock): Blockkosten x (Ausbaustufe + 1) x Liga-Faktor
+int64 FFM13World::BlockAusbauKosten(const FFM13StadiumBlock& B) const
+{
+	return FM13Transfers::JsRunden((double)B.Cost * (double)(B.Expansions + 1) * StadionKostenFaktor(LeagueLevel));
+}
+
+// Komfortausbau (Fressbude, Merch-Stand, Toiletten): 15.000 / 12.000 / 10.000 Euro x Liga-Faktor x 20, mindestens 50.000 / 40.000 / 35.000
+int64 FFM13World::KomfortKosten(int32 Art) const
+{
+	const double Skala = StadionKostenFaktor(LeagueLevel);
+	const double Basis[3] = { 15000.0, 12000.0, 10000.0 };
+	const int64 Mindest[3] = { 50000, 40000, 35000 };
+	return FMath::Max<int64>(Mindest[Art], FM13Transfers::JsRunden(Basis[Art] * Skala * 20.0));
+}
+
+// Eine Baustelle eroeffnen: voll bezahlt beim Auftrag, Effekt erst nach der Bauzeit (queueStadiumConstruction)
+bool FFM13World::StarteBaustelle(FFM13StadiumBaustelle Auftrag, const FString& Name, FString& OutReason)
+{
+	for (const FFM13StadiumBaustelle& B : StadiumBaustellen)
+		if (B.Typ == Auftrag.Typ && B.Block == Auftrag.Block && B.Infra == Auftrag.Infra)
+		{
+			OutReason = TEXT("Fuer diese Anlage laeuft bereits eine Baustelle!");
+			return false;
+		}
+	if (Money < Auftrag.Kosten)
+	{
+		OutReason = FString::Printf(TEXT("Baukosten nicht gedeckt: %lld auf dem Konto, %lld noetig."), (long long)Money, (long long)Auftrag.Kosten);
+		return false;
+	}
+	Book(TEXT("Stadionausbau"), -Auftrag.Kosten);
+	Auftrag.TageRest = BauTage(Auftrag.Kosten);
+	Auftrag.Gesamttage = Auftrag.TageRest;
+	StadiumBaustellen.Add(Auftrag);
+	AddMessage(FString(TEXT("Bauprojekt gestartet: ")) + Name, FString::Printf(TEXT("%lld wurden vollstaendig bezahlt. Fertigstellung in %d Spieltagen."), (long long)Auftrag.Kosten, Auftrag.Gesamttage));
+	return true;
+}
+
+// expandBlock(): der Block bekommt seine Zusatzplaetze nach der Bauzeit; hoechstens 5 Ausbaustufen je Block
+bool FFM13World::ExpandBlock(const FString& Key, FString& OutReason)
+{
+	FFM13StadiumBlock* B = nullptr;
+	for (FFM13StadiumBlock& K : StadiumBlocks) if (K.Key == Key) B = &K;
+	if (!B) { OutReason = TEXT("Dieser Block gibt es nicht."); return false; }
+	if (B->Expansions >= 5) { OutReason = TEXT("Dieser Block hat die maximale Ausbaustufe erreicht."); return false; }
+	FFM13StadiumBaustelle Auftrag;
+	Auftrag.Typ = 0;
+	Auftrag.Block = Key;
+	Auftrag.Seats = B->AddSeats;
+	Auftrag.Kosten = BlockAusbauKosten(*B);
+	return StarteBaustelle(Auftrag, FString(TEXT("Rangerweiterung ")) + B->Name, OutReason);
+}
+
+// upgradeBlockInfra(): Fressbude (0), Merch-Stand (1), Toiletten (2), hoechstens Stufe 3
+bool FFM13World::UpgradeBlockInfra(const FString& Key, int32 Art, FString& OutReason)
+{
+	FFM13StadiumBlock* B = nullptr;
+	for (FFM13StadiumBlock& K : StadiumBlocks) if (K.Key == Key) B = &K;
+	if (!B) { OutReason = TEXT("Dieser Block gibt es nicht."); return false; }
+	const int32 Stufe = Art == 0 ? B->FoodLvl : (Art == 1 ? B->MerchLvl : B->ToiletLvl);
+	if (Stufe >= 3) { OutReason = TEXT("Maximalstufe erreicht - hier ist kein weiterer Ausbau moeglich."); return false; }
+	FFM13StadiumBaustelle Auftrag;
+	Auftrag.Typ = 1;
+	Auftrag.Block = Key;
+	Auftrag.Infra = Art;
+	Auftrag.Kosten = KomfortKosten(Art);
+	const TCHAR* Namen[3] = { TEXT("Fressbude"), TEXT("Merch-Stand"), TEXT("Toiletten") };
+	return StarteBaustelle(Auftrag, FString(B->Name) + TEXT(": ") + Namen[Art], OutReason);
+}
+
+// tickStadiumConstruction(): jeden Spieltag zaehlen die Baustellen herunter, fertige wirken sofort
+void FFM13World::TickStadiumConstruction()
+{
+	for (int32 i = StadiumBaustellen.Num() - 1; i >= 0; --i)
+	{
+		FFM13StadiumBaustelle& P = StadiumBaustellen[i];
+		P.TageRest--;
+		if (P.TageRest > 0) continue;
+		for (FFM13StadiumBlock& B : StadiumBlocks)
+		{
+			if (B.Key != P.Block) continue;
+			if (P.Typ == 0) { B.Cap += P.Seats; B.Expansions++; }
+			else if (P.Infra == 0) B.FoodLvl = FMath::Min(3, B.FoodLvl + 1);
+			else if (P.Infra == 1) B.MerchLvl = FMath::Min(3, B.MerchLvl + 1);
+			else B.ToiletLvl = FMath::Min(3, B.ToiletLvl + 1);
+		}
+		AddMessage(TEXT("Bauprojekt fertig"), FString(TEXT("Fertig: ")) + P.Block + TEXT("."));
+		StadiumBaustellen.RemoveAt(i);
+	}
 }
 
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin

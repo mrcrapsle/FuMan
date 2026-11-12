@@ -49,6 +49,15 @@ public:
 	int32 TicketAverage() const;                                                      // mittlerer Preis (Eingang der Zuschauerformel)
 	int64 TicketRevenue(int32 Att) const;                                             // matchRevenue je Kategorie
 	bool SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& OutReason);      // Regler 35 bis 400 Prozent des Marktpreises
+	struct FFM13StadiumBaustelle { int32 Typ = 0; FString Block; int32 Seats = 0; int32 Infra = 0; int64 Kosten = 0; int32 TageRest = 0; int32 Gesamttage = 0; };   // Typ 0 Rangerweiterung, 1 Komfort
+	TArray<FFM13StadiumBaustelle> StadiumBaustellen;                                 // game.stadiumConstructionQueue
+	int32 BauTage(int64 Kosten) const;
+	int64 BlockAusbauKosten(const FFM13StadiumBlock& B) const;
+	int64 KomfortKosten(int32 Art) const;
+	bool StarteBaustelle(FFM13StadiumBaustelle Auftrag, const FString& Name, FString& OutReason);
+	bool ExpandBlock(const FString& Key, FString& OutReason);                         // expandBlock()
+	bool UpgradeBlockInfra(const FString& Key, int32 Art, FString& OutReason);        // upgradeBlockInfra()
+	void TickStadiumConstruction();                                                    // tickStadiumConstruction(): jeden Spieltag
 	int32 PendingSeats = 0;             // laufender Ausbau
 	int32 PendingSeatsMatchdays = 0;
 	int32 YouthAcademyLevel = 1;        // 1 bis 5: mehr und bessere Talente
