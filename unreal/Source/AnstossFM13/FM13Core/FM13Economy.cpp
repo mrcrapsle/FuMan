@@ -48,8 +48,9 @@ namespace FM13Economy
 
 	int32 BaseTicketPrice(int32 Level)
 	{
-		static const int32 Preise[FM13::NumLeagues] = { 45, 30, 22, 16, 13, 10 };
-		return Preise[FMath::Clamp(Level, 0, FM13::NumLeagues - 1)];
+		// Mittlerer Ticketpreis der Liga: Kategorien 12/24/80 Euro mit Anteilen 50/45/5 Prozent, mal Ligafaktor (1 + (4 - Liga) x 0,25)
+		const float Faktor = (4.f - (float)FMath::Clamp(Level, 0, FM13::NumLeagues - 1)) * 0.25f + 1.f;
+		return FMath::FloorToInt(Faktor * 20.8f + 0.5f);
 	}
 
 	// Vereinfachung gegenüber calculateMatchAttendanceDetails() (js/stadium.js): Grundnachfrage je Liga,

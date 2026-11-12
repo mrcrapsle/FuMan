@@ -175,10 +175,24 @@ namespace FM13Save
 		W.Field(TEXT("seasonTarget"), S.SeasonTarget);
 		W.Field(TEXT("wageBudget"), S.WageBudget);
 		W.FieldBool(TEXT("sacked"), S.bSacked);
-		W.Field(TEXT("capacity"), S.StadiumCapacity);
+		W.Field(TEXT("bonusCapacity"), S.BonusCapacity);
+		W.ArrayKey(TEXT("stadiumBlocks"));
+		for (const FFM13World::FFM13StadiumBlock& B : S.StadiumBlocks)
+		{
+			W.ElementObject();
+			W.Field(TEXT("key"), B.Key); W.Field(TEXT("name"), B.Name); W.Field(TEXT("cap"), B.Cap);
+			W.Field(TEXT("food"), B.FoodLvl); W.Field(TEXT("merch"), B.MerchLvl); W.Field(TEXT("toilet"), B.ToiletLvl);
+			W.Field(TEXT("addSeats"), B.AddSeats); W.Field(TEXT("cost"), B.Cost); W.Field(TEXT("exp"), B.Expansions);
+			W.EndObject();
+		}
+		W.EndArray();
+		W.Field(TEXT("stehPromille"), (int64)FMath::RoundToInt((float)(S.StehShare * 1000.0)));
+		W.Field(TEXT("sitzPromille"), (int64)FMath::RoundToInt((float)(S.SitzShare * 1000.0)));
+		W.Field(TEXT("vipPromille"), (int64)FMath::RoundToInt((float)(S.VipShare * 1000.0)));
 		W.Field(TEXT("pendingSeats"), S.PendingSeats);
 		W.Field(TEXT("pendingSeatsMatchdays"), S.PendingSeatsMatchdays);
-		W.Field(TEXT("ticketPrice"), S.TicketPrice);
+		W.Field(TEXT("ticketSteh"), S.TicketSteh); W.Field(TEXT("ticketSitz"), S.TicketSitz);
+		W.Field(TEXT("ticketVip"), S.TicketVip); W.Field(TEXT("ticketDauer"), S.TicketDauerkarte);
 		W.Field(TEXT("academy"), S.YouthAcademyLevel);
 		W.Field(TEXT("training"), S.TrainingLevel);
 		W.Field(TEXT("tvPaid"), S.TvPaidThisSeason);
@@ -965,10 +979,33 @@ namespace FM13Save
 		W.SeasonTarget = (int32)R.Int(Root, TEXT("seasonTarget"), 9);
 		W.WageBudget = R.Int(Root, TEXT("wageBudget"), 0);
 		W.bSacked = R.Bool(Root, TEXT("sacked"), false);
-		W.StadiumCapacity = (int32)R.Int(Root, TEXT("capacity"), 4000);
+		W.BonusCapacity = (int32)R.Int(Root, TEXT("bonusCapacity"), 0);
+		W.StadiumBlocks.Reset();
+		for (int32 N : R.Items(Root, TEXT("stadiumBlocks")))
+		{
+			FFM13World::FFM13StadiumBlock B;
+			B.Key = R.Str(N, TEXT("key"), TEXT("")); B.Name = R.Str(N, TEXT("name"), TEXT(""));
+			B.Cap = (int32)R.Int(N, TEXT("cap"), 0); B.FoodLvl = (int32)R.Int(N, TEXT("food"), 0);
+			B.MerchLvl = (int32)R.Int(N, TEXT("merch"), 0); B.ToiletLvl = (int32)R.Int(N, TEXT("toilet"), 0);
+			B.AddSeats = (int32)R.Int(N, TEXT("addSeats"), 0); B.Cost = R.Int(N, TEXT("cost"), 0); B.Expansions = (int32)R.Int(N, TEXT("exp"), 0);
+			W.StadiumBlocks.Add(B);
+		}
+		if (W.StadiumBlocks.Num() == 0)
+		{
+			// Altstand ohne Blockdaten: Startstadion, auf die gespeicherte Kapazitaet verteilt
+			W.ResetStadiumBlocks();
+			const int64 Alt = R.Int(Root, TEXT("capacity"), 15550);
+			const int64 Summe = W.StadiumTotal();
+			if (Summe > 0 && Alt != Summe) for (FFM13World::FFM13StadiumBlock& B : W.StadiumBlocks) B.Cap = (int32)FMath::FloorToInt((float)B.Cap * (float)Alt / (float)Summe + 0.5f);
+		}
+		W.TicketSteh = R.Int(Root, TEXT("ticketSteh"), R.Int(Root, TEXT("ticketPrice"), 12));
+		W.TicketSitz = R.Int(Root, TEXT("ticketSitz"), 24); W.TicketVip = R.Int(Root, TEXT("ticketVip"), 80);
+		W.TicketDauerkarte = R.Int(Root, TEXT("ticketDauer"), 90);
+		W.StehShare = (double)R.Int(Root, TEXT("stehPromille"), 500) / 1000.0;
+		W.SitzShare = (double)R.Int(Root, TEXT("sitzPromille"), 450) / 1000.0;
+		W.VipShare = (double)R.Int(Root, TEXT("vipPromille"), 50) / 1000.0;
 		W.PendingSeats = (int32)R.Int(Root, TEXT("pendingSeats"), 0);
 		W.PendingSeatsMatchdays = (int32)R.Int(Root, TEXT("pendingSeatsMatchdays"), 0);
-		W.TicketPrice = (int32)R.Int(Root, TEXT("ticketPrice"), 13);
 		W.YouthAcademyLevel = (int32)R.Int(Root, TEXT("academy"), 1);
 		W.TrainingLevel = (int32)R.Int(Root, TEXT("training"), 1);
 		W.TvPaidThisSeason = R.Int(Root, TEXT("tvPaid"), 0);

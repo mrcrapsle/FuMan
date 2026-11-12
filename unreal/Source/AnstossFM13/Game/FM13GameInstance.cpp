@@ -117,10 +117,10 @@ FFM13StatusView UFM13GameInstance::GetStatus() const
 	S.WageBudget = Kern.WageBudget;
 	S.Wages = Kern.WagesPerMatchday();
 	S.SquadValue = Kern.SquadValue();
-	S.StadiumCapacity = Kern.StadiumCapacity;
+	S.StadiumCapacity = Kern.StadiumTotal();
 	S.PendingSeats = Kern.PendingSeats;
 	S.PendingSeatsMatchdays = Kern.PendingSeatsMatchdays;
-	S.TicketPrice = Kern.TicketPrice;
+	S.TicketPrice = (int32)Kern.TicketSteh;
 	S.YouthAcademyLevel = Kern.YouthAcademyLevel;
 	S.YouthAcademyUpgradeCost = Kern.YouthAcademyUpgradeCost();
 	S.TrainingLevel = Kern.TrainingLevel;

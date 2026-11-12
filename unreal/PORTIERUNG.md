@@ -164,7 +164,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 
 | Modul | Zeilen | Stand | Inhalt | In Unreal |
 |---|---:|---|---|---|
-| `stadium.js` | 1306 | teilweise | Stadion | Kapazität, Ausbau, Zuschauer, Ticketpreis (Blöcke, Anlagen offen) |
+| `stadium.js` | 1306 | teilweise | Stadion | Datenmodell wie im Browserspiel: zehn Blöcke mit Plätzen und Ständen, 15.550 Plätze zum Start, Zusatzplätze, Ticketpreise je Kategorie (12/24/80/90 Euro) mit Anteilen 50/45/5 Prozent, Marktpreise je Liga, Einnahmen je Kategorie, Preisgrenzen der Regler. Zwischenstand: Zuschauerformel noch vereinfacht (Schritt 2), Ausbau über Zusatzplätze im Ostblock (Schritt 3: Baustellen wie im Browserspiel) |
 | `stadium-tools.js` | 220 | offen | Stadion-Werkzeuge (Phase 26.21): Fans ohne Karte, Rendite je Ausbau, Bau-Chronik und |  |
 | `stadium-events.js` | 124 | offen | Stadion-Events: Veranstaltungen im eigenen Stadion abseits der Ligaspiele. |  |
 | `stadion-canvas.js` | 2222 | teilweise | Stadionansicht | AFM13StadiumActor in 3D (Gelände, Anlagen offen) |

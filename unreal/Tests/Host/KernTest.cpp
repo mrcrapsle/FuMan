@@ -132,7 +132,7 @@ static void TestFinanzen()
 		if (W.LastReport.bHome)
 		{
 			++Heim;
-			PRUEFE(W.LastReport.Attendance > 0 && W.LastReport.Attendance <= W.StadiumCapacity, "Zuschauer im Rahmen");
+			PRUEFE(W.LastReport.Attendance > 0 && W.LastReport.Attendance <= W.StadiumTotal(), "Zuschauer im Rahmen");
 		}
 		else PRUEFE(W.LastReport.Attendance == 0, "Auswaerts keine Zuschauereinnahmen");
 		PRUEFE((int)W.LastReport.Scorers.Num() == W.LastReport.OwnGoals, "Torschuetzen = eigene Tore");
@@ -225,16 +225,16 @@ static void TestKaderAktionen()
 	W.Money = 100000000;
 	PRUEFE(W.ExpandStadium(1000, Grund), "Ausbau startet");
 	PRUEFE(!W.ExpandStadium(1000, Grund), "Nur ein Ausbau gleichzeitig");
-	const int32 Kap = W.StadiumCapacity;
+	const int32 Kap = W.StadiumTotal();
 	for (int i = 0; i < 6; ++i) W.PlayMatchday();
-	PRUEFE(W.StadiumCapacity == Kap + 1000, "Ausbau nach 6 Spieltagen fertig");
+	PRUEFE(W.StadiumTotal() == Kap + 1000, "Ausbau nach 6 Spieltagen fertig");
 	PRUEFE(W.UpgradeYouthAcademy(Grund) && W.YouthAcademyLevel == 2, "Akademie ausgebaut");
 	while (W.PlayMatchday()) {}
 	const FFM13SeasonSummary S = W.ConcludeSeason();
 	PRUEFE(S.NewYouth.Num() == 3, "Drei Talente mit Akademie 2 (%d)", S.NewYouth.Num());
 	const int32 Jugend = W.YouthTalents.Num();
 	PRUEFE(W.PromoteYouth(0, Grund) && W.YouthTalents.Num() == Jugend - 1, "Talent aufgerueckt");
-	PRUEFE(W.SetTicketPrice(20, Grund) && W.TicketPrice == 20, "Ticketpreis");
+	PRUEFE(W.SetTicketPrice(20, Grund) && W.TicketSteh == 20, "Ticketpreis");
 	PRUEFE(!W.SetTicketPrice(0, Grund), "Ticketpreis 0 abgelehnt");
 }
 
@@ -440,7 +440,7 @@ static void TestBrowserImport()
 			PRUEFE(Summe == Gespielt * 2, "%s: Liga %d Tabelle %d = 2 x %d Spiele", Name.c_str(), L.Level, Summe, Gespielt);
 		}
 		PRUEFE(Eigene == 1, "%s: genau ein eigener Verein", Name.c_str());
-		PRUEFE(W.Squad.Num() >= 11 && W.StadiumCapacity >= 500, "%s: Kader und Stadion", Name.c_str());
+		PRUEFE(W.Squad.Num() >= 11 && W.StadiumTotal() >= 500, "%s: Kader und Stadion", Name.c_str());
 		// Gleiche Namen und Zahlen wie in der Datei
 		PRUEFE(B.str().find("\"clubName\":\"" + W.ClubName.S + "\"") != std::string::npos, "%s: Vereinsname", Name.c_str());
 		PRUEFE(B.str().find(W.Squad[0].Name.S) != std::string::npos, "%s: Spielername %s", Name.c_str(), *W.Squad[0].Name);
@@ -457,7 +457,7 @@ static void TestBrowserImport()
 		while (!W.bSacked && Tage < 40) { if (!W.PlayMatchday()) { if (W.IsSeasonFinished()) W.ConcludeSeason(); else break; } ++Tage; }
 		PRUEFE(W.bSacked || Tage == 40, "%s: 40 Spieltage weitergespielt (%d)", Name.c_str(), Tage);
 		std::printf("  %-36s %s S%d/%d %s, Konto %lld, %d Spieler, %d Talente, Stadion %d%s\n", Name.c_str(), *W.ClubName, Kopie.Season, FMath::Min(Kopie.Matchday, 34),
-			FM13::LeagueName(Kopie.LeagueLevel), (long long)Kopie.Money, Kopie.Squad.Num(), Kopie.YouthTalents.Num(), Kopie.StadiumCapacity, Kopie.bSacked ? ", entlassen" : "");
+			FM13::LeagueName(Kopie.LeagueLevel), (long long)Kopie.Money, Kopie.Squad.Num(), Kopie.YouthTalents.Num(), Kopie.StadiumTotal(), Kopie.bSacked ? ", entlassen" : "");
 	}
 	// Fremde Dateien werden abgelehnt
 	FFM13World X; FString Fehler; TArray<FString> H;
@@ -1538,6 +1538,26 @@ static void TestWeiterverkauf()
 	const int64 Auszahlung = W.Money - Geld;
 	PRUEFE(W.SellOnClauses.Num() == 0, "Der Weiterverkauf loest die Klausel aus");
 	PRUEFE(Auszahlung >= 1700000 && Auszahlung <= 3700000, "Beteiligung im erwarteten Band (%lld)", (long long)Auszahlung);
+}
+
+static void TestStadionDaten()
+{
+	std::printf("Stadion: Startblöcke, Marktpreise, Einnahmen je Kategorie, Reglergrenzen\n");
+	FFM13World W;
+	W.NewGame(TEXT("Stadion"), 141, 0);
+	PRUEFE(W.StadiumBlocks.Num() == 10, "Zehn Stadionbloecke (%d)", W.StadiumBlocks.Num());
+	PRUEFE(W.StadiumTotal() == 15550, "Startstadion 15.550 Plaetze (%d)", W.StadiumTotal());
+	PRUEFE(W.VipTotal() == 50, "VIP-Logen 50");
+	W.LeagueLevel = 0;
+	PRUEFE(W.MarketTicketPrice(TEXT("steh")) == 24 && W.MarketTicketPrice(TEXT("vip")) == 160, "Bundesliga: Marktpreise verdoppelt");
+	W.LeagueLevel = 5;
+	PRUEFE(W.MarketTicketPrice(TEXT("steh")) == 9, "6. Liga: Stehplatz 9 Euro (%lld)", (long long)W.MarketTicketPrice(TEXT("steh")));
+	W.LeagueLevel = 5;
+	// 1.000 Besucher: 500 Stehplaetze zu 12, 450 Sitzplaetze zu 24, 50 VIP zu 80
+	PRUEFE(W.TicketRevenue(1000) == 500 * 12 + 450 * 24 + 50 * 80, "Einnahmen je Kategorie (%lld)", (long long)W.TicketRevenue(1000));
+	FString G;
+	PRUEFE(!W.SetTicketPrices(1000, 24, 80, G) && G.Contains(TEXT("Stehplatz")), "Stehplatz darf nicht über 400 Prozent steigen");
+	PRUEFE(W.SetTicketPrices(15, 30, 90, G) && W.TicketSteh == 15 && W.TicketSitz == 30, "Gueltige Preise werden uebernommen");
 }
 
 static void TestMedizincheck()
@@ -2628,7 +2648,7 @@ static void BotZug(FFM13World& W)
 	const int32 Elf = W.OwnStrength();
 	// Der Bot plant wie ein vorsichtiger Manager: die Gehaelter duerfen hoechstens 80 % der erwarteten
 	// Saisoneinnahmen kosten (TV-Geld nach Tabellenplatz plus Heimspiel-Tickets), umgelegt auf den Spieltag
-	const int64 Saisoneinnahmen = FM13Economy::TvMoney(W.LeagueLevel, FMath::Max(1, W.OwnRank())) + (int64)W.StadiumCapacity * W.TicketPrice * 17 * 6 / 10;
+	const int64 Saisoneinnahmen = FM13Economy::TvMoney(W.LeagueLevel, FMath::Max(1, W.OwnRank())) + W.TicketRevenue(W.StadiumTotal()) * 17 * 6 / 10;
 	const int64 Gehaltsgrenze = Saisoneinnahmen * 8 / 10 / FM13::MatchdaysPerSeason;
 	// Liegen die Gehaelter ueber der Grenze (etwa nach einem Abstieg), geht je Spieltag der teuerste Spieler
 	if (W.WagesPerMatchday() > Gehaltsgrenze && W.Squad.Num() > FM13::MinSquadSize)
@@ -2664,7 +2684,7 @@ static void BotZug(FFM13World& W)
 	// Ausbauen mit Reserve
 	if (W.Money > W.TrainingUpgradeCost() * 4) W.UpgradeTraining(Grund);
 	if (W.Money > W.YouthAcademyUpgradeCost() * 4) W.UpgradeYouthAcademy(Grund);
-	const int32 Auslastung = W.LastReport.bHome && W.StadiumCapacity > 0 ? W.LastReport.Attendance * 100 / W.StadiumCapacity : 0;
+	const int32 Auslastung = W.LastReport.bHome && W.StadiumTotal() > 0 ? W.LastReport.Attendance * 100 / W.StadiumTotal() : 0;
 	if (Auslastung >= 98 && W.Money > FM13Economy::StadiumExpansionCost(2000) * 5) W.ExpandStadium(2000, Grund);
 }
 
@@ -2725,6 +2745,7 @@ int main()
 	TestAufstiegsbudget();
 	TestAusstiegsklausel();
 	TestWeiterverkauf();
+	TestStadionDaten();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

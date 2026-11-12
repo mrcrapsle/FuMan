@@ -180,21 +180,34 @@ namespace FM13BrowserImport
 		W.bDfbViaLandespokal = R.Bool(G, TEXT("dfbPokalViaLandespokal"), false);
 		W.YouthAcademyLevel = FMath::Clamp((int32)R.Int(G, TEXT("youthAcademyLvl"), 1), 1, 5);
 		W.TrainingLevel = FMath::Clamp((int32)R.Int(G, TEXT("equipmentLevel"), 0) + 1, 1, 5);
-		const int32 Ticket = (int32)R.Int(R.Find(G, TEXT("ticketPrices")), TEXT("steh"), FM13Economy::BaseTicketPrice(W.LeagueLevel));
-		W.TicketPrice = FMath::Clamp(Ticket, 1, FM13Economy::BaseTicketPrice(W.LeagueLevel) * 5);
+		const int32 Preise = R.Find(G, TEXT("ticketPrices"));
+		W.TicketSteh = R.Int(Preise, TEXT("steh"), 12); W.TicketSitz = R.Int(Preise, TEXT("sitz"), 24);
+		W.TicketVip = R.Int(Preise, TEXT("vip"), 80); W.TicketDauerkarte = R.Int(Preise, TEXT("dauerkarte"), 90);
 		const int32 Erwartung = R.Find(G, TEXT("seasonExpectation"));
 		W.SeasonTarget = (R.IsObject(Erwartung) && R.Int(Erwartung, TEXT("season"), 0) == W.Season)
 			? FMath::Clamp((int32)R.Int(Erwartung, TEXT("expectedRank"), 9), 1, FM13::TeamsPerLeague) : 9;
 		if (W.ClubName.IsEmpty()) { OutError = TEXT("Vereinsname fehlt im Spielstand."); return false; }
 
-		// Stadion: Summe der Blöcke plus Zusatzplätze (stadium.total ist im Browser ein Getter)
+		// Stadion: zehn Blöcke mit ihren Staenden in der Reihenfolge des Browserspiels, dazu Zusatzplaetze
 		const int32 Stadion = R.Find(Root, TEXT("stadium"));
-		int64 Plaetze = 0;
+		W.ResetStadiumBlocks();
 		const int32 Bloecke = R.Find(Stadion, TEXT("blocks"));
-		if (R.IsObject(Bloecke)) for (int32 B : Doc.Nodes[Bloecke].Children) Plaetze += R.Int(B, TEXT("cap"), 0);
-		Plaetze += R.Int(Stadion, TEXT("bonusCapacity"), 0);
-		if (Plaetze <= 0) Plaetze = R.Int(Stadion, TEXT("total"), 4000);
-		W.StadiumCapacity = (int32)FMath::Clamp<int64>(Plaetze, 500, 150000);
+		if (R.IsObject(Bloecke))
+		{
+			int32 Index = 0;
+			for (int32 B : Doc.Nodes[Bloecke].Children)
+			{
+				if (W.StadiumBlocks.IsValidIndex(Index))
+				{
+					FFM13World::FFM13StadiumBlock& K = W.StadiumBlocks[Index];
+					K.Cap = (int32)R.Int(B, TEXT("cap"), K.Cap);
+					K.FoodLvl = (int32)R.Int(B, TEXT("foodLvl"), 0); K.MerchLvl = (int32)R.Int(B, TEXT("merchLvl"), 0); K.ToiletLvl = (int32)R.Int(B, TEXT("toiletLvl"), 0);
+					K.AddSeats = (int32)R.Int(B, TEXT("addSeats"), K.AddSeats); K.Cost = R.Int(B, TEXT("cost"), K.Cost); K.Expansions = (int32)R.Int(B, TEXT("expansions"), 0);
+				}
+				++Index;
+			}
+		}
+		W.BonusCapacity = (int32)R.Int(Stadion, TEXT("bonusCapacity"), 0);
 
 		// Kader und Jugend (die Browser-Ids sind Texte, hier gibt es neue Zahlen)
 		for (int32 N : R.Items(Root, TEXT("squad"))) W.Squad.Add(ReadPlayer(R, N, W.NextPlayerId++, false));

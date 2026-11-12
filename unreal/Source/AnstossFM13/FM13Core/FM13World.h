@@ -27,10 +27,30 @@ public:
 	int64 WageBudget = 0;               // Gehaltsbudget pro Spieltag, vom Vorstand je Saison festgelegt
 	bool bSacked = false;
 
-	int32 StadiumCapacity = 4000;
+	// Stadion (js/stadium.js: stadium.blocks, bonusCapacity, total)
+	struct FFM13StadiumBlock
+	{
+		FString Key;
+		FString Name;
+		int32 Cap = 0;
+		int32 FoodLvl = 0, MerchLvl = 0, ToiletLvl = 0;
+		int32 AddSeats = 0;
+		int64 Cost = 0;
+		int32 Expansions = 0;
+	};
+	TArray<FFM13StadiumBlock> StadiumBlocks;
+	int32 BonusCapacity = 0;                                                          // stadium.bonusCapacity
+	int64 TicketSteh = 12, TicketSitz = 24, TicketVip = 80, TicketDauerkarte = 90;     // game.ticketPrices
+	double StehShare = 0.5, SitzShare = 0.45, VipShare = 0.05;                        // stadium.stehShare/sitzShare/vipShare
+	void ResetStadiumBlocks();                                                        // Startstadion wie im Browserspiel
+	int32 StadiumTotal() const;                                                       // stadium.total
+	int32 VipTotal() const;                                                           // stadium.vipTotal
+	int64 MarketTicketPrice(const FString& Kategorie) const;                            // getMarketTicketPrice()
+	int32 TicketAverage() const;                                                      // mittlerer Preis (Eingang der Zuschauerformel)
+	int64 TicketRevenue(int32 Att) const;                                             // matchRevenue je Kategorie
+	bool SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& OutReason);      // Regler 35 bis 400 Prozent des Marktpreises
 	int32 PendingSeats = 0;             // laufender Ausbau
 	int32 PendingSeatsMatchdays = 0;
-	int32 TicketPrice = 13;
 	int32 YouthAcademyLevel = 1;        // 1 bis 5: mehr und bessere Talente
 	int32 TrainingLevel = 1;            // 1 bis 5: Trainingsplatz, beschleunigt die Entwicklung
 
@@ -791,7 +811,7 @@ public:
 	static int32 AchievementCount();
 
 	// ---------- Verein ----------
-	bool SetTicketPrice(int32 Price, FString& OutReason);
+	bool SetTicketPrice(int32 Price, FString& OutReason);   // Alt-Schnittstelle fuer die UE-Schicht: nur Stehplatz
 	bool ExpandStadium(int32 Seats, FString& OutReason);
 	bool UpgradeYouthAcademy(FString& OutReason);
 	int64 YouthAcademyUpgradeCost() const;

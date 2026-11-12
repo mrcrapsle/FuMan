@@ -17,7 +17,6 @@ namespace
 {
 	// Start je Liga: Kontostand und Stadiongröße (das Browserspiel startet immer in der 6. Liga mit 150.000 €)
 	const int64 StartMoney[FM13::NumLeagues] = { 30000000, 6000000, 1500000, 600000, 250000, 150000 };
-	const int32 StartCapacity[FM13::NumLeagues] = { 60000, 30000, 15000, 8000, 5000, 4000 };
 
 	// Sponsor-Faktor je Liga (SPONSOR_LEAGUE_FACTOR in js/sponsors.js)
 	const float SponsorLeagueFactor[FM13::NumLeagues] = { 74.f, 20.f, 6.5f, 3.2f, 1.0f, 0.75f };
@@ -80,8 +79,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
 	LeagueLevel = FMath::Clamp(StartLevel, 0, FM13::NumLeagues - 1);
 	Money = StartMoney[LeagueLevel];
-	StadiumCapacity = StartCapacity[LeagueLevel];
-	TicketPrice = FM13Economy::BaseTicketPrice(LeagueLevel);
+	ResetStadiumBlocks();
 	UsedClubNames.Add(ClubName);
 	WeeklyPlan = FM13Fitness::Startplan();
 	InitLeagues(LeagueLevel);
@@ -213,8 +211,8 @@ bool FFM13World::PlayMatchday()
 	// Stadionausbau läuft über mehrere Spieltage
 	if (PendingSeatsMatchdays > 0 && --PendingSeatsMatchdays == 0)
 	{
-		StadiumCapacity += PendingSeats;
-		AddMessage(TEXT("Stadionausbau fertig"), FString::Printf(TEXT("%d neue Plaetze, das Stadion fasst jetzt %d Zuschauer."), PendingSeats, StadiumCapacity));
+		for (FFM13StadiumBlock& B : StadiumBlocks) if (B.Key == TEXT("gegen")) B.Cap += PendingSeats;   // Zwischenstand bis zum Baustellen-Port: Zusatzplaetze im Ostblock
+		AddMessage(TEXT("Stadionausbau fertig"), FString::Printf(TEXT("%d neue Plaetze, das Stadion fasst jetzt %d Zuschauer."), PendingSeats, StadiumTotal()));
 		PendingSeats = 0;
 	}
 
@@ -295,7 +293,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	if (OwnGoals > OppGoals) Fans = FMath::Min(100, Fans + 1);
 	else if (OwnGoals < OppGoals) Fans = FMath::Max(0, Fans - 1);
 
-	const int32 Att = bHome ? FMath::Min(StadiumCapacity, FMath::RoundToInt((float)FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * (float)Wetter.AttendanceMult)) : 0;
+	const int32 Att = bHome ? FMath::Min(StadiumTotal(), FMath::RoundToInt((float)FM13Economy::Attendance(StadiumTotal(), Fans, LeagueLevel, OwnRank(), TicketAverage()) * (float)Wetter.AttendanceMult)) : 0;
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
@@ -424,13 +422,13 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 		Book(Label, Betrag);
 		if (Betrag > 0) LastReport.Income += Betrag; else LastReport.Expenses -= Betrag;
 	};
-	if (bHome) Buche(TEXT("Ticketeinnahmen"), (int64)Att * TicketPrice);
+	if (bHome) Buche(TEXT("Ticketeinnahmen"), TicketRevenue(Att));
 	if (bHome && Att > 0) { HeimZuschauer.Add(Att); while (HeimZuschauer.Num() > 8) HeimZuschauer.RemoveAt(0); }
 	Buche(TEXT("Fanshop-Erloes"), SimulateMerchSales(bHome && Att > 0, bWin, Att));
 	Buche(TEXT("Sponsor Grundbetrag"), Sponsor.Base);
 	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), Sponsor.WinBonus);
 	Buche(TEXT("Gehaelter"), -WagesPerMatchday());
-	Buche(TEXT("Stadion-Unterhalt"), -(int64)(StadiumCapacity / 8));
+	Buche(TEXT("Stadion-Unterhalt"), -(int64)(StadiumTotal() / 8));
 	Buche(TEXT("Jugendakademie"), -(int64)YouthAcademyLevel * 250);
 }
 
@@ -1046,8 +1044,8 @@ void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
 		if (bHome)
 		{
 			// Pokal-Heimspiel: Zuschauer wie in der Liga, im Pokal etwas mehr Andrang
-			R.Attendance = FMath::Min(StadiumCapacity, FM13Economy::Attendance(StadiumCapacity, Fans, LeagueLevel, OwnRank(), TicketPrice) * 6 / 5);
-			const int64 Tickets = (int64)R.Attendance * TicketPrice;
+			R.Attendance = FMath::Min(StadiumTotal(), FM13Economy::Attendance(StadiumTotal(), Fans, LeagueLevel, OwnRank(), TicketAverage()) * 6 / 5);
+			const int64 Tickets = TicketRevenue(R.Attendance);
 			Book(Cup.Name + TEXT(": Ticketeinnahmen"), Tickets);
 			R.Income += Tickets;
 		}
@@ -1622,6 +1620,100 @@ void FFM13World::CheckSellOnClausePayouts()
 	}
 }
 
+// ---------- Stadion-Daten (js/stadium.js: stadium.blocks, bonusCapacity, total; js/finances.js: ticketPrices) ----------
+
+// Startstadion wie im Browserspiel (js/state.js): zehn Blöcke, 15.550 Plätze, Preise 12/24/80/90 Euro
+void FFM13World::ResetStadiumBlocks()
+{
+	StadiumBlocks.Reset();
+	auto Add = [this](const TCHAR* Key, const TCHAR* Name, int32 Cap, int32 Seats, int64 Cost)
+	{
+		FFM13StadiumBlock B;
+		B.Key = Key; B.Name = Name; B.Cap = Cap; B.AddSeats = Seats; B.Cost = Cost;
+		StadiumBlocks.Add(B);
+	};
+	Add(TEXT("haupt"), TEXT("Nord-Unterrang"), 2000, 500, 8000000);
+	Add(TEXT("hauptNord"), TEXT("Nord-Oberrang"), 1500, 500, 7000000);
+	Add(TEXT("kurve"), TEXT("Suedtribuene (Ultras)"), 3000, 1000, 6500000);
+	Add(TEXT("suedOber"), TEXT("Sued-Oberrang"), 1500, 500, 7000000);
+	Add(TEXT("gegen"), TEXT("Ost-Gegengerade"), 3000, 1000, 10500000);
+	Add(TEXT("west"), TEXT("West-Haupttribuene"), 2000, 500, 9000000);
+	Add(TEXT("vipLogen"), TEXT("VIP-Logen"), 50, 25, 4500000);
+	Add(TEXT("gaeste"), TEXT("Gaeste-Block"), 1500, 500, 4000000);
+	Add(TEXT("familie"), TEXT("Familienblock"), 800, 300, 3500000);
+	Add(TEXT("presse"), TEXT("Presse-Tribuene"), 200, 100, 3000000);
+	BonusCapacity = 0;
+	TicketSteh = 12; TicketSitz = 24; TicketVip = 80; TicketDauerkarte = 90;
+	StehShare = 0.5; SitzShare = 0.45; VipShare = 0.05;
+}
+
+// stadium.total: Summe der Blockplätze plus Zusatzplätze
+int32 FFM13World::StadiumTotal() const
+{
+	int64 Summe = BonusCapacity;
+	for (const FFM13StadiumBlock& B : StadiumBlocks) Summe += B.Cap;
+	return (int32)Summe;
+}
+
+// stadium.vipTotal: die VIP-Logen (50, wenn der Block fehlt)
+int32 FFM13World::VipTotal() const
+{
+	for (const FFM13StadiumBlock& B : StadiumBlocks) if (B.Key == TEXT("vipLogen")) return B.Cap;
+	return 50;
+}
+
+// getMarketTicketPrice(): Marktpreis je Kategorie, skaliert mit dem Ligafaktor (1 + (4 - Liga) x 0,25)
+int64 FFM13World::MarketTicketPrice(const FString& Kategorie) const
+{
+	int64 Basis = 12;
+	if (Kategorie == TEXT("sitz")) Basis = 24;
+	else if (Kategorie == TEXT("vip")) Basis = 80;
+	else if (Kategorie == TEXT("dauerkarte")) Basis = 90;
+	const double Faktor = (4.0 - (double)FMath::Clamp(LeagueLevel, 0, 5)) * 0.25 + 1.0;
+	return FM13Transfers::JsRunden((double)Basis * Faktor);
+}
+
+// Mittlerer Ticketpreis aus den Kategorien und ihren Anteilen (Eingang fuer die Zuschauerformel)
+int32 FFM13World::TicketAverage() const
+{
+	return (int32)FM13Transfers::JsRunden((double)TicketSteh * StehShare + (double)TicketSitz * SitzShare + (double)TicketVip * VipShare);
+}
+
+// Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen
+int64 FFM13World::TicketRevenue(int32 Att) const
+{
+	const int64 Steh = FM13Transfers::JsRunden((double)Att * StehShare);
+	const int64 Sitz = FM13Transfers::JsRunden((double)Att * SitzShare);
+	const int64 Vip = FMath::Min<int64>(VipTotal(), FM13Transfers::JsRunden((double)Att * VipShare));
+	return Steh * TicketSteh + Sitz * TicketSitz + Vip * TicketVip;
+}
+
+// updateTicketPriceSlider()/getTicketSliderRange(): je Kategorie von 35 % bis 400 % des Marktpreises
+bool FFM13World::SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& OutReason)
+{
+	const TCHAR* Namen[3] = { TEXT("Stehplatz"), TEXT("Sitzplatz"), TEXT("VIP") };
+	const TCHAR* Kat[3] = { TEXT("steh"), TEXT("sitz"), TEXT("vip") };
+	const int64 Werte[3] = { Steh, Sitz, Vip };
+	for (int32 i = 0; i < 3; ++i)
+	{
+		const int64 Markt = MarketTicketPrice(Kat[i]);
+		const int64 Min = FMath::Max<int64>(1, FM13Transfers::JsRunden((double)Markt * 0.35));
+		const int64 Max = FM13Transfers::JsRunden((double)Markt * 4.0);
+		if (Werte[i] < Min || Werte[i] > Max)
+		{
+			OutReason = FString::Printf(TEXT("%s: erlaubt sind %lld bis %lld Euro."), Namen[i], (long long)Min, (long long)Max);
+			return false;
+		}
+	}
+	TicketSteh = Steh; TicketSitz = Sitz; TicketVip = Vip;
+	return true;
+}
+
+bool FFM13World::SetTicketPrice(int32 Price, FString& OutReason)
+{
+	return SetTicketPrices(Price, TicketSitz, TicketVip, OutReason);   // UE-Schnittstelle: nur der Stehplatzpreis
+}
+
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin
 int32 FFM13World::RenewalWage(const FFM13Player& P) const
 {
@@ -1708,14 +1800,6 @@ bool FFM13World::ReleaseYouth(int32 YouthIndex, FString& OutReason)
 }
 
 // ---------- Verein ----------
-
-bool FFM13World::SetTicketPrice(int32 Price, FString& OutReason)
-{
-	const int32 Basis = FM13Economy::BaseTicketPrice(LeagueLevel);
-	if (Price < 1 || Price > Basis * 5) { OutReason = FString::Printf(TEXT("Erlaubt sind 1 bis %d Euro."), Basis * 5); return false; }
-	TicketPrice = Price;
-	return true;
-}
 
 bool FFM13World::ExpandStadium(int32 Seats, FString& OutReason)
 {
@@ -2239,7 +2323,7 @@ void FFM13World::CheckAchievements(bool bSeasonEnd, int32 Rank, EFM13SeasonOutco
 	if (Records.LongestUnbeatenStreak >= 10) Unlock(TEXT("unbeaten-10"), OutNew);
 	if (Records.LongestUnbeatenStreak >= 20) Unlock(TEXT("unbeaten-20"), OutNew);
 	if (YouthAcademyLevel >= 3) Unlock(TEXT("talentschmiede"), OutNew);
-	if (StadiumCapacity >= 25000) Unlock(TEXT("grosses-stadion"), OutNew);
+	if (StadiumTotal() >= 25000) Unlock(TEXT("grosses-stadion"), OutNew);
 	if (!bSeasonEnd) return;
 	if (Rank == 1) Unlock(TEXT("meister"), OutNew);
 	if (Outcome == EFM13SeasonOutcome::Promoted) Unlock(TEXT("aufstieg"), OutNew);
@@ -2277,8 +2361,8 @@ FFM13RelegationResult FFM13World::PlayRelegation(int32 Rank)
 		Tore[Leg][1] = bHeim ? A : H;
 		if (bHeim)
 		{
-			const int32 Zuschauer = StadiumCapacity; // Relegation: ausverkauft
-			Book(TEXT("Relegation: Ticketeinnahmen"), (int64)Zuschauer * TicketPrice);
+			const int32 Zuschauer = StadiumTotal(); // Relegation: ausverkauft
+			Book(TEXT("Relegation: Ticketeinnahmen"), TicketRevenue(Zuschauer));
 		}
 	}
 	R.Leg1Own = Tore[0][0]; R.Leg1Opp = Tore[0][1]; R.Leg2Own = Tore[1][0]; R.Leg2Opp = Tore[1][1];
@@ -2620,8 +2704,8 @@ void FFM13World::PlayEuropeMatchday()
 			PickScorers(R.OwnGoals, R.Scorers);
 			if (bEigenHeim)
 			{
-				R.Attendance = StadiumCapacity;   // Europapokal: ausverkauft
-				const int64 Tickets = (int64)StadiumCapacity * TicketPrice * 3 / 2;
+				R.Attendance = StadiumTotal();   // Europapokal: ausverkauft
+				const int64 Tickets = TicketRevenue(StadiumTotal()) * 3 / 2;
 				Book(TEXT("Europapokal: Ticketeinnahmen"), Tickets);
 				R.Income += Tickets;
 			}
@@ -5811,7 +5895,7 @@ namespace
 
 int32 FFM13World::AverageHeimZuschauer() const
 {
-	if (HeimZuschauer.Num() == 0) return FMath::Max(200, StadiumCapacity);
+	if (HeimZuschauer.Num() == 0) return FMath::Max(200, StadiumTotal());
 	int64 Summe = 0;
 	for (int32 A : HeimZuschauer) Summe += A;
 	return (int32)MerchRund((double)Summe / HeimZuschauer.Num());
