@@ -1852,6 +1852,57 @@ void FFM13World::TickStadiumConstruction()
 	}
 }
 
+// ---------- DFB-Lizenz (js/stadium.js: DFB_LICENSING_REQUIREMENTS, checkDfbLicensingStatus, getLicenceBuildsInProgress) ----------
+
+namespace
+{
+	// Anforderungen je Liga (Ziel = naechsthoehere Liga): Kapazitaet, Flutlicht, Finanzreserve, Jugendinternat
+	struct FLizenzBedingung { int32 MinKapazitaet; bool bFlutlicht; int64 MinReserve; int32 MinInternat; };
+	const FLizenzBedingung LizenzBedingungen[6] = {
+		{ 15000, true, 500000, 2 },   // 1. Bundesliga
+		{ 10000, true, 250000, 1 },   // 2. Bundesliga
+		{ 6000, true, 100000, 0 },    // 3. Liga
+		{ 3000, false, 30000, 0 },    // Regionalliga
+		{ 1000, false, 0, 0 },        // Oberliga
+		{ 0, false, 0, 0 },           // Landesliga
+	};
+}
+
+// Kapazitaetsplaetze, die gerade im Bau sind (Rangerweiterungen zaehlen als Auflage im Bau)
+int32 FFM13World::BauPlaetze() const
+{
+	int32 Summe = 0;
+	for (const FFM13StadiumBaustelle& P : StadiumBaustellen) if (P.Typ == 0) Summe += P.Seats;
+	return Summe;
+}
+
+// checkDfbLicensingStatus(): welche Auflagen fuer die naechste Liga fehlen; Auflagen im Bau gelten als erfuellbar
+FFM13World::FFM13LizenzStatus FFM13World::DfbLicensingStatus() const
+{
+	FFM13LizenzStatus S;
+	if (LeagueLevel <= 0) return S;
+	S.ZielLiga = LeagueLevel - 1;
+	const FLizenzBedingung& Req = LizenzBedingungen[FMath::Clamp(S.ZielLiga, 0, 5)];
+	const int32 Bau = BauPlaetze();
+	const int32 Kap = StadiumTotal();
+	auto Pruefe = [&S](bool bAktiv, bool bErfuellt, bool bImBau, const FString& Text)
+	{
+		if (!bAktiv) return;
+		S.Gesamt++;
+		if (bErfuellt || bImBau) S.Erfuellt++;
+		if (!bErfuellt && bImBau) S.Auflagen.Add(Text + TEXT(" (im Bau)"));
+		else if (!bErfuellt) S.Fehlend.Add(Text);
+	};
+	Pruefe(Req.MinKapazitaet > 0, Kap >= Req.MinKapazitaet, Kap + Bau >= Req.MinKapazitaet,
+		FString::Printf(TEXT("Stadionkapazitaet: %d / %d"), Kap, Req.MinKapazitaet));
+	Pruefe(Req.bFlutlicht, bFlutlicht, false, TEXT("Flutlichtanlage fehlt"));
+	Pruefe(Req.MinReserve > 0, Money >= Req.MinReserve, false,
+		FString::Printf(TEXT("Finanzreserve: %lld / %lld"), (long long)Money, (long long)Req.MinReserve));
+	// Jugendinternat (Campusgebaeude) ist im Kern noch nicht portiert: Stufe 0
+	Pruefe(Req.MinInternat > 0, false, false, FString::Printf(TEXT("Jugendinternat: Stufe 0 / %d"), Req.MinInternat));
+	return S;
+}
+
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin
 int32 FFM13World::RenewalWage(const FFM13Player& P) const
 {

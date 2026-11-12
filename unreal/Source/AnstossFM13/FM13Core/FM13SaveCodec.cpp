@@ -189,6 +189,7 @@ namespace FM13Save
 		W.Field(TEXT("stehPromille"), (int64)FMath::RoundToInt((float)(S.StehShare * 1000.0)));
 		W.Field(TEXT("sitzPromille"), (int64)FMath::RoundToInt((float)(S.SitzShare * 1000.0)));
 		W.Field(TEXT("vipPromille"), (int64)FMath::RoundToInt((float)(S.VipShare * 1000.0)));
+		W.FieldBool(TEXT("flutlicht"), S.bFlutlicht);
 		W.ArrayKey(TEXT("baustellen"));
 		for (const FFM13World::FFM13StadiumBaustelle& P : S.StadiumBaustellen)
 		{
@@ -1014,6 +1015,7 @@ namespace FM13Save
 		W.StehShare = (double)R.Int(Root, TEXT("stehPromille"), 500) / 1000.0;
 		W.SitzShare = (double)R.Int(Root, TEXT("sitzPromille"), 450) / 1000.0;
 		W.VipShare = (double)R.Int(Root, TEXT("vipPromille"), 50) / 1000.0;
+		W.bFlutlicht = R.Bool(Root, TEXT("flutlicht"), false);
 		W.PendingSeats = (int32)R.Int(Root, TEXT("pendingSeats"), 0);
 		W.PendingSeatsMatchdays = (int32)R.Int(Root, TEXT("pendingSeatsMatchdays"), 0);
 		W.YouthAcademyLevel = (int32)R.Int(Root, TEXT("academy"), 1);

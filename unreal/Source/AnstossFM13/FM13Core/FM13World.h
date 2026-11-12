@@ -58,6 +58,10 @@ public:
 	bool ExpandBlock(const FString& Key, FString& OutReason);                         // expandBlock()
 	bool UpgradeBlockInfra(const FString& Key, int32 Art, FString& OutReason);        // upgradeBlockInfra()
 	void TickStadiumConstruction();                                                    // tickStadiumConstruction(): jeden Spieltag
+	bool bFlutlicht = false;                                                          // stadium.flutlicht
+	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; };
+	int32 BauPlaetze() const;
+	FFM13LizenzStatus DfbLicensingStatus() const;                                      // checkDfbLicensingStatus()
 	int32 PendingSeats = 0;             // laufender Ausbau
 	int32 PendingSeatsMatchdays = 0;
 	int32 YouthAcademyLevel = 1;        // 1 bis 5: mehr und bessere Talente

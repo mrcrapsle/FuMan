@@ -1593,6 +1593,36 @@ static void TestStadionBaustellen()
 	PRUEFE(!W.ExpandBlock(TEXT("kurve"), G) && G.Contains(TEXT("nicht gedeckt")), "Ohne Geld kein Ausbau");
 }
 
+static void TestDfbLizenz()
+{
+	std::printf("DFB-Lizenz: Anforderungen fuer die naechste Liga, Auflagen im Bau\n");
+	FFM13World W;
+	W.NewGame(TEXT("Lizenz"), 141, 0);
+	W.LeagueLevel = 1;             // Ziel: 1. Bundesliga
+	W.Money = 1000000;
+	W.bFlutlicht = false;
+	FFM13World::FFM13LizenzStatus S = W.DfbLicensingStatus();
+	PRUEFE(S.ZielLiga == 0, "Ziel ist die 1. Bundesliga");
+	PRUEFE(S.Gesamt == 4 && S.Fehlend.Num() == 2 && S.Auflagen.Num() == 0, "Ohne Flutlicht und Internat fehlen zwei Auflagen (%d)", S.Fehlend.Num());
+	W.bFlutlicht = true;
+	W.Money = 100000;
+	S = W.DfbLicensingStatus();
+	PRUEFE(S.Fehlend.Num() == 2, "Ohne Reserve von 500.000 und Internat fehlen zwei");
+	W.Money = 1000000;
+	S = W.DfbLicensingStatus();
+	PRUEFE(S.Fehlend.Num() == 1, "Mit Reserve und Flutlicht fehlt nur das Internat");
+	// Kapazitaet knapp: der Bau bringt die Plaetze, die Auflage gilt dann als im Bau
+	W.StadiumBlocks[4].Cap = 450;   // Ostblock: Gesamt 13.000
+	PRUEFE(W.StadiumTotal() < 15000, "Kapazitaet unter 15.000");
+	FFM13World::FFM13StadiumBaustelle P;
+	P.Typ = 0; P.Block = TEXT("haupt"); P.Seats = 5000; P.TageRest = 5; P.Gesamttage = 5;
+	W.StadiumBaustellen.Add(P);
+	S = W.DfbLicensingStatus();
+	PRUEFE(S.Auflagen.Num() == 1, "Kapazitaet im Bau zaehlt als Auflage");
+	W.LeagueLevel = 0;
+	PRUEFE(W.DfbLicensingStatus().ZielLiga == -1, "In der hoechsten Liga gibt es kein Ziel");
+}
+
 static void TestMedizincheck()
 {
 	std::printf("Medizincheck: Befund, Gebuehr, Nachlass, Unterschrift\n");
@@ -2780,6 +2810,7 @@ int main()
 	TestWeiterverkauf();
 	TestStadionDaten();
 	TestStadionBaustellen();
+	TestDfbLizenz();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();
