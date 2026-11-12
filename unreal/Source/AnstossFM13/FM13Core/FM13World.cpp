@@ -414,6 +414,16 @@ bool FFM13World::SetTrainingIntensity(const FString& Level, FString& OutReason)
 	return true;
 }
 
+// LEAGUE_OPERATING_COST (js/finances.js): Betriebskosten je Saison, je Liga
+namespace
+{
+	int64 BetriebskostenJeSaison(int32 Liga)
+	{
+		static const int64 Kosten[6] = { 40000000, 5000000, 500000, 0, 0, 0 };
+		return Kosten[FMath::Clamp(Liga, 0, 5)];
+	}
+}
+
 void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 {
 	auto Buche = [this](const TCHAR* Label, int64 Betrag)
@@ -422,12 +432,31 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 		Book(Label, Betrag);
 		if (Betrag > 0) LastReport.Income += Betrag; else LastReport.Expenses -= Betrag;
 	};
-	if (bHome) Buche(TEXT("Ticketeinnahmen"), TicketRevenue(Att));
+	// Brutto wie grossIncome in js/match-live.js: Tickets, Fanshop, Sponsor und die TV-Rate dieses Spieltags
+	const int64 Tickets = bHome ? TicketRevenue(Att) : 0;
+	const int64 Fanshop = SimulateMerchSales(bHome && Att > 0, bWin, Att);
+	const int64 SponsorBrutto = Sponsor.Base + (bWin ? Sponsor.WinBonus : 0);
+	const int64 TvRate = FM13Economy::TvMoney(LeagueLevel, OwnRank()) / FM13::MatchdaysPerSeason;
+	const int64 Brutto = Tickets + Fanshop + SponsorBrutto + TvRate;
+	const int64 Steuer = FM13Transfers::JsRunden((double)FMath::Max<int64>(0, Brutto) * 0.12);   // getTaxRate(): 12 Prozent ohne Steuerberater
+	const int64 Betrieb = FM13Transfers::JsRunden((double)BetriebskostenJeSaison(LeagueLevel) / (double)FM13::MatchdaysPerSeason);
+	int64 Reise = 0;
+	if (!bHome)
+	{
+		// Auswaertsfahrt: (800 + (6 - Liga) x 300), Bus spart 45 Prozent; Reisefaktor nach Entfernung folgt mit der Geografie
+		Reise = FM13Transfers::JsRunden((800.0 + (double)(6 - FMath::Clamp(LeagueLevel, 0, 5)) * 300.0) * (bBusTravel ? 0.55 : 1.0));
+	}
+	const int64 Personal = StaffWagesTotal();
+	if (bHome) Buche(TEXT("Ticketeinnahmen"), Tickets);
 	if (bHome && Att > 0) { HeimZuschauer.Add(Att); while (HeimZuschauer.Num() > 8) HeimZuschauer.RemoveAt(0); }
-	Buche(TEXT("Fanshop-Erloes"), SimulateMerchSales(bHome && Att > 0, bWin, Att));
+	Buche(TEXT("Fanshop-Erloes"), Fanshop);
 	Buche(TEXT("Sponsor Grundbetrag"), Sponsor.Base);
 	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), Sponsor.WinBonus);
 	Buche(TEXT("Gehaelter"), -WagesPerMatchday());
+	Buche(TEXT("Personalgehaelter"), -Personal);
+	Buche(TEXT("Steuern und Abgaben"), -Steuer);
+	Buche(TEXT("Betriebskosten"), -Betrieb);
+	if (Reise > 0) Buche(TEXT("Reisekosten"), -Reise);
 	Buche(TEXT("Stadion-Unterhalt"), -(int64)(StadiumTotal() / 8));
 	Buche(TEXT("Jugendakademie"), -(int64)YouthAcademyLevel * 250);
 }
