@@ -1627,6 +1627,43 @@ static void TestDfbLizenz()
 	PRUEFE(W.DfbLicensingStatus().ZielLiga == -1, "In der hoechsten Liga gibt es kein Ziel");
 }
 
+static void TestZuschauerformel()
+{
+	std::printf("Zuschauerformel: Liga-Obergrenze, Derby-Boost, Formkurve, Tagesstreuung\n");
+	FFM13World W;
+	W.NewGame(TEXT("Zuschauer"), 161, 0);
+	W.LeagueLevel = 5;          // Landesliga: Obergrenze 1.000 bei 100 % Fans
+	W.Fans = 100;
+	W.OwnRecentForm.Empty();
+	PRUEFE(W.LeagueAttendanceCap(1.0) == 1000, "Landesliga, 100 Prozent Fans: Obergrenze 1.000 (%d)", W.LeagueAttendanceCap(1.0));
+	PRUEFE(W.LeagueAttendanceCap(2.2) == 1720, "Derby-Boost 2,2 gedaempft mit 0,6: 1.720 (%d)", W.LeagueAttendanceCap(2.2));
+	W.Fans = 0;
+	PRUEFE(W.LeagueAttendanceCap(1.0) == 350, "Ohne Fans bleibt der Anhang bei 35 Prozent (%d)", W.LeagueAttendanceCap(1.0));
+	W.Fans = 100;
+	W.OwnRecentForm = { 1, 1, 1, 1, 1 };
+	PRUEFE(std::fabs(W.AttendanceForm() - 0.10) < 1e-9, "Fuenf Siege: +10 Prozent Formkurve");
+	W.OwnRecentForm = { -1, -1, 0, 1, -1 };
+	PRUEFE(std::fabs(W.AttendanceForm() + 0.04) < 1e-9, "Gemischte Form: -4 Prozent");
+	W.OwnRecentForm.Empty();
+	const FFM13World::FFM13AttendanceResult E = W.AttendanceDetails(1.0, 1.0, 1.0);
+	PRUEFE(E.Zuschauer > 0 && E.Zuschauer <= 1000 && E.Nachfrage >= E.Zuschauer, "Landesliga: Zuschauer %d, Nachfrage %d unter der Obergrenze", E.Zuschauer, E.Nachfrage);
+	PRUEFE(E.OhneKarte == 0, "Ohne ausverkauftes Stadion keine Fans ohne Karte");
+	const FFM13World::FFM13AttendanceResult Derby = W.AttendanceDetails(2.2, 1.0, 1.0);
+	PRUEFE(Derby.Zuschauer >= E.Zuschauer, "Derby-Boost hebt die Zuschauer nicht unter den Normalfall");
+	// Tagesstreuung: ausverkauft = 1,0, sonst 0,92 bis 1,08
+	W.LeagueLevel = 0;
+	W.StadiumBlocks[0].Cap = 10;
+	bool bOk = true;
+	for (int32 m = 0; m < 20; ++m)
+	{
+		W.Matchday = m;
+		const double N = W.KickoffNoise(1.0);
+		const bool bVoll = W.AttendanceDetails(1.0, 1.0, 1.0).Zuschauer >= W.StadiumTotal();
+		if (bVoll ? N != 1.0 : (N < 0.92 - 1e-9 || N > 1.08 + 1e-9)) bOk = false;
+	}
+	PRUEFE(bOk, "Tagesstreuung: ausverkauft genau 1,0, sonst zwischen 0,92 und 1,08");
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -2911,6 +2948,7 @@ int main()
 	TestStadionBaustellen();
 	TestDfbLizenz();
 	TestCampusInternat();
+	TestZuschauerformel();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

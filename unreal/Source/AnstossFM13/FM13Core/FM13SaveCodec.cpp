@@ -493,6 +493,9 @@ namespace FM13Save
 		W.ArrayKey(TEXT("heimZuschauer"));
 		for (int32 Z : S.HeimZuschauer) { W.ElementObject(); W.Field(TEXT("z"), Z); W.EndObject(); }
 		W.EndArray();
+		W.ArrayKey(TEXT("ownRecentForm"));
+		for (int32 V : S.OwnRecentForm) { W.ElementObject(); W.Field(TEXT("v"), V); W.EndObject(); }
+		W.EndArray();
 		W.FieldBool(TEXT("leAktiv"), S.LimitedEdition.bAktiv); W.Field(TEXT("leName"), S.LimitedEdition.Name);
 		W.Field(TEXT("leLager"), S.LimitedEdition.Lager); W.Field(TEXT("leStart"), S.LimitedEdition.Start);
 		W.Field(TEXT("lePreis"), S.LimitedEdition.Preis); W.Field(TEXT("leVerk"), S.LimitedEdition.Verkauft); W.Field(TEXT("leUmsatz"), S.LimitedEdition.Umsatz);
@@ -1287,6 +1290,7 @@ namespace FM13Save
 		}
 		W.HeimZuschauer.Reset();
 		for (int32 N : R.Items(Root, TEXT("heimZuschauer"))) W.HeimZuschauer.Add((int32)R.Int(N, TEXT("z"), 0));
+		for (int32 N : R.Items(Root, TEXT("ownRecentForm"))) W.OwnRecentForm.Add((int32)R.Int(N, TEXT("v"), 0));
 		W.LimitedEdition.bAktiv = R.Bool(Root, TEXT("leAktiv"), false);
 		W.LimitedEdition.Name = R.Str(Root, TEXT("leName"), TEXT(""));
 		W.LimitedEdition.Lager = (int32)R.Int(Root, TEXT("leLager"), 0);

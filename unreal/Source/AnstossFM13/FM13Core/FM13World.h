@@ -47,6 +47,14 @@ public:
 	int32 VipTotal() const;                                                           // stadium.vipTotal
 	int64 MarketTicketPrice(const FString& Kategorie) const;                            // getMarketTicketPrice()
 	int32 TicketAverage() const;                                                      // mittlerer Preis (Eingang der Zuschauerformel)
+	struct FFM13AttendanceResult { int32 Kapazitaet = 0; int32 Zuschauer = 0; int32 Nachfrage = 0; int32 OhneKarte = 0; };   // calculateMatchAttendanceDetails
+	TArray<int32> OwnRecentForm;                  // letzte fuenf Ligaspiele: 1 Sieg, 0 Remis, -1 Niederlage (recentForm)
+	int32 LeagueAttendanceCap(double BoostMult) const;                                // getLeagueAttendanceCap
+	double TicketPriceElasticityFactor(double PreisMult) const;                       // getTicketPriceElasticityFactor
+	double AttendanceForm() const;                                                    // Formkurve: +2 % je Sieg, -2 % je Niederlage
+	double AttendanceFactor(double PreisMult) const;                                  // getAttendanceFactor (ohne Ausbau-Anlagen, Schritt 3)
+	FFM13AttendanceResult AttendanceDetails(double BoostMult, double Noise, double PreisMult) const;   // calculateMatchAttendanceDetails
+	double KickoffNoise(double BoostMult) const;                                      // Tagesstreuung beim Anpfiff (0,92 bis 1,08, sonst 1,0 bei ausverkauft)
 	int64 TicketRevenue(int32 Att) const;                                             // matchRevenue je Kategorie
 	bool SetTicketPrices(int64 Steh, int64 Sitz, int64 Vip, FString& OutReason);      // Regler 35 bis 400 Prozent des Marktpreises
 	struct FFM13StadiumBaustelle { int32 Typ = 0; FString Block; int32 Seats = 0; int32 Infra = 0; int64 Kosten = 0; int32 TageRest = 0; int32 Gesamttage = 0; };   // Typ 0 Rangerweiterung, 1 Komfort, 2 Flutlicht, 3 Jugendinternat

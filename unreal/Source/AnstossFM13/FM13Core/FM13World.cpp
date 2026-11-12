@@ -293,7 +293,12 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	if (OwnGoals > OppGoals) Fans = FMath::Min(100, Fans + 1);
 	else if (OwnGoals < OppGoals) Fans = FMath::Max(0, Fans - 1);
 
-	const int32 Att = bHome ? FMath::Min(StadiumTotal(), FMath::RoundToInt((float)FM13Economy::Attendance(StadiumTotal(), Fans, LeagueLevel, OwnRank(), TicketAverage()) * (float)Wetter.AttendanceMult)) : 0;
+	// Zuschauerformel: Derby-Boost 2,2 im Heimspiel gegen den Rivalen, Tagesstreuung beim Anpfiff
+	const double Boost = bHome && OppName == RivalName ? 2.2 : 1.0;
+	const int32 Att = bHome ? AttendanceDetails(Boost, KickoffNoise(Boost), 1.0).Zuschauer : 0;
+	// Formkurve fuer das naechste Spiel (das aktuelle zaehlt nicht mehr fuer seinen eigenen Zuschauerschnitt)
+	OwnRecentForm.Insert(OwnGoals > OppGoals ? 1 : (OwnGoals < OppGoals ? -1 : 0), 0);
+	while (OwnRecentForm.Num() > 5) OwnRecentForm.RemoveAt(OwnRecentForm.Num() - 1);
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
@@ -1091,7 +1096,8 @@ void FFM13World::PlayCupRound(FFM13Cup& Cup, bool bDfb)
 		if (bHome)
 		{
 			// Pokal-Heimspiel: Zuschauer wie in der Liga, im Pokal etwas mehr Andrang
-			R.Attendance = FMath::Min(StadiumTotal(), FM13Economy::Attendance(StadiumTotal(), Fans, LeagueLevel, OwnRank(), TicketAverage()) * 6 / 5);
+			const double CupBoost = 1.4;   // Pokal und Europa: gedaempfter Andrang (cupBoostActive)
+			R.Attendance = AttendanceDetails(CupBoost, KickoffNoise(CupBoost), 1.0).Zuschauer;
 			const int64 Tickets = TicketRevenue(R.Attendance);
 			Book(Cup.Name + TEXT(": Ticketeinnahmen"), Tickets);
 			R.Income += Tickets;
@@ -1724,6 +1730,89 @@ int64 FFM13World::MarketTicketPrice(const FString& Kategorie) const
 int32 FFM13World::TicketAverage() const
 {
 	return (int32)FM13Transfers::JsRunden((double)TicketSteh * StehShare + (double)TicketSitz * SitzShare + (double)TicketVip * VipShare);
+}
+
+namespace
+{
+	// LEAGUE_MAX_ATTENDANCE und LEAGUE_ATTENDANCE_CEILING (js/stadium.js)
+	const int32 LigaMaxZuschauer[6] = { 75000, 45000, 18000, 7000, 2800, 1000 };
+	const double LigaZuschauerDecke[6] = { 0.90, 0.60, 0.32, 0.14, 0.06, 0.025 };
+
+	// calculateElasticity() (js/merchandise.js) mit Kommazahlen
+	double ElastizitaetDoppelt(double Preis, double Optimal)
+	{
+		const double Verhaeltnis = Preis / (Optimal > 0.0 ? Optimal : 1.0);
+		if (Verhaeltnis <= 0.6) return 1.8;
+		if (Verhaeltnis <= 0.85) return 1.35;
+		if (Verhaeltnis <= 1.15) return 1.0;
+		if (Verhaeltnis <= 1.45) return 0.55;
+		return FMath::Max(0.08, (double)FMath::Pow(1.0 / Verhaeltnis, 2.5));
+	}
+}
+
+// getLeagueAttendanceCap(): Liga-Obergrenze mit Anhang (Fan-Zufriedenheit), Boost gedaempft mit 0,6
+int32 FFM13World::LeagueAttendanceCap(double BoostMult) const
+{
+	const double Basis = LigaMaxZuschauer[FMath::Clamp(LeagueLevel, 0, 5)];
+	const double Anhang = 0.35 + (double)FMath::Clamp(Fans, 0, 100) / 100.0 * 0.65;
+	const double Gedaempft = 1.0 + (BoostMult - 1.0) * 0.6;
+	return (int32)FM13Transfers::JsRunden(Basis * Anhang * Gedaempft);
+}
+
+// getTicketPriceElasticityFactor(): Preis gegen Marktpreis je Kategorie, nach Sitzplatzanteilen gewichtet, gedaempft mit 0,4
+double FFM13World::TicketPriceElasticityFactor(double PreisMult) const
+{
+	const double Steh = ElastizitaetDoppelt((double)TicketSteh * PreisMult, (double)MarketTicketPrice(TEXT("steh")));
+	const double Sitz = ElastizitaetDoppelt((double)TicketSitz * PreisMult, (double)MarketTicketPrice(TEXT("sitz")));
+	const double Vip = ElastizitaetDoppelt((double)TicketVip * PreisMult, (double)MarketTicketPrice(TEXT("vip")));
+	const double Gewichtet = Steh * StehShare + Sitz * SitzShare + Vip * VipShare;
+	return 1.0 + (Gewichtet - 1.0) * 0.4;
+}
+
+// Formkurve der letzten fuenf Ligaspiele: Sieg +2 %, Niederlage -2 % (getMatchdayAttendanceMood)
+double FFM13World::AttendanceForm() const
+{
+	int32 Summe = 0;
+	for (int32 V : OwnRecentForm) Summe += V;
+	return (double)Summe * 0.02;
+}
+
+// getAttendanceFactor(): Komfort je Block, Wetter, Form, Ticketpreis; danach Liga-Decke
+double FFM13World::AttendanceFactor(double PreisMult) const
+{
+	double Komfort = 0.0;
+	for (const FFM13StadiumBlock& B : StadiumBlocks) Komfort += (double)(B.FoodLvl + B.MerchLvl + B.ToiletLvl) / 9.0;
+	double AvgKomfort = 0.9 + (Komfort / 8.0) * 0.2;
+	AvgKomfort *= (double)FM13Match::Weathers()[WeatherIndex].AttendanceMult;
+	AvgKomfort += AttendanceForm();
+	const double Roh = FMath::Clamp((double)Fans / 100.0 * AvgKomfort * TicketPriceElasticityFactor(PreisMult), 0.3, 1.2);
+	const double Decke = LigaZuschauerDecke[FMath::Clamp(LeagueLevel, 0, 5)];
+	return Decke * (Roh / 0.75);
+}
+
+// calculateMatchAttendanceDetails(): Zuschauer, Nachfrage und Fans ohne Karte eines Heimspiels.
+// Die Tagesstreuung wirkt auf die Nachfrage, erst danach greift die Kapazitaet (Phase 26.22).
+FFM13World::FFM13AttendanceResult FFM13World::AttendanceDetails(double BoostMult, double Noise, double PreisMult) const
+{
+	const int32 Kap = StadiumTotal();
+	const double Faktor = AttendanceFactor(PreisMult) * BoostMult;
+	const int32 AusKap = (int32)FM13Transfers::JsRunden((double)Kap * FMath::Min(1.0, Faktor * Noise));
+	const double Wetter = (double)FM13Match::Weathers()[WeatherIndex].AttendanceMult;
+	const double Schwankung = Wetter * (1.0 + AttendanceForm()) * TicketPriceElasticityFactor(PreisMult) * Noise;
+	const int32 Interesse = (int32)FM13Transfers::JsRunden((double)LeagueAttendanceCap(BoostMult) * FMath::Min(1.12, Schwankung));
+	FFM13AttendanceResult E;
+	E.Kapazitaet = Kap;
+	E.Zuschauer = FMath::Max(0, FMath::Min(Kap, FMath::Min(AusKap, Interesse)));
+	E.Nachfrage = FMath::Max(E.Zuschauer, FMath::Min((int32)FM13Transfers::JsRunden((double)Kap * Faktor * Noise), Interesse));
+	E.OhneKarte = E.Zuschauer >= Kap ? FMath::Max(0, E.Nachfrage - Kap) : 0;
+	return E;
+}
+
+// Tagesstreuung beim Anpfiff (match.js: kickoffNoise): ausverkauft = 1,0, sonst 0,92 bis 1,08 aus der Spielkennung
+double FFM13World::KickoffNoise(double BoostMult) const
+{
+	if (AttendanceDetails(BoostMult, 1.0, 1.0).Zuschauer >= StadiumTotal()) return 1.0;
+	return 0.92 + FM13Transfers::HashEinheit(Season * 1000 + Matchday, 7777) * 0.16;
 }
 
 // Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen
@@ -5904,6 +5993,7 @@ void FFM13World::ResetOekonomieGrunddaten()
 	for (int32 i = 0; i < 25; ++i) Waren.Add(FFM13Ware{ WarenNamen[i], WarenLager[i], WarenRoh[i], WarenMenge[i], WarenFabrik[i], WarenKosten[i], WarenPreis[i], WarenPreis[i], WarenBeliebt[i], 0, 0 });
 	MerchVerlauf.Reset();
 	HeimZuschauer.Reset();
+	OwnRecentForm.Reset();
 	LimitedEdition = FFM13LimitedEdition();
 	Saisonkollektion = FFM13Saisonkollektion();
 	Produktionen.Reset();
