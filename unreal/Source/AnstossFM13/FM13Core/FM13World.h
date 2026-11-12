@@ -59,6 +59,9 @@ public:
 	bool UpgradeBlockInfra(const FString& Key, int32 Art, FString& OutReason);        // upgradeBlockInfra()
 	void TickStadiumConstruction();                                                    // tickStadiumConstruction(): jeden Spieltag
 	bool bFlutlicht = false;                                                          // stadium.flutlicht
+	struct FFM13Nachfrist { bool bAktiv = false; int32 Ziel = -1; int32 Frist = 0; };
+	FFM13Nachfrist DfbNachfrist;                    // game.dfbGracePeriod
+	void TickDfbNachfrist();                        // checkDfbLicenseDeadlines(): jeden Spieltag
 	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; };
 	int32 BauPlaetze() const;
 	FFM13LizenzStatus DfbLicensingStatus() const;                                      // checkDfbLicensingStatus()

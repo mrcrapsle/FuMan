@@ -298,6 +298,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
 	TickStadiumConstruction();
+	TickDfbNachfrist();
 	TickFixedDeposit();
 	TickMoneyHistory();
 	TickCreditRating();          // wie js/match-live.js: Festgeld und Bonitaet je Spieltag
@@ -648,6 +649,20 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 		if (LastRelegation.bForPromotion && LastRelegation.bWon) Outcome = EFM13SeasonOutcome::Promoted;
 		if (!LastRelegation.bForPromotion && !LastRelegation.bWon) Outcome = EFM13SeasonOutcome::Relegated;
 		if (LastRelegation.bWon) Unlock(TEXT("relegation"), &S.NewAchievements);
+	}
+	// DFB-Lizenz (season-end.js): der Aufstieg braucht die erfuellten Auflagen, sonst gibt es eine Nachfrist von drei Spieltagen
+	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel > 0)
+	{
+		const FFM13LizenzStatus Lizenz = DfbLicensingStatus();
+		if (Lizenz.Fehlend.Num() > 0)
+		{
+			DfbNachfrist.bAktiv = true;
+			DfbNachfrist.Ziel = Lizenz.ZielLiga;
+			DfbNachfrist.Frist = 3;
+			AddMessage(TEXT("DFB-Lizenz vorlaeufig verweigert - Nachfrist!"), FString::Printf(TEXT("Sportlich ist der Aufstieg geschafft, aber der DFB verweigert vorerst die Lizenz. Offen: %s. Frist: drei Spieltage."), *Lizenz.Fehlend[0]));
+			Outcome = EFM13SeasonOutcome::Stayed;
+		}
+		else if (Lizenz.Auflagen.Num() > 0) AddMessage(TEXT("Lizenz unter Auflagen"), TEXT("Der DFB erteilt die Lizenz unter Auflagen - die Baustellen muessen fertig werden."));
 	}
 	S.Outcome = Outcome;
 	if (Outcome == EFM13SeasonOutcome::Promoted && Sponsor.PromotionBonus > 0) Book(TEXT("Sponsor Aufstiegspraemie"), Sponsor.PromotionBonus);
@@ -1901,6 +1916,25 @@ FFM13World::FFM13LizenzStatus FFM13World::DfbLicensingStatus() const
 	// Jugendinternat (Campusgebaeude) ist im Kern noch nicht portiert: Stufe 0
 	Pruefe(Req.MinInternat > 0, false, false, FString::Printf(TEXT("Jugendinternat: Stufe 0 / %d"), Req.MinInternat));
 	return S;
+}
+
+// checkDfbLicenseDeadlines(): jeden Spieltag zaehlt die Nachfrist herunter. Ob der Aufstieg nachtraeglich
+// in die Liga eingebaut wird, ist noch offen (die Liga-Tabelle laesst sich waehrend der Saison nicht umbauen).
+void FFM13World::TickDfbNachfrist()
+{
+	if (!DfbNachfrist.bAktiv) return;
+	if (DfbLicensingStatus().Fehlend.Num() == 0)
+	{
+		DfbNachfrist.bAktiv = false;
+		AddMessage(TEXT("Nachfrist: Auflagen erfuellt"), TEXT("Die Auflagen sind innerhalb der Nachfrist erfuellt. Der Aufstieg wird fuer diese Saison nicht nachgeholt (nachtraegliche Wertung noch offen)."));
+		return;
+	}
+	DfbNachfrist.Frist--;
+	if (DfbNachfrist.Frist <= 0)
+	{
+		DfbNachfrist.bAktiv = false;
+		AddMessage(TEXT("DFB-Nachfrist verstrichen"), TEXT("Die Nachfrist ist ohne Erfolg verstrichen - der Aufstieg verfaellt fuer diese Saison."));
+	}
 }
 
 // getContractDemand() (js/contracts.js): Marktgehalt mal Rollenfaktor, Stammspieler unter 31 nehmen keine Kuerzung hin

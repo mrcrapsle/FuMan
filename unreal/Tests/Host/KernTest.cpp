@@ -569,6 +569,9 @@ static void TestRundeA()
 	{
 		FFM13World X;
 		X.NewGame(TEXT("Relegationsverein"), Seed, 3);
+		// DFB-Lizenz (season-end.js): mit Flutlicht und Reserve laesst sie den Aufstieg aus der 3. Liga zu
+		X.bFlutlicht = true;
+		X.Money = 1000000000;
 		while (X.PlayMatchday()) {}
 		const int32 Platz = X.OwnRank();
 		const int32 Liga = X.LeagueLevel;
@@ -579,7 +582,8 @@ static void TestRundeA()
 			PRUEFE(T.Relegation.bPlayed && T.Relegation.bForPromotion == (Platz == 3), "Relegation bei Platz %d", Platz);
 			if (T.Relegation.bWon) ++Gewonnen;
 			if (Platz == 16) PRUEFE(X.LeagueLevel == (T.Relegation.bWon ? Liga : Liga + 1), "Platz 16: Klassenerhalt nur mit Sieg");
-			if (Platz == 3) PRUEFE(X.LeagueLevel == (T.Relegation.bWon ? Liga - 1 : Liga), "Platz 3: Aufstieg nur mit Sieg");
+			if (Platz == 3 && Liga >= 3) PRUEFE(X.LeagueLevel == (T.Relegation.bWon ? Liga - 1 : Liga), "Platz 3: Aufstieg nur mit Sieg");
+			if (Platz == 3 && Liga < 3 && T.Relegation.bWon) PRUEFE(X.LeagueLevel == Liga && X.DfbNachfrist.bAktiv, "Platz 3 ohne Lizenz: Nachfrist statt Aufstieg");
 		}
 		else PRUEFE(!T.Relegation.bPlayed, "Keine Relegation auf Platz %d", Platz);
 	}
@@ -1621,6 +1625,27 @@ static void TestDfbLizenz()
 	PRUEFE(S.Auflagen.Num() == 1, "Kapazitaet im Bau zaehlt als Auflage");
 	W.LeagueLevel = 0;
 	PRUEFE(W.DfbLicensingStatus().ZielLiga == -1, "In der hoechsten Liga gibt es kein Ziel");
+}
+
+static void TestDfbNachfrist()
+{
+	std::printf("DFB-Nachfrist: drei Spieltage, danach verfaellt der Aufstieg\n");
+	FFM13World W;
+	W.NewGame(TEXT("Nachfrist"), 141, 0);
+	W.LeagueLevel = 1;
+	W.Money = 0;
+	W.bFlutlicht = false;
+	W.DfbNachfrist.bAktiv = true;
+	W.DfbNachfrist.Ziel = 0;
+	W.DfbNachfrist.Frist = 3;
+	const int32 Nachrichten = W.Messages.Num();
+	W.TickDfbNachfrist();
+	W.TickDfbNachfrist();
+	PRUEFE(W.DfbNachfrist.bAktiv && W.DfbNachfrist.Frist == 1, "Nach zwei Spieltagen noch eine Frist");
+	W.TickDfbNachfrist();
+	PRUEFE(!W.DfbNachfrist.bAktiv && W.Messages.Num() == Nachrichten + 1, "Nach drei Spieltagen verstrichen, eine Meldung");
+	W.TickDfbNachfrist();
+	PRUEFE(W.Messages.Num() == Nachrichten + 1, "Ohne Nachfrist keine weitere Meldung");
 }
 
 static void TestMedizincheck()
@@ -2811,6 +2836,7 @@ int main()
 	TestStadionDaten();
 	TestStadionBaustellen();
 	TestDfbLizenz();
+	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();
 	TestSpielstand();

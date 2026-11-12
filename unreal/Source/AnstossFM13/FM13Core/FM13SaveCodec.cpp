@@ -190,6 +190,8 @@ namespace FM13Save
 		W.Field(TEXT("sitzPromille"), (int64)FMath::RoundToInt((float)(S.SitzShare * 1000.0)));
 		W.Field(TEXT("vipPromille"), (int64)FMath::RoundToInt((float)(S.VipShare * 1000.0)));
 		W.FieldBool(TEXT("flutlicht"), S.bFlutlicht);
+		W.FieldBool(TEXT("nachfristAktiv"), S.DfbNachfrist.bAktiv);
+		W.Field(TEXT("nachfristZiel"), (int64)S.DfbNachfrist.Ziel); W.Field(TEXT("nachfristFrist"), (int64)S.DfbNachfrist.Frist);
 		W.ArrayKey(TEXT("baustellen"));
 		for (const FFM13World::FFM13StadiumBaustelle& P : S.StadiumBaustellen)
 		{
@@ -1016,6 +1018,9 @@ namespace FM13Save
 		W.SitzShare = (double)R.Int(Root, TEXT("sitzPromille"), 450) / 1000.0;
 		W.VipShare = (double)R.Int(Root, TEXT("vipPromille"), 50) / 1000.0;
 		W.bFlutlicht = R.Bool(Root, TEXT("flutlicht"), false);
+		W.DfbNachfrist.bAktiv = R.Bool(Root, TEXT("nachfristAktiv"), false);
+		W.DfbNachfrist.Ziel = (int32)R.Int(Root, TEXT("nachfristZiel"), -1);
+		W.DfbNachfrist.Frist = (int32)R.Int(Root, TEXT("nachfristFrist"), 0);
 		W.PendingSeats = (int32)R.Int(Root, TEXT("pendingSeats"), 0);
 		W.PendingSeatsMatchdays = (int32)R.Int(Root, TEXT("pendingSeatsMatchdays"), 0);
 		W.YouthAcademyLevel = (int32)R.Int(Root, TEXT("academy"), 1);
