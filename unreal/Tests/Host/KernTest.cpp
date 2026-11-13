@@ -2851,6 +2851,83 @@ static int64 LizenzRuecklage(const FFM13World& W)
 	return Summe;
 }
 
+// Kadermedian wie im JS-Bot: Stärke des Spielers in der Mitte der nach Stärke sortierten Liste
+static int32 KaderMedian(const FFM13World& W)
+{
+	if (W.Squad.Num() == 0) return 0;
+	std::vector<int32> St;
+	for (const FFM13Player& P : W.Squad) St.push_back(P.Strength);
+	std::sort(St.begin(), St.end());
+	return St[St.size() / 2];
+}
+
+// Bestes Talent (ab 17 Jahren) einer Position oder ueberhaupt, mindestens auf Stärke Untergrenze; -1 wenn keins
+static int32 BesteJugend(const FFM13World& W, int32 PosIndex, int32 Untergrenze)
+{
+	int32 Bester = -1;
+	for (int32 i = 0; i < W.YouthTalents.Num(); ++i)
+	{
+		const FFM13Player& T = W.YouthTalents[i];
+		if (T.Age < 17 || T.Strength < Untergrenze) continue;
+		if (PosIndex >= 0 && (int32)T.Pos != PosIndex) continue;
+		if (Bester < 0 || T.Strength > W.YouthTalents[Bester].Strength) Bester = i;
+	}
+	return Bester;
+}
+
+// Bester Vereinsloser (optional nach Position), -1 wenn keiner
+static int32 BesterFreier(const FFM13World& W, int32 PosIndex)
+{
+	int32 Bester = -1;
+	for (int32 i = 0; i < W.FreeAgents.Num(); ++i)
+	{
+		const FFM13Player& P = W.FreeAgents[i].Player;
+		if (PosIndex >= 0 && (int32)P.Pos != PosIndex) continue;
+		if (Bester < 0 || P.Strength > W.FreeAgents[Bester].Player.Strength) Bester = i;
+	}
+	return Bester;
+}
+
+// Talente ab Kadermedian hochziehen (bis 3 je Spieltag), Positionstiefe 2/6/6/4 auffuellen
+// (erst Talente, dann Vereinslose), danach den Kader auf 20 bringen
+static void BotKaderPlanen(FFM13World& W, FString& Grund)
+{
+	for (int32 n = 0; n < 3 && W.Squad.Num() < 26; ++n)
+	{
+		const int32 i = BesteJugend(W, -1, KaderMedian(W));
+		if (i < 0 || !W.PromoteYouth(i, Grund)) break;
+	}
+	const int32 Soll[4] = { 2, 6, 6, 4 };
+	for (int32 Pos = 0; Pos < 4; ++Pos)
+	{
+		for (int32 guard = 0; guard < 12; ++guard)
+		{
+			int32 Anzahl = 0;
+			for (const FFM13Player& P : W.Squad) if ((int32)P.Pos == Pos) Anzahl++;
+			if (Anzahl >= Soll[Pos] || W.Squad.Num() >= FM13::MaxSquadSize) break;
+			const int32 Talent = BesteJugend(W, Pos, 0);
+			if (Talent >= 0) { if (!W.PromoteYouth(Talent, Grund)) break; continue; }
+			const int32 Frei = BesterFreier(W, Pos);
+			if (Frei < 0) break;
+			const int32 Vorher = W.Squad.Num();
+			W.SignFreeAgent(Frei, Grund);
+			if (W.Squad.Num() == Vorher) W.SignFreeAgent(Frei, Grund);   // Gegenangebot annehmen
+			if (W.Squad.Num() == Vorher) break;
+		}
+	}
+	for (int32 guard = 0; guard < 12 && W.Squad.Num() < 20; ++guard)
+	{
+		const int32 Talent = BesteJugend(W, -1, 0);
+		if (Talent >= 0) { if (!W.PromoteYouth(Talent, Grund)) break; continue; }
+		const int32 Frei = BesterFreier(W, -1);
+		if (Frei < 0) break;
+		const int32 Vorher = W.Squad.Num();
+		W.SignFreeAgent(Frei, Grund);
+		if (W.Squad.Num() == Vorher) W.SignFreeAgent(Frei, Grund);
+		if (W.Squad.Num() == Vorher) break;
+	}
+}
+
 static void BotZug(FFM13World& W)
 {
 	FString Grund;
@@ -2907,9 +2984,8 @@ static void BotZug(FFM13World& W)
 	for (FFM13Player& P : W.Squad)
 		if (P.ContractYears <= 1 && P.Strength >= Elf - 3 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
 			&& W.Money > W.RenewalSigningFee(P, 3) * 3) W.RenewContract(P.Id, 3, Grund);
-	// Talente
-	for (int32 i = W.YouthTalents.Num() - 1; i >= 0; --i)
-		if (W.YouthTalents[i].Strength >= Elf - 6 && W.Squad.Num() < FM13::MaxSquadSize) W.PromoteYouth(i, Grund);
+	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
+	BotKaderPlanen(W, Grund);
 	// Ausbauen mit Reserve
 	if (W.Money > W.TrainingUpgradeCost() * 4) W.UpgradeTraining(Grund);
 	if (W.Money > W.YouthAcademyUpgradeCost() * 4) W.UpgradeYouthAcademy(Grund);
