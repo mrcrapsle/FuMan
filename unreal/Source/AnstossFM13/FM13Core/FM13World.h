@@ -285,6 +285,7 @@ public:
 	void RefreshMarket();
 	void SetMarketTerms(FFM13MarketOffer& O);          // ensureTransferTerms(): Verkaeufer, Schmerzgrenze, Forderung
 	FRandomStream RngTransfer;                         // eigener Zufall fuer Transfers, damit der Rest gleich bleibt
+	FRandomStream RngSponsor;                         // eigener Zufall fuer Sponsorangebote, damit Annahmen den Haupt-Zufall nicht verschieben
 	FRandomStream RngIndustrie;                        // eigener Zufall fuer Rohstoffe, Konkurrenten, Holding-Auftraege
 	// Transferbudget und Wechselfenster (js/transfermarket.js, js/season-end.js)
 	int64 TransferBudget = 0;                          // game.transferBudget: Budget der Saison

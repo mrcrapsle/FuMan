@@ -3041,6 +3041,13 @@ static void BotZug(FFM13World& W)
 			&& W.Money > W.RenewalSigningFee(P, 3) * 3 + W.WagesPerMatchday() * 6) W.RenewContract(P.Id, 3, Grund);
 	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
 	BotKaderPlanen(W, Grund);
+	// Hauptsponsor wie js/longrun-bundesliga.js (sponsoren): schwaches Sponsoring ersetzen
+	if (W.Sponsor.Base <= 500 && W.SponsorOffers.Num() > 0)
+	{
+		int32 BesterSponsor = 0;
+		for (int32 i = 1; i < W.SponsorOffers.Num(); ++i) if (W.SponsorOffers[i].Base > W.SponsorOffers[BesterSponsor].Base) BesterSponsor = i;
+		W.AcceptSponsorOffer(BesterSponsor, Grund);
+	}
 	// Namensrechte einmal verkaufen (sponsoren). Hauptsponsor-Angebote noch nicht: siehe PORTIERUNG.md
 	if (W.NamingRightsSponsor.IsEmpty()) W.SellNamingRights(Grund);
 	// Talentangebote (25.18): verkaufen mit Beteiligung, wessen Potenzial unter dem Kader-Median liegt; sonst ablehnen

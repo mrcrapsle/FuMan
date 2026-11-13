@@ -74,6 +74,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	RngJugend.Initialize(Seed * 104729 + 29);
 	RngTransfer.Initialize(Seed * 31337 + 7);
 	RngIndustrie.Initialize(Seed * 15485863 + 11);
+	RngSponsor.Initialize(Seed * 32452843 + 5);
 	TransferBudget = LeagueTransferBudget(StartLevel);
 	ResetOekonomieGrunddaten();
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
@@ -2589,12 +2590,12 @@ void FFM13World::MakeSponsorOffers()
 	for (const FStufe& St : Stufen)
 	{
 		FFM13Sponsor O;
-		O.Name = FString(Vorne[Rng.RandRange(0, 9)]) + Hinten[Rng.RandRange(0, 9)];
+		O.Name = FString(Vorne[RngSponsor.RandRange(0, 9)]) + Hinten[RngSponsor.RandRange(0, 9)];
 		O.Tier = St.Name;
 		O.MatchdaysLeft = St.Spieltage;
-		O.Base = FMath::RoundToInt((2000.f + Rng.FRand() * 2500.f) * Lf * St.Pay / 100.f) * 100;
-		O.WinBonus = FMath::RoundToInt((800.f + Rng.FRand() * 1500.f) * Lf * St.Pay / 100.f) * 100;
-		O.PromotionBonus = FMath::RoundToInt((12000.f + Rng.FRand() * 18000.f) * Lf / 500.f) * 500;
+		O.Base = FMath::RoundToInt((2000.f + RngSponsor.FRand() * 2500.f) * Lf * St.Pay / 100.f) * 100;
+		O.WinBonus = FMath::RoundToInt((800.f + RngSponsor.FRand() * 1500.f) * Lf * St.Pay / 100.f) * 100;
+		O.PromotionBonus = FMath::RoundToInt((12000.f + RngSponsor.FRand() * 18000.f) * Lf / 500.f) * 500;
 		O.SignOn = St.SignOn > 0.f ? FMath::RoundToInt((float)O.Base * 8.f * St.SignOn / 100.f) * 100 : 0;
 		SponsorOffers.Add(O);
 	}

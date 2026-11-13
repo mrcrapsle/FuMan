@@ -505,6 +505,7 @@ namespace FM13Save
 		W.Field(TEXT("lePreis"), S.LimitedEdition.Preis); W.Field(TEXT("leVerk"), S.LimitedEdition.Verkauft); W.Field(TEXT("leUmsatz"), S.LimitedEdition.Umsatz);
 		W.FieldBool(TEXT("skAktiv"), S.Saisonkollektion.bAktiv); W.Field(TEXT("skSchub"), S.Saisonkollektion.Schub); W.Field(TEXT("skEnde"), S.Saisonkollektion.AblaeuftBei);
 		W.Field(TEXT("rngIndustrieSeed"), (int64)S.RngIndustrie.GetCurrentSeed());
+		W.Field(TEXT("rngSponsorSeed"), (int64)S.RngSponsor.GetCurrentSeed());
 		W.Field(TEXT("holdingGeld"), S.HoldingGeld);
 		W.Field(TEXT("lagerstufe"), S.Lagerstufe);
 		W.Field(TEXT("nextB2B"), S.NextB2BId);
@@ -1318,6 +1319,7 @@ namespace FM13Save
 		W.Saisonkollektion.Schub = (int32)R.Int(Root, TEXT("skSchub"), 0);
 		W.Saisonkollektion.AblaeuftBei = (int32)R.Int(Root, TEXT("skEnde"), 0);
 		W.RngIndustrie.Initialize((int32)R.Int(Root, TEXT("rngIndustrieSeed"), 1));
+		W.RngSponsor.Initialize((int32)R.Int(Root, TEXT("rngSponsorSeed"), 1));
 		W.HoldingGeld = R.Int(Root, TEXT("holdingGeld"), 50000);
 		W.Lagerstufe = (int32)R.Int(Root, TEXT("lagerstufe"), 1);
 		W.NextB2BId = (int32)R.Int(Root, TEXT("nextB2B"), 4);
