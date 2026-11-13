@@ -3019,22 +3019,34 @@ static void BotZug(FFM13World& W)
 	// Gekauft wird nur in den Wechselfenstern (Spieltag 1 bis 3 und 18 bis 20) und nie aus der Lizenzruecklage
 	const bool bFenster = W.Matchday <= 3 || (W.Matchday >= 18 && W.Matchday <= 20);
 	const int64 Ruecklage = LizenzRuecklage(W);
-	int32 Bester = -1;
-	for (int32 i = 0; bFenster && i < W.Market.Num(); ++i)
+	// Kaufen wie js/longrun-bundesliga.js (fenster): bezahlbar heisst Ablöse im Transferbudget und zehn Spieltage Gehalt
+	// plus Ruecklage auf dem Konto. Gekauft wird, wer die schwaechste Stammkraft um mehr als zwei uebertrifft,
+	// unter 22 Spielern notfalls der Beste
+	for (int32 versuch = 0; bFenster && versuch < 6; ++versuch)
 	{
-		const FFM13MarketOffer& O = W.Market[i];
-		const bool bBezahlbar = O.Price <= W.Money * 3 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12
-			&& W.WagesPerMatchday() + O.Player.Wage <= Gehaltsgrenze && W.Money - O.Price >= Ruecklage;
-		if (bBezahlbar && O.Player.Strength > Elf + 1 && (Bester < 0 || O.Player.Strength > W.Market[Bester].Player.Strength)) Bester = i;
+		const TArray<int32> Ids = W.StartingEleven();
+		int32 Schwach = 999;
+		int64 Gehaelter = 0;
+		for (const FFM13Player& P : W.Squad)
+		{
+			Gehaelter += P.Wage;
+			if (Ids.Contains(P.Id) && P.Strength < Schwach) Schwach = P.Strength;
+		}
+		int32 Wahl = -1, Fallback = -1;
+		for (int32 i = 0; i < W.Market.Num(); ++i)
+		{
+			const FFM13MarketOffer& O = W.Market[i];
+			const bool bBezahlbar = O.Price <= W.TransferBudget && W.Money - O.Price > (Gehaelter + O.Player.Wage) * 34 * 3 / 10 + Ruecklage;
+			if (!bBezahlbar) continue;
+			if (O.Player.Strength > Schwach + 2 && (Wahl < 0 || O.Player.Strength > W.Market[Wahl].Player.Strength)) Wahl = i;
+			if (Fallback < 0 || O.Player.Strength > W.Market[Fallback].Player.Strength) Fallback = i;
+		}
+		if (Wahl < 0 && W.Squad.Num() < 22) Wahl = Fallback;
+		if (Wahl < 0) break;
+		const int32 Vorher = W.Squad.Num();
+		W.BuyPlayer(Wahl, Grund);
+		if (W.Squad.Num() == Vorher) break;
 	}
-	if (Bester >= 0 && W.Squad.Num() >= FM13::MaxSquadSize)
-	{
-		// Platz schaffen: schwächsten Spieler abgeben
-		int32 Schwach = 0;
-		for (int32 i = 1; i < W.Squad.Num(); ++i) if (W.Squad[i].Strength < W.Squad[Schwach].Strength) Schwach = i;
-		W.SellPlayer(W.Squad[Schwach].Id, Grund);
-	}
-	if (Bester >= 0) W.BuyPlayer(Bester, Grund);
 	// Verlängern: wer zur Elf gehört
 	for (FFM13Player& P : W.Squad)
 		if (P.ContractYears <= 1 && P.Strength >= Elf - 3 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
