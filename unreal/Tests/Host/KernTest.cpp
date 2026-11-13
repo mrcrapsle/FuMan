@@ -2986,7 +2986,6 @@ static void BotKaderPlanen(FFM13World& W, FString& Grund)
 static void BotZug(FFM13World& W)
 {
 	FString Grund;
-	const int32 Elf = W.OwnStrength();
 	// Der Bot plant wie ein vorsichtiger Manager: die Gehaelter duerfen hoechstens 80 % der erwarteten
 	// Saisoneinnahmen kosten (TV-Geld nach Tabellenplatz plus Heimspiel-Tickets), umgelegt auf den Spieltag
 	const int64 Saisoneinnahmen = FM13Economy::TvMoney(W.LeagueLevel, FMath::Max(1, W.OwnRank())) + W.TicketRevenue(W.StadiumTotal()) * 17 * 6 / 10;
@@ -3047,9 +3046,10 @@ static void BotZug(FFM13World& W)
 		W.BuyPlayer(Wahl, Grund);
 		if (W.Squad.Num() == Vorher) break;
 	}
-	// Verlängern: wer zur Elf gehört
+	// Verlaengern wie js/longrun-bundesliga.js (halten): Stammkraefte ab Kadermedian bis 31 Jahre
+	const int32 Median = KaderMedian(W);
 	for (FFM13Player& P : W.Squad)
-		if (P.ContractYears <= 1 && P.Strength >= Elf - 3 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
+		if (P.ContractYears <= 1 && P.Strength >= Median && P.Age <= 31 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
 			&& W.Money > W.RenewalSigningFee(P, 3) * 3 + W.WagesPerMatchday() * 6) W.RenewContract(P.Id, 3, Grund);
 	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
 	BotKaderPlanen(W, Grund);
