@@ -1719,6 +1719,38 @@ static void TestNamensrechte()
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(V), L, Fehler) && L.NamingRightsSponsor == V.NamingRightsSponsor && L.NamingRightsPerMatch == V.NamingRightsPerMatch && !L.NamingRightsSponsor.IsEmpty(), "Namensrechte bleiben beim Speichern erhalten (%s)", *Fehler);
 }
 
+static void TestVertragsultimatum()
+{
+	std::printf("Vertragsultimatum: Ausloesung, Verlaengerung, Verkauf, Ablauf, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Ultimatum"), 191, 0);
+	FFM13Player& P = W.Squad[0];
+	P.Strength = 80; P.Morale = 20; P.ContractYears = 1; P.MarketValue = 5000000; P.UltimatumCount = 0;
+	bool bAusgeloest = false;
+	for (int32 m = 1; m <= 200 && !bAusgeloest; ++m) { W.Matchday = m; W.TickContractUltimatum(); bAusgeloest = W.Ultimatum.bAktiv; }
+	PRUEFE(bAusgeloest && W.Ultimatum.PlayerId == P.Id, "Ein unzufriedener Star stellt ein Ultimatum");
+	FString G;
+	const int64 Geld = W.Money = 100000000;
+	PRUEFE(W.ResolveUltimatumRenew(G) && !W.Ultimatum.bAktiv, "Verlaengerung klappt (%s)", *G);
+	PRUEFE(W.Money == Geld - 750000 && P.ContractYears == 3 && P.UltimatumCount == 1, "15 Prozent Marktwert, zwei Jahre dazu (Geld %lld)", (long long)(Geld - W.Money));
+	// Ablauf: die Frist verstreicht ohne Reaktion
+	W.Ultimatum = FFM13World::FFM13Ultimatum{ true, P.Id, 10, false, false };
+	const int32 Moral = P.Morale;
+	W.Matchday = 10;
+	W.TickContractUltimatum();
+	PRUEFE(!W.Ultimatum.bAktiv && P.Morale == FMath::Max(5, Moral - 25), "Verstrichene Frist kostet 25 Moral");
+	// Ignorieren
+	W.Ultimatum = FFM13World::FFM13Ultimatum{ true, P.Id, 20, false, false };
+	const int32 Moral2 = P.Morale;
+	PRUEFE(W.IgnoreUltimatum(G) && P.Morale == FMath::Max(5, Moral2 - 15), "Ignorieren kostet 15 Moral");
+	// Verkauf und Speichern mit aktivem Ultimatum
+	W.Ultimatum = FFM13World::FFM13Ultimatum{ true, P.Id, 30, true, false };
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.Ultimatum.bAktiv && L.Ultimatum.Frist == 30 && L.Ultimatum.bErinnert, "Ultimatum bleibt beim Speichern erhalten (%s)", *Fehler);
+	PRUEFE(W.ResolveUltimatumSell(G) && !W.Ultimatum.bAktiv, "Verkauf loest das Ultimatum (%s)", *G);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -3051,6 +3083,13 @@ static void BotZug(FFM13World& W)
 	for (FFM13Player& P : W.Squad)
 		if (P.ContractYears <= 1 && P.Strength >= Median && P.Age <= 31 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
 			&& W.Money > W.RenewalSigningFee(P, 3) * 3 + W.WagesPerMatchday() * 6) W.RenewContract(P.Id, 3, Grund);
+	// Ultimatum wie js/longrun-bundesliga.js (reagieren): erst verlaengern, sonst verkaufen, sonst ignorieren
+	if (W.Ultimatum.bAktiv)
+	{
+		W.ResolveUltimatumRenew(Grund);
+		if (W.Ultimatum.bAktiv) W.ResolveUltimatumSell(Grund);
+		if (W.Ultimatum.bAktiv) W.IgnoreUltimatum(Grund);
+	}
 	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
 	BotKaderPlanen(W, Grund);
 	// Hauptsponsor wie js/longrun-bundesliga.js (sponsoren): schwaches Sponsoring ersetzen
@@ -3167,6 +3206,7 @@ int main()
 	TestZuschauerformel();
 	TestJugendangebote();
 	TestNamensrechte();
+	TestVertragsultimatum();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

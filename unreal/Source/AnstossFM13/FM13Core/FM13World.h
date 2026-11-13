@@ -401,7 +401,15 @@ public:
 	int32 MarketIndexOf(int32 PlayerId) const;
 	bool TickPokerRival(int32 MarktIndex);            // true, wenn der Spieler zum Rivalen gegangen ist
 	bool BuyPlayer(int32 MarketIndex, FString& OutReason);
-	bool SellPlayer(int32 PlayerId, FString& OutReason, bool bChemieBestaetigt = false);   // sellPlayer(): 80 % Marktwert, Beraterprovision; bChemieBestaetigt = zweiter Klick bei eingespielter Elf
+	bool SellPlayer(int32 PlayerId, FString& OutReason, bool bChemieBestaetigt = false);
+	// Vertragsultimatum (js/contract-ultimatum.js): ein starker, unzufriedener Spieler fordert Verlaengerung oder Verkauf
+	struct FFM13Ultimatum { bool bAktiv = false; int32 PlayerId = 0; int32 Frist = 0; bool bErinnert = false; bool bPresse = false; };
+	FFM13Ultimatum Ultimatum;
+	void TickContractUltimatum();                                    // jeden Spieltag: Ausloesung, Erinnerung, Frist
+	bool ResolveUltimatumRenew(FString& OutReason);                  // Verlaengerung ab 15 % Marktwert, je Wiederholung teurer
+	bool ResolveUltimatumSell(FString& OutReason);                   // Verkauf
+	bool IgnoreUltimatum(FString& OutReason);                        // Frist aussitzen: Moral -15
+   // sellPlayer(): 80 % Marktwert, Beraterprovision; bChemieBestaetigt = zweiter Klick bei eingespielter Elf
 	void CheckInsolvencyRisk();                       // checkInsolvencyRisk() (js/finances.js): jeden Spieltag nach den Finanzen
 	bool RenewContract(int32 PlayerId, int32 Years, FString& OutReason);
 	struct FFM13ContractTalk { bool bActive = false; int32 PlayerId = 0; int32 Years = 1; double OfferFactor = 1.0; bool bGarantie = false; int32 Rounds = 0; };

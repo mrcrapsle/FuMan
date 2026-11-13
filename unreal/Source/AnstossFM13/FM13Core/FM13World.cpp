@@ -304,6 +304,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
 	TickStadiumConstruction();
+	TickContractUltimatum();
 	TickDfbNachfrist();
 	TickFixedDeposit();
 	TickMoneyHistory();
@@ -1902,6 +1903,92 @@ bool FFM13World::RejectYouthOffer(int32 Index, FString& OutReason)
 	YouthOffers.RemoveAt(Index);
 	for (FFM13Player& T : YouthTalents)
 		if (T.Id == PlayerId && T.PotentialTier == 3 && T.Strength < T.Potential) T.Strength++;
+	return true;
+}
+
+// ---------- Vertragsultimatum (js/contract-ultimatum.js) ----------
+// Ausloesung: Stammkraft ab 75, Moral unter 35, Vertrag hoechstens zwei Jahre, 15 % je Spieltag. Die Wuerfe kommen aus
+// der Spielkennung, damit sie andere Zufallsstroeme nicht verschieben.
+void FFM13World::TickContractUltimatum()
+{
+	if (!Ultimatum.bAktiv)
+	{
+		TArray<int32> Kandidaten;
+		for (int32 i = 0; i < Squad.Num(); ++i)
+			if (Squad[i].Strength >= 75 && Squad[i].Morale < 35 && Squad[i].ContractYears <= 2) Kandidaten.Add(i);
+		if (Kandidaten.Num() == 0) return;
+		if (FM13Transfers::HashEinheit(Season * 100 + Matchday, 5151) > 0.15) return;
+		const int32 Wahl = FMath::Min(Kandidaten.Num() - 1, (int32)(FM13Transfers::HashEinheit(Season * 100 + Matchday, 5152) * Kandidaten.Num()));
+		const FFM13Player& P = Squad[Kandidaten[Wahl]];
+		// Wiederholungstaeter eskalieren schneller: Frist sinkt von drei auf mindestens einen Spieltag
+		const int32 Frist = FMath::Max(1, 3 - P.UltimatumCount);
+		Ultimatum = FFM13Ultimatum{ true, P.Id, Matchday + Frist, false, false };
+		AddMessage(FString(TEXT("Ultimatum von ")) + P.Name, FString::Printf(TEXT("%s fordert einen neuen Vertrag oder Verkauf. Frist bis Spieltag %d."), *P.Name, Ultimatum.Frist));
+	}
+	int32 Idx = -1;
+	for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].Id == Ultimatum.PlayerId) Idx = i;
+	if (Idx < 0) { Ultimatum = FFM13Ultimatum(); return; }   // Spieler ist anderweitig weg
+	const int32 Rest = Ultimatum.Frist - Matchday;
+	// Pressekontakt: in den letzten zwei Tagen kann der Spieler an die Presse gehen (Vorstand -4, Fans +3)
+	if (!Ultimatum.bPresse && Rest <= 2 && Rest >= 1 && FM13Transfers::HashEinheit(Season * 100 + Matchday, 5153) < 0.2)
+	{
+		Ultimatum.bPresse = true;
+		BoardSat = FMath::Max(10, BoardSat - 4);
+		Fans = FMath::Min(100, Fans + 3);
+		AddMessage(FString(TEXT("Ultimatum geht an die Presse: ")) + Squad[Idx].Name, TEXT("Der Vorstand ist veraergert, viele Fans zeigen Verstaendnis."));
+	}
+	if (Rest == 1 && !Ultimatum.bErinnert)
+	{
+		Ultimatum.bErinnert = true;
+		AddMessage(TEXT("Ultimatum laeuft bald ab"), FString(TEXT("Nur noch ein Spieltag fuer ")) + Squad[Idx].Name + TEXT("."));
+	}
+	if (Matchday >= Ultimatum.Frist)
+	{
+		// Frist ungenutzt verstrichen: Moral und Vorstand leiden
+		Squad[Idx].Morale = FMath::Max(5, Squad[Idx].Morale - 25);
+		BoardSat = FMath::Max(10, BoardSat - 5);
+		AddMessage(FString(TEXT("Ultimatum verstrichen: ")) + Squad[Idx].Name, TEXT("Die Frist ist ungenutzt verstrichen, die Stimmung im Kader leidet."));
+		Ultimatum = FFM13Ultimatum();
+	}
+}
+
+// resolveUltimatumRenew(): Verlaengerung um zwei Jahre, Ablöse 15 % des Marktwerts mal Wiederholungsfaktor (hoechstens 2,5)
+bool FFM13World::ResolveUltimatumRenew(FString& OutReason)
+{
+	int32 Idx = -1;
+	for (int32 i = 0; i < Squad.Num(); ++i) if (Squad[i].Id == Ultimatum.PlayerId) Idx = i;
+	if (!Ultimatum.bAktiv || Idx < 0) { OutReason = TEXT("Kein aktives Ultimatum."); return false; }
+	const double Mult = FMath::Min(2.5, 1.0 + (double)Squad[Idx].UltimatumCount * 0.4);
+	const int64 Fee = FMath::Max<int64>(3000, FM13Transfers::JsRunden((double)Squad[Idx].MarketValue * 0.15 * Mult));
+	if (Money < Fee) { OutReason = FString::Printf(TEXT("Nicht genug Geld! Benoetigt: %lld Euro."), (long long)Fee); return false; }
+	Book(TEXT("Ultimatum: Vertragsverlaengerung"), -Fee);
+	Squad[Idx].ContractYears += 2;
+	Squad[Idx].Wage = FMath::Max(Squad[Idx].Wage, RenewalWage(Squad[Idx]));
+	Squad[Idx].Morale = FMath::Min(100, Squad[Idx].Morale + 30);
+	Squad[Idx].UltimatumCount++;
+	AddMessage(FString(TEXT("Ultimatum geloest: ")) + Squad[Idx].Name + TEXT(" bleibt"), FString::Printf(TEXT("Der neue Vertrag (%lld Euro) besaenftigt den Spieler."), (long long)Fee));
+	Ultimatum = FFM13Ultimatum();
+	return true;
+}
+
+// resolveUltimatumSell(): Verkauf, wenn die Verlaengerung scheitert (Ablöse wie beim Verkauf)
+bool FFM13World::ResolveUltimatumSell(FString& OutReason)
+{
+	if (!Ultimatum.bAktiv) { OutReason = TEXT("Kein aktives Ultimatum."); return false; }
+	const int32 Id = Ultimatum.PlayerId;
+	if (!SellPlayer(Id, OutReason, true)) return false;
+	AddMessage(TEXT("Ultimatum geloest: Spieler verkauft"), TEXT("Um weiteren Unmut zu vermeiden, wurde der Spieler abgegeben."));
+	Ultimatum = FFM13Ultimatum();
+	return true;
+}
+
+// Ignorieren: der Spieler bleibt, aber verärgert (Moral -15)
+bool FFM13World::IgnoreUltimatum(FString& OutReason)
+{
+	if (!Ultimatum.bAktiv) { OutReason = TEXT("Kein aktives Ultimatum."); return false; }
+	for (FFM13Player& P : Squad) if (P.Id == Ultimatum.PlayerId) P.Morale = FMath::Max(5, P.Morale - 15);
+	AddMessage(TEXT("Ultimatum ignoriert"), TEXT("Der Spieler ist veraergert ueber die fehlende Reaktion."));
+	Ultimatum = FFM13Ultimatum();
 	return true;
 }
 

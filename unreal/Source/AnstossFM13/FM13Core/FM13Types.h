@@ -48,6 +48,7 @@ struct FFM13Player
 	int64 MarketValue = 15000;
 	int32 Wage = 250;         // Euro pro Spieltag
 	int32 ContractYears = 2;  // Restlaufzeit in Saisons
+	int32 UltimatumCount = 0;  // Vertragsultimaten dieses Spielers (contract-ultimatum.js: ultimatumCount)
 	int32 InjuredMatchdays = 0; // fällt so viele Spieltage aus (0 = fit)
 	int32 SuspendedMatchdays = 0; // gesperrt (Rot oder fünfte Gelbe)
 	int32 YellowCards = 0;      // Gelbe Karten der Saison, jede fünfte sperrt

@@ -75,6 +75,7 @@ namespace
 		W.Field(TEXT("potentialTier"), (int64)P.PotentialTier);
 		W.Field(TEXT("proDecisionLeft"), P.ProDecisionLeft);
 		W.FieldBool(TEXT("academyGraduate"), P.bAcademyGraduate);
+		W.Field(TEXT("ultimatumCount"), P.UltimatumCount);
 		W.Field(TEXT("meilensteinDebut"), P.MeilensteinDebut);
 		W.Field(TEXT("meilensteinTor"), P.MeilensteinTor);
 		W.Field(TEXT("meilensteinElf"), P.MeilensteinElf);
@@ -506,6 +507,7 @@ namespace FM13Save
 		W.FieldBool(TEXT("skAktiv"), S.Saisonkollektion.bAktiv); W.Field(TEXT("skSchub"), S.Saisonkollektion.Schub); W.Field(TEXT("skEnde"), S.Saisonkollektion.AblaeuftBei);
 		W.Field(TEXT("rngIndustrieSeed"), (int64)S.RngIndustrie.GetCurrentSeed());
 		W.Field(TEXT("rngSponsorSeed"), (int64)S.RngSponsor.GetCurrentSeed());
+		W.FieldBool(TEXT("ultAktiv"), S.Ultimatum.bAktiv); W.Field(TEXT("ultSpieler"), (int64)S.Ultimatum.PlayerId); W.Field(TEXT("ultFrist"), (int64)S.Ultimatum.Frist); W.FieldBool(TEXT("ultErinnert"), S.Ultimatum.bErinnert); W.FieldBool(TEXT("ultPresse"), S.Ultimatum.bPresse);
 		W.Field(TEXT("holdingGeld"), S.HoldingGeld);
 		W.Field(TEXT("lagerstufe"), S.Lagerstufe);
 		W.Field(TEXT("nextB2B"), S.NextB2BId);
@@ -899,6 +901,7 @@ namespace
 		P.PotentialTier = (uint8)FMath::Clamp((int32)R.Int(Obj, TEXT("potentialTier"), 0), 0, 3);
 		P.ProDecisionLeft = (int32)R.Int(Obj, TEXT("proDecisionLeft"), 0);
 		P.bAcademyGraduate = R.Bool(Obj, TEXT("academyGraduate"), false);
+		P.UltimatumCount = (int32)R.Int(Obj, TEXT("ultimatumCount"), 0);
 		P.MeilensteinDebut = R.Str(Obj, TEXT("meilensteinDebut"), TEXT(""));
 		P.MeilensteinTor = R.Str(Obj, TEXT("meilensteinTor"), TEXT(""));
 		P.MeilensteinElf = R.Str(Obj, TEXT("meilensteinElf"), TEXT(""));
@@ -1320,6 +1323,7 @@ namespace FM13Save
 		W.Saisonkollektion.AblaeuftBei = (int32)R.Int(Root, TEXT("skEnde"), 0);
 		W.RngIndustrie.Initialize((int32)R.Int(Root, TEXT("rngIndustrieSeed"), 1));
 		W.RngSponsor.Initialize((int32)R.Int(Root, TEXT("rngSponsorSeed"), 1));
+		W.Ultimatum.bAktiv = R.Bool(Root, TEXT("ultAktiv"), false); W.Ultimatum.PlayerId = (int32)R.Int(Root, TEXT("ultSpieler"), 0); W.Ultimatum.Frist = (int32)R.Int(Root, TEXT("ultFrist"), 0); W.Ultimatum.bErinnert = R.Bool(Root, TEXT("ultErinnert"), false); W.Ultimatum.bPresse = R.Bool(Root, TEXT("ultPresse"), false);
 		W.HoldingGeld = R.Int(Root, TEXT("holdingGeld"), 50000);
 		W.Lagerstufe = (int32)R.Int(Root, TEXT("lagerstufe"), 1);
 		W.NextB2BId = (int32)R.Int(Root, TEXT("nextB2B"), 4);
