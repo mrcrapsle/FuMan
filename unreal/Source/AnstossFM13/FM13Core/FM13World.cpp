@@ -2040,14 +2040,20 @@ bool FFM13World::FlutlichImBau() const
 }
 
 // specialInstall flutlicht (js/stadium.js: getSpecialInstallCost): 3,5 Mio. x Liga-Faktor, auf 10.000 gerundet
+// Kosten des Flutlichts: 3,5 Mio. je Liga-Faktor, auf 10.000 gerundet
+int64 FFM13World::FlutlichKosten() const
+{
+	const double Faktor = FMath::Max(0.2, StadionKostenFaktor(LeagueLevel));
+	return FM13Transfers::JsRunden(3500000.0 * Faktor / 10000.0) * 10000;
+}
+
 bool FFM13World::BuildFlutlicht(FString& OutReason)
 {
 	if (bFlutlicht) { OutReason = TEXT("Das Flutlicht steht schon."); return false; }
-	const double Faktor = FMath::Max(0.2, StadionKostenFaktor(LeagueLevel));
 	FFM13StadiumBaustelle Auftrag;
 	Auftrag.Typ = 2;
 	Auftrag.Block = TEXT("flutlicht");
-	Auftrag.Kosten = FM13Transfers::JsRunden(3500000.0 * Faktor / 10000.0) * 10000;
+	Auftrag.Kosten = FlutlichKosten();
 	return StarteBaustelle(Auftrag, TEXT("Flutlicht-Masten"), OutReason);
 }
 

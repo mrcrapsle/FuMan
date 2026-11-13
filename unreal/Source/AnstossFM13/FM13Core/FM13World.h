@@ -73,6 +73,7 @@ public:
 	struct FFM13LizenzStatus { int32 ZielLiga = -1; TArray<FString> Fehlend; TArray<FString> Auflagen; int32 Gesamt = 0; int32 Erfuellt = 0; int32 MinKapazitaet = 0; int64 MinReserve = 0; bool bFlutlichNoetig = false; int32 MinInternat = 0; };
 	bool FlutlichImBau() const;
 	bool BuildFlutlicht(FString& OutReason);                                              // specialInstall flutlicht: 3,5 Mio. je Liga-Faktor
+	int64 FlutlichKosten() const;                                                         // Kosten des Flutlichts je Liga-Faktor
 	int64 CampusInternatKosten(int32 Stufe) const;                                        // getCampusStufenKosten: 9 Mio. x Stufe x Liga-Faktor, mind. 250.000
 	bool UpgradeCampusInternat(FString& OutReason);                                       // Stufe bauen (Typ 3), hoechstens Stufe 5
 	int32 InternatImBau() const;                                                          // laufende Internat-Baustellen

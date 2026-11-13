@@ -2818,6 +2818,39 @@ static void TestRundeB()
 
 // Einfacher Manager wie scripts/longrun-bundesliga.js (aktiv): kauft Verstärkungen, verlängert Stammkräfte,
 // zieht gute Talente hoch und baut aus, wenn genug Geld da ist.
+// Lizenzruecklage (js/longrun-bundesliga.js: lizenzRuecklage): Flutlicht, Internat, fehlende Plaetze und Reserve,
+// die ein Aufstiegskandidat in den Wechselfenstern zurueckhaelt
+static int64 LizenzRuecklage(const FFM13World& W)
+{
+	if (W.LeagueLevel <= 0 || W.OwnRank() > 6) return 0;
+	const FFM13World::FFM13LizenzStatus L = W.DfbLicensingStatus();
+	int64 Summe = L.MinReserve;
+	if (L.bFlutlichNoetig && !W.bFlutlicht && !W.FlutlichImBau()) Summe += W.FlutlichKosten();
+	if (L.MinInternat > W.CampusInternat + W.InternatImBau()) Summe += W.CampusInternatKosten(W.CampusInternat + 1);
+	int32 Plaetze = W.StadiumTotal() + W.BauPlaetze();
+	auto Lokal = W.StadiumBlocks;   // Kopie: die Ausbaustufen zaehlen nur fuer die Berechnung
+	for (int32 n = 0; n < 6 && Plaetze < L.MinKapazitaet; ++n)
+	{
+		int32 Guenstig = -1;
+		double JeSitz = 0.0;
+		int64 Kosten = 0;
+		for (int32 i = 0; i < Lokal.Num(); ++i)
+		{
+			FFM13World::FFM13StadiumBlock B = Lokal[i];
+			if (B.Expansions >= 5 || B.AddSeats <= 0) continue;
+			B.Expansions++;
+			const int64 K = W.BlockAusbauKosten(B);
+			const double Je = (double)K / B.AddSeats;
+			if (Guenstig < 0 || Je < JeSitz) { Guenstig = i; JeSitz = Je; Kosten = K; }
+		}
+		if (Guenstig < 0) break;
+		Summe += Kosten;
+		Plaetze += Lokal[Guenstig].AddSeats;
+		Lokal[Guenstig].Expansions++;
+	}
+	return Summe;
+}
+
 static void BotZug(FFM13World& W)
 {
 	FString Grund;
@@ -2826,20 +2859,40 @@ static void BotZug(FFM13World& W)
 	// Saisoneinnahmen kosten (TV-Geld nach Tabellenplatz plus Heimspiel-Tickets), umgelegt auf den Spieltag
 	const int64 Saisoneinnahmen = FM13Economy::TvMoney(W.LeagueLevel, FMath::Max(1, W.OwnRank())) + W.TicketRevenue(W.StadiumTotal()) * 17 * 6 / 10;
 	const int64 Gehaltsgrenze = Saisoneinnahmen * 8 / 10 / FM13::MatchdaysPerSeason;
-	// Liegen die Gehaelter ueber der Grenze (etwa nach einem Abstieg), geht je Spieltag der teuerste Spieler
-	if (W.WagesPerMatchday() > Gehaltsgrenze && W.Squad.Num() > FM13::MinSquadSize)
+	// Wie js/scripts/longrun-bundesliga.js: ueber dem Gehaltsbudget (z. B. nach einem Abstieg) die teuersten Nicht-Stammspieler
+	// abgeben, solange mindestens 18 Spieler bleiben
+	const TArray<int32> Stamm = W.StartingEleven();
+	for (int32 n = 0; n < 6 && W.Squad.Num() > 18 && W.WagesPerMatchday() > W.WageBudget; ++n)
 	{
-		int32 Teuer = 0;
-		for (int32 i = 1; i < W.Squad.Num(); ++i) if (W.Squad[i].Wage > W.Squad[Teuer].Wage) Teuer = i;
+		int32 Teuer = -1;
+		for (int32 i = 0; i < W.Squad.Num(); ++i)
+			if (!Stamm.Contains(W.Squad[i].Id) && (Teuer < 0 || W.Squad[i].Wage > W.Squad[Teuer].Wage)) Teuer = i;
+		if (Teuer < 0) break;
+		const int32 Vorher = W.Squad.Num();
 		W.SellPlayer(W.Squad[Teuer].Id, Grund);
+		if (W.Squad.Num() == Vorher) break;
+	}
+	// Mehr als 24 Spieler kosten nur Gehalt: die schwaechsten Nicht-Stammspieler ab 21 Jahren abgeben
+	for (int32 n = 0; n < 6 && W.Squad.Num() > 24; ++n)
+	{
+		int32 Weg = -1;
+		for (int32 i = 0; i < W.Squad.Num(); ++i)
+			if (!Stamm.Contains(W.Squad[i].Id) && W.Squad[i].Age >= 21 && (Weg < 0 || W.Squad[i].Strength < W.Squad[Weg].Strength)) Weg = i;
+		if (Weg < 0) break;
+		const int32 Vorher = W.Squad.Num();
+		W.SellPlayer(W.Squad[Weg].Id, Grund);
+		if (W.Squad.Num() == Vorher) break;
 	}
 	// Kaufen: bester Spieler, der die Elf verbessert und bezahlbar bleibt
+	// Gekauft wird nur in den Wechselfenstern (Spieltag 1 bis 3 und 18 bis 20) und nie aus der Lizenzruecklage
+	const bool bFenster = W.Matchday <= 3 || (W.Matchday >= 18 && W.Matchday <= 20);
+	const int64 Ruecklage = LizenzRuecklage(W);
 	int32 Bester = -1;
-	for (int32 i = 0; i < W.Market.Num(); ++i)
+	for (int32 i = 0; bFenster && i < W.Market.Num(); ++i)
 	{
 		const FFM13MarketOffer& O = W.Market[i];
 		const bool bBezahlbar = O.Price <= W.Money * 3 / 10 && W.Money - O.Price > (W.WagesPerMatchday() + O.Player.Wage) * 12
-			&& W.WagesPerMatchday() + O.Player.Wage <= Gehaltsgrenze;
+			&& W.WagesPerMatchday() + O.Player.Wage <= Gehaltsgrenze && W.Money - O.Price >= Ruecklage;
 		if (bBezahlbar && O.Player.Strength > Elf + 1 && (Bester < 0 || O.Player.Strength > W.Market[Bester].Player.Strength)) Bester = i;
 	}
 	if (Bester >= 0 && W.Squad.Num() >= FM13::MaxSquadSize)
@@ -2867,7 +2920,7 @@ static void BotZug(FFM13World& W)
 	{
 		const FFM13World::FFM13LizenzStatus L = W.DfbLicensingStatus();
 		const int64 Puffer = L.MinReserve + W.WagesPerMatchday() * 6;
-		if (L.bFlutlichNoetig && !W.bFlutlicht && !W.FlutlichImBau() && W.Money > Puffer + 3500000)
+		if (L.bFlutlichNoetig && !W.bFlutlicht && !W.FlutlichImBau() && W.Money > Puffer + W.FlutlichKosten())
 			W.BuildFlutlicht(Grund);
 		// Jugendinternat fuer die Lizenz: Stufe plus Baustelle erreicht das Mindestniveau
 		if (W.CampusInternat + W.InternatImBau() < L.MinInternat && W.Money > Puffer + W.CampusInternatKosten(W.CampusInternat + 1))
