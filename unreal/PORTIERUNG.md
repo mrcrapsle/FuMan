@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen, 11 entfallen** (von 145 Modulen in `js/`).
+Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 37 teilweise, 64 offen, 11 entfallen** (von 145 Modulen in `js/`; die Zahlen stammen aus der Tabelle unten).
 
 ## Ordner
 
@@ -107,7 +107,7 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 | `team-council.js` | 186 | portiert | Mannschaftsrat | Monatliches Anliegen (Stimmung, Kabine, Einsatzzeit, Training, Siegesserie), Antworten mit Kosten nach Liga, Verfall nach vier Spieltagen, Verlauf. 2 Antworttypen sind mit Tests gegen die Regel geprüft, Kabinen-Antworten mit Kapitänswechsel über den Kern
 | `contracts.js` | 296 | teilweise | Verträge | Verlängern mit Verhandlung wie im Browserspiel: Angebot aus Forderung, Laufzeit, Garantie (15 Einsätze, 15 % weniger), Gegenangebot (10 % weniger, zwei Absagen sperren die Saison), Handgeld und Berater, Einsatzgarantie am Saisonende. Ausstiegsklauseln: setzen ab 110 Prozent des Marktwerts (Moral +6 bis 130 Prozent), entfernen, tägliche Auslösung mit Käufer aus der Klubliste (Wurf je Spieltag). Offen: Sportdirektor-Rabatt, Gehaltsbudget-Prüfung mit der Liste der Verträge, Fan-Reaktion beim Verkauf eines Publikumslieblings |
 | `contract-tools.js` | 222 | offen | VERTRAGS- UND TRANSFER-WERKZEUGE (Phase 26.2): Gehalts-Ampel, Verlängerungs-Assistent, |  |
-| `contract-ultimatum.js` | 222 | offen | (aus match.js ausgelagert - reine Datei-Organisation, keine Verhaltensänderung) |  |
+| `contract-ultimatum.js` | 222 | teilweise | Vertragsultimaten | Auslösung, Frist, Presse-Leck, Verlängerung, Verkauf, Ignorieren und Speichern im Kern. Berater- und Perk-Pfade fehlen, Verkauf über `SellPlayer` (80 % statt 75 %), kein Legenden-Schutz |
 | `bonusclauses.js` | 140 | portiert | ERFOLGSBASIERTE VERTRAGSBONI |  |
 | `pro-loans.js` | 74 | offen | Profis verleihen (Phase 25.20): bisher ließen sich nur Spieler der zweiten Mannschaft und  |  |
 | `secondteam.js` | 919 | offen | ZWEITE MANNSCHAFT: eigenständiger Klub, der parallel zur ersten Mannschaft ganz |  |
@@ -236,3 +236,33 @@ Stand nach Runde B und der Stärkeformel: **17 portiert, 33 teilweise, 84 offen,
 5. **Runde F, Verein:** Fans und Fan-Gruppen, Stadion-Blöcke und -Anlagen, Stadion-Events, Ausschreitungen, Vorstand, Mitgliederversammlung, Wintergespräch, Medienabteilung, Mitarbeiter, Wappen, Freischaltungen.
 6. **Runde G, Rahmen:** Büro, Privatleben, Manager-Talente, Startmenü, Einsteiger-Modus, Lexikon, Englisch, Admin-Menü, Klänge.
 7. **Runde H, Livespiel:** 3D-Livespiel mit Ballphysik, Standards und Reaktionsspielen.
+
+## Reihenfolge der offenen Module nach Spielwirkung
+
+Die Einordnung ist eine Einschätzung aus Titel und Inhalt der Module, nicht aus einer Zeile-für-Zeile-Lektüre. Stufe 1 greift direkt in Ergebnis, Geld oder Kader ein. Stufe 2 betrifft Spielvorbereitung, Standards und Nebenwirkungen. Stufe 3 ist Anzeige, Werkzeug oder Oberfläche.
+
+| Rang | Modul | Zeilen | Stufe | Warum |
+|---|---|---|---|---|
+| 1 | `season-objectives.js` | 391 | 1 | Saisonziele bestimmen die Vorstandszufriedenheit und damit die Entlassung |
+| 2 | `women-team.js` | 388 | 1 | Frauenmannschaft mit eigener Liga und Einnahmen |
+| 3 | `secondteam.js` | 919 | 1 | Zweite Mannschaft als eigener Klub mit Kader und Ligaspielen parallel zur Ersten |
+| 4 | `scouting.js` | 366 | 1 | Weltweites Scouting; hier kommen die Talente her |
+| 5 | `ausschreitungen.js` und `ausschreitungen-szene.js` | 216 / 260 | 1 | Strafen und Geisterspiele nach Krawallen |
+| 6 | `match-live.js` und `spielphysik.js` | 1536 / 1437 | 1 | Livespiel mit Statistik und Ballphysik; Ergebnisse kommen schon aus der Spiellogik |
+| 7 | `club-geo.js` | 456 | 1 | Echte Orte, regionale Ligen, Reisefaktor (Derby über `RivalName` ist im Kern bereits da) |
+| 8 | `cup-live.js` und `cup-final.js` | 210 / 182 | 1 | Pokal als Livespiel und Pokalfinale |
+| 9 | `national-team.js` und `season-events.js` | 172 / 243 | 1 | Länderspiele mit Vergütung und Pausen, Saisonereignisse |
+| 10 | `matchprep.js` | 940 | 2 | Aufstellungs- und Taktikvorlagen, Spieltag-Check |
+| 11 | `set-pieces.js`, `reaktionsspiel.js`, `set-piece-drills.js` | 373 / 234 / 87 | 2 | Standards, Elfmeter und Freistoß |
+| 12 | `co-trainer-live.js` und `referee-critique.js` | 213 / 135 | 2 | Co-Trainer im Spiel, Schiedsrichterkritik |
+| 13 | `player-scandals.js` | 180 | 2 | Spielerskandale mit Folgen für Moral und Image |
+| 14 | `media-department.js` und `private-life-extra.js` | 243 / 289 | 2 | Medienimage und Privatleben des Managers |
+| 15 | `stocks.js`, `betting.js`, `underworld.js`, `premium.js` | 292 / 227 / 141 / 264 | 2 | Nebenfinanzen und Aktionen |
+| 16 | `stadium-tools.js` und `stadium-events.js` | 220 / 124 | 2 | Stadionveranstaltungen und Werkzeuge |
+| 17 | `training-games.js` und `pro-loans.js` | 299 / 74 | 2 | Trainingsspiele, Profi-Leihen |
+| 18 | `freischaltungen.js` und `coach-carousel.js` | 364 / 107 | 2 | Freischaltungen, Trainerwechsel bei KI-Vereinen |
+| 19 | Anzeigen und Werkzeuge (u. a. `squad-radar`, `financial-charts`, `insights`, `manager-tools`, `office`, `avatars`, `crest`) | | 3 | Keine eigene Regel |
+| 20 | Oberfläche und Sprache (u. a. `lexicon`, `i18n`, `audio`, `startmenue`, `onboarding`, `einsteiger`) | | 3 | Keine Spielwirkung |
+| 21 | `admin.js`, `admin-tools.js` | 569 / 328 | 3 | Nur Entwicklung |
+
+**Nächste fünf:** Saisonziele, Frauenmannschaft, Zweite Mannschaft, Scouting, Ausschreitungen.
