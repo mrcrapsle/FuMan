@@ -227,6 +227,9 @@ public:
 	// Sponsor, Angebote, Ehrungen
 	FFM13Sponsor Sponsor;
 	TArray<FFM13Sponsor> SponsorOffers;
+	FString NamingRightsSponsor;                  // stadium.namingRightsSponsor (leer = keine Namensrechte vergeben)
+	int64 NamingRightsPerMatch = 0;               // laufende Einnahme je Heimspiel (stadium.namingRightsIncome)
+	bool SellNamingRights(FString& OutReason);    // sellNamingRights(): Einmalzahlung und laufende Einnahme je Heimspiel
 	TArray<FFM13IncomingOffer> IncomingOffers;
 	FFM13ClubRecords Records;
 	TArray<FFM13Achievement> Achievements;

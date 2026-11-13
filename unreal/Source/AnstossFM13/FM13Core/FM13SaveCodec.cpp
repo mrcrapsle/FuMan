@@ -493,6 +493,7 @@ namespace FM13Save
 		W.ArrayKey(TEXT("heimZuschauer"));
 		for (int32 Z : S.HeimZuschauer) { W.ElementObject(); W.Field(TEXT("z"), Z); W.EndObject(); }
 		W.EndArray();
+		W.Field(TEXT("namingSponsor"), S.NamingRightsSponsor); W.Field(TEXT("namingPerMatch"), S.NamingRightsPerMatch);
 		W.ArrayKey(TEXT("youthOffers"));
 		for (const FFM13World::FFM13YouthOffer& O : S.YouthOffers) { W.ElementObject(); W.Field(TEXT("pid"), O.PlayerId); W.Field(TEXT("club"), O.Club); W.Field(TEXT("betrag"), O.Betrag); W.Field(TEXT("season"), O.Season); W.Field(TEXT("bis"), O.Bis); W.EndObject(); }
 		W.EndArray();
@@ -1294,6 +1295,8 @@ namespace FM13Save
 		W.HeimZuschauer.Reset();
 		for (int32 N : R.Items(Root, TEXT("heimZuschauer"))) W.HeimZuschauer.Add((int32)R.Int(N, TEXT("z"), 0));
 		for (int32 N : R.Items(Root, TEXT("ownRecentForm"))) W.OwnRecentForm.Add((int32)R.Int(N, TEXT("v"), 0));
+		W.NamingRightsSponsor = R.Str(Root, TEXT("namingSponsor"), TEXT(""));
+		W.NamingRightsPerMatch = R.Int(Root, TEXT("namingPerMatch"), 0);
 		for (int32 N : R.Items(Root, TEXT("youthOffers")))
 		{
 			FFM13World::FFM13YouthOffer O;

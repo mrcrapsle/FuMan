@@ -1699,6 +1699,26 @@ static void TestJugendangebote()
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.YouthOffers.Num() == W.YouthOffers.Num(), "Angebote bleiben beim Speichern erhalten (%s)", *Fehler);
 }
 
+static void TestNamensrechte()
+{
+	std::printf("Namensrechte: Einmalzahlung, laufende Einnahme je Heimspiel, eine Vergabe\n");
+	FFM13World W;
+	W.NewGame(TEXT("Namen"), 181, 0);
+	W.LeagueLevel = 4;   // Faktor 1,0
+	const int64 Geld = W.Money;
+	FString G;
+	PRUEFE(W.SellNamingRights(G), "Namensrechte verkauft (%s)", *G);
+	PRUEFE(W.Money - Geld >= 150000 && W.Money - Geld <= 350000, "Einmalzahlung 150.000 bis 350.000 bei Faktor 1 (%lld)", (long long)(W.Money - Geld));
+	PRUEFE(W.NamingRightsPerMatch >= 800 && W.NamingRightsPerMatch <= 2000 && !W.NamingRightsSponsor.IsEmpty(), "Laufend 800 bis 2.000 je Heimspiel (%lld)", (long long)W.NamingRightsPerMatch);
+	PRUEFE(!W.SellNamingRights(G) && G.Contains(TEXT("bereits vergeben")), "Zweiter Verkauf wird abgelehnt");
+	FFM13World V;
+	V.NewGame(TEXT("Namen"), 181, 0);
+	V.SellNamingRights(G);
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(V), L, Fehler) && L.NamingRightsSponsor == V.NamingRightsSponsor && L.NamingRightsPerMatch == V.NamingRightsPerMatch && !L.NamingRightsSponsor.IsEmpty(), "Namensrechte bleiben beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -3018,9 +3038,11 @@ static void BotZug(FFM13World& W)
 	// Verlängern: wer zur Elf gehört
 	for (FFM13Player& P : W.Squad)
 		if (P.ContractYears <= 1 && P.Strength >= Elf - 3 && W.WagesPerMatchday() - P.Wage + W.RenewalWage(P) <= Gehaltsgrenze
-			&& W.Money > W.RenewalSigningFee(P, 3) * 3) W.RenewContract(P.Id, 3, Grund);
+			&& W.Money > W.RenewalSigningFee(P, 3) * 3 + W.WagesPerMatchday() * 6) W.RenewContract(P.Id, 3, Grund);
 	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
 	BotKaderPlanen(W, Grund);
+	// Namensrechte einmal verkaufen (sponsoren). Hauptsponsor-Angebote noch nicht: siehe PORTIERUNG.md
+	if (W.NamingRightsSponsor.IsEmpty()) W.SellNamingRights(Grund);
 	// Talentangebote (25.18): verkaufen mit Beteiligung, wessen Potenzial unter dem Kader-Median liegt; sonst ablehnen
 	const int32 Med = KaderMedian(W);
 	for (int32 i = W.YouthOffers.Num() - 1; i >= 0; --i)
@@ -3125,6 +3147,7 @@ int main()
 	TestCampusInternat();
 	TestZuschauerformel();
 	TestJugendangebote();
+	TestNamensrechte();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

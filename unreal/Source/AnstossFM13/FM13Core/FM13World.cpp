@@ -442,7 +442,7 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 	// Brutto wie grossIncome in js/match-live.js: Tickets, Fanshop, Sponsor und die TV-Rate dieses Spieltags
 	const int64 Tickets = bHome ? TicketRevenue(Att) : 0;
 	const int64 Fanshop = SimulateMerchSales(bHome && Att > 0, bWin, Att);
-	const int64 SponsorBrutto = Sponsor.Base + (bWin ? Sponsor.WinBonus : 0);
+	const int64 SponsorBrutto = Sponsor.Base + (bWin ? Sponsor.WinBonus : 0) + (bHome ? NamingRightsPerMatch : 0);
 	const int64 TvRate = FM13Economy::TvMoney(LeagueLevel, OwnRank()) / FM13::MatchdaysPerSeason;
 	const int64 Brutto = Tickets + Fanshop + SponsorBrutto + TvRate;
 	const int64 Steuer = FM13Transfers::JsRunden((double)FMath::Max<int64>(0, Brutto) * 0.12);   // getTaxRate(): 12 Prozent ohne Steuerberater
@@ -459,6 +459,7 @@ void FFM13World::ApplyMatchdayFinances(bool bHome, bool bWin, int32 Att)
 	Buche(TEXT("Fanshop-Erloes"), Fanshop);
 	Buche(TEXT("Sponsor Grundbetrag"), Sponsor.Base);
 	if (bWin) Buche(TEXT("Sponsor Siegpraemie"), Sponsor.WinBonus);
+	if (bHome) Buche(TEXT("Namensrechte"), NamingRightsPerMatch);
 	Buche(TEXT("Gehaelter"), -WagesPerMatchday());
 	Buche(TEXT("Personalgehaelter"), -Personal);
 	Buche(TEXT("Steuern und Abgaben"), -Steuer);
@@ -2613,6 +2614,24 @@ void FFM13World::TickSponsor()
 		Sponsor.Base = 500; Sponsor.WinBonus = 200; Sponsor.PromotionBonus = 0; Sponsor.SignOn = 0; Sponsor.Tier = TEXT("");
 		if (!SponsorOffers.Num()) MakeSponsorOffers();
 	}
+}
+
+// sellNamingRights() (js/stadium.js): Einmalzahlung und laufende Einnahme je Heimspiel, Faktor je Liga (SPONSOR_LEAGUE_FACTOR)
+bool FFM13World::SellNamingRights(FString& OutReason)
+{
+	if (!NamingRightsSponsor.IsEmpty()) { OutReason = TEXT("Namensrechte sind bereits vergeben - erst aufloesen, um neu zu verkaufen."); return false; }
+	static const TCHAR* const Namen[5] = { TEXT("Energie Nord AG"), TEXT("MediaPark Digital"), TEXT("Volksbank Arena-Partner"), TEXT("TechFlow Systems"), TEXT("Landmarkt-Gruppe") };
+	static const double Faktor[6] = { 74.0, 20.0, 6.5, 3.2, 1.0, 0.75 };
+	const double F = Faktor[FMath::Clamp(LeagueLevel, 0, 5)];
+	const double U1 = FM13Transfers::HashEinheit(Season * 100 + Matchday, 9191);
+	const double U2 = FM13Transfers::HashEinheit(Season * 100 + Matchday, 9192);
+	const int32 Wahl = FMath::Min(4, (int32)(FM13Transfers::HashEinheit(Season * 100 + Matchday, 9193) * 5.0));
+	const int64 Einmal = FM13Transfers::JsRunden((150000.0 + U1 * 200000.0) * F / 1000.0) * 1000;
+	NamingRightsPerMatch = FM13Transfers::JsRunden((800.0 + U2 * 1200.0) * F / 50.0) * 50;
+	NamingRightsSponsor = Namen[Wahl];
+	Book(TEXT("Namensrechte"), Einmal);
+	AddMessage(TEXT("Namensrechte verkauft!"), FString::Printf(TEXT("%s. Einmalzahlung: %lld Euro, laufend %lld Euro je Heimspiel."), *NamingRightsSponsor, (long long)Einmal, (long long)NamingRightsPerMatch));
+	return true;
 }
 
 bool FFM13World::AcceptSponsorOffer(int32 Index, FString& OutReason)
