@@ -139,6 +139,12 @@ public:
 	bool LoanYouth(int32 PlayerId, const FString& Verein, FString& OutReason);
 	void ReturnFromLoan(const FFM13YouthLoan& L);
 	void TickYouthPathway();                       // taeglich: Entscheidungen, Leihen
+	struct FFM13YouthOffer { int32 PlayerId = 0; FString Club; int64 Betrag = 0; int32 Season = 0; int32 Bis = 0; };   // game.youthOffers
+	TArray<FFM13YouthOffer> YouthOffers;
+	void TickYouthOffers();                                    // monatlich: tickYouthOffers() (Talente ab 16, hoechstens zwei Angebote, vier Spieltage)
+	bool AcceptYouthOffer(int32 Index, bool bMitBeteiligung, FString& OutReason);   // acceptYouthOffer: 85 % ins Transferbudget, 20 % Weiterverkauf
+	bool RejectYouthOffer(int32 Index, FString& OutReason);                         // rejectYouthOffer: Top-Talent +1 Stärke
+	int64 YouthOfferAmount(const FFM13Player& T);                                   // getYouthOfferAmount
 	void TickYouthBreakthroughs();                 // monatlich
 	void CheckYouthMilestones(const TArray<int32>& Starter);  // Debuet, erstes Tor, erste Elf
 	void AgeYouthAtSeasonEnd();                    // ageYouthAtSeasonEnd()

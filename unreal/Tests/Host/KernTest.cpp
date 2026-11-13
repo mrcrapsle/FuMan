@@ -1664,6 +1664,41 @@ static void TestZuschauerformel()
 	PRUEFE(bOk, "Tagesstreuung: ausverkauft genau 1,0, sonst zwischen 0,92 und 1,08");
 }
 
+static void TestJugendangebote()
+{
+	std::printf("Talentangebote: Chance je Stufe, Verkauf mit Beteiligung, Ablehnung, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Talent"), 171, 0);
+	FFM13Player T;
+	T.Id = 9001; T.Name = TEXT("Testtalent"); T.Pos = EFM13Position::MIT; T.Age = 17;
+	T.Strength = 60; T.Potential = 80; T.PotentialTier = 3;
+	W.YouthTalents.Add(T);
+	const int32 Id = T.Id;
+	for (int32 n = 0; n < 60 && W.YouthOffers.Num() == 0; ++n) { W.Matchday = 4; W.TickYouthOffers(); }
+	PRUEFE(W.YouthOffers.Num() == 1 && W.YouthOffers[0].PlayerId == Id, "Ein Top-Talent bekommt bald ein Angebot");
+	PRUEFE(W.YouthOffers[0].Bis == W.Matchday + 4 && W.YouthOffers[0].Betrag >= 5000, "Angebot gilt vier Spieltage, Betrag %lld", (long long)W.YouthOffers[0].Betrag);
+	const int64 Betrag = W.YouthOffers[0].Betrag;
+	const int64 Geld = W.Money;
+	const int32 Klauseln = W.SellOnClauses.Num();
+	FString G;
+	PRUEFE(W.AcceptYouthOffer(0, true, G), "Verkauf mit Beteiligung klappt (%s)", *G);
+	PRUEFE(W.Money == Geld + FM13Transfers::JsRunden(Betrag * 0.8 / 1000.0) * 1000, "Mit Beteiligung 20 %% weniger jetzt");
+	PRUEFE(W.SellOnClauses.Num() == Klauseln + 1 && W.SellOnClauses.Last().Percent == 20, "Weiterverkauf 20 %% vereinbart");
+	bool bWeg = true;
+	for (const FFM13Player& P : W.YouthTalents) if (P.Id == Id) bWeg = false;
+	PRUEFE(bWeg && W.YouthOffers.Num() == 0, "Talent und Angebot sind weg");
+	FFM13Player U;
+	U.Id = 9002; U.Name = TEXT("Zweittalent"); U.Pos = EFM13Position::ST; U.Age = 17;
+	U.Strength = 55; U.Potential = 70; U.PotentialTier = 3;
+	W.YouthTalents.Add(U);
+	W.YouthOffers.Add(FFM13World::FFM13YouthOffer{ U.Id, TEXT("Testklub"), 900000, W.Season, W.Matchday + 4 });
+	PRUEFE(W.RejectYouthOffer(0, G) && W.YouthTalents.Last().Strength == 56, "Ablehnung eines Top-Talents: +1 Stärke");
+	W.YouthOffers.Add(FFM13World::FFM13YouthOffer{ U.Id, TEXT("Testklub"), 900000, W.Season, W.Matchday + 4 });
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.YouthOffers.Num() == W.YouthOffers.Num(), "Angebote bleiben beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -2986,6 +3021,17 @@ static void BotZug(FFM13World& W)
 			&& W.Money > W.RenewalSigningFee(P, 3) * 3) W.RenewContract(P.Id, 3, Grund);
 	// Talente und Kaderplanung wie js/longrun-bundesliga.js (verwalten)
 	BotKaderPlanen(W, Grund);
+	// Talentangebote (25.18): verkaufen mit Beteiligung, wessen Potenzial unter dem Kader-Median liegt; sonst ablehnen
+	const int32 Med = KaderMedian(W);
+	for (int32 i = W.YouthOffers.Num() - 1; i >= 0; --i)
+	{
+		if (i >= W.YouthOffers.Num()) continue;
+		int32 Pot = -1;
+		for (const FFM13Player& T : W.YouthTalents) if (T.Id == W.YouthOffers[i].PlayerId) Pot = T.Potential;
+		if (Pot < 0) continue;
+		if (Pot < Med) W.AcceptYouthOffer(i, true, Grund);
+		else W.RejectYouthOffer(i, Grund);
+	}
 	// Ausbauen mit Reserve
 	if (W.Money > W.TrainingUpgradeCost() * 4) W.UpgradeTraining(Grund);
 	if (W.Money > W.YouthAcademyUpgradeCost() * 4) W.UpgradeYouthAcademy(Grund);
@@ -3078,6 +3124,7 @@ int main()
 	TestDfbLizenz();
 	TestCampusInternat();
 	TestZuschauerformel();
+	TestJugendangebote();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

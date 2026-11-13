@@ -241,7 +241,7 @@ bool FFM13World::PlayMatchday()
 	TickImmobilien();
 	TickFriendships();
 	TickYouthPathway();
-	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickTeamCouncil(); TickLockerRoom(); }
+	if (Matchday % 4 == 0) { TickYouthDevelopment(); TickYouthBreakthroughs(); TickYouthOffers(); TickTeamCouncil(); TickLockerRoom(); }
 	++Matchday;
 	TickTransferStrategy();
 	TickRumors();
@@ -1813,6 +1813,94 @@ double FFM13World::KickoffNoise(double BoostMult) const
 {
 	if (AttendanceDetails(BoostMult, 1.0, 1.0).Zuschauer >= StadiumTotal()) return 1.0;
 	return 0.92 + FM13Transfers::HashEinheit(Season * 1000 + Matchday, 7777) * 0.16;
+}
+
+// ---------- Talentverkauf (js/youth-sales.js) ----------
+namespace
+{
+	const double YouthOfferChance[4] = { 0.015, 0.015, 0.05, 0.12 };   // je Potenzialstufe 1 bis 3
+	const int32 YouthOfferMax = 2;
+	const int32 YouthOfferDays = 4;
+	const int32 YouthSellOnPercent = 20;
+}
+
+// getYouthOfferAmount(): Marktwert der Stärke mal (1 + Potenzial-Luft / 20) mal 0,8 bis 1,2, hoechstens 30 % des Marktwerts am Potenzial
+int64 FFM13World::YouthOfferAmount(const FFM13Player& T)
+{
+	const int32 Luft = FMath::Max(0, T.Potential - T.Strength);
+	const double Wert = (double)FM13Economy::MarketValue(T.Strength, nullptr) * (1.0 + (double)Luft / 20.0) * (0.8 + RngJugend.FRand() * 0.4);
+	const double Deckel = (double)FM13Economy::MarketValue(T.Potential, nullptr) * 0.3;
+	return FMath::Max<int64>(5000, FM13Transfers::JsRunden(FMath::Min(Wert, Deckel) / 1000.0) * 1000);
+}
+
+// tickYouthOffers(): abgelaufene oder verwaiste Angebote streichen, dann Chance je Talent (Potenzialstufe)
+void FFM13World::TickYouthOffers()
+{
+	for (int32 i = YouthOffers.Num() - 1; i >= 0; --i)
+	{
+		const FFM13YouthOffer& O = YouthOffers[i];
+		bool bDa = false;
+		for (const FFM13Player& T : YouthTalents) if (T.Id == O.PlayerId) bDa = true;
+		if (!(O.Season == Season && O.Bis >= Matchday && bDa)) YouthOffers.RemoveAt(i);
+	}
+	if (YouthOffers.Num() >= YouthOfferMax) return;
+	for (const FFM13Player& T : YouthTalents)
+	{
+		if (YouthOffers.Num() >= YouthOfferMax) break;
+		if (T.Age < 16) continue;
+		bool bSchon = false;
+		for (const FFM13YouthOffer& O : YouthOffers) if (O.PlayerId == T.Id) bSchon = true;
+		if (bSchon) continue;
+		const int32 Stufe = FMath::Clamp((int32)T.PotentialTier, 1, 3);
+		if (RngJugend.FRand() >= YouthOfferChance[Stufe]) continue;
+		FFM13YouthOffer O;
+		O.PlayerId = T.Id;
+		O.Club = RandomOpposingClub(true);
+		O.Betrag = YouthOfferAmount(T);
+		O.Season = Season;
+		O.Bis = Matchday + YouthOfferDays;
+		YouthOffers.Add(O);
+		AddMessage(FString(TEXT("Angebot fuer Talent ")) + T.Name, FString::Printf(TEXT("%s bietet %lld Euro fuer %s (%d Jahre). Gilt bis Spieltag %d."), *O.Club, (long long)O.Betrag, *T.Name, T.Age, O.Bis));
+	}
+}
+
+// acceptYouthOffer(): das Talent geht; mit Beteiligung 20 % weniger jetzt, dafuer 20 % vom Weiterverkauf
+bool FFM13World::AcceptYouthOffer(int32 Index, bool bMitBeteiligung, FString& OutReason)
+{
+	if (!YouthOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gilt nicht mehr."); return false; }
+	const FFM13YouthOffer O = YouthOffers[Index];
+	int32 TIndex = -1;
+	for (int32 i = 0; i < YouthTalents.Num(); ++i) if (YouthTalents[i].Id == O.PlayerId) TIndex = i;
+	if (TIndex < 0) { OutReason = TEXT("Dieses Angebot gilt nicht mehr."); return false; }
+	const FFM13Player T = YouthTalents[TIndex];
+	const int64 Jetzt = bMitBeteiligung ? FM13Transfers::JsRunden((double)O.Betrag * (1.0 - YouthSellOnPercent / 100.0) / 1000.0) * 1000 : O.Betrag;
+	Book(TEXT("Talentverkauf"), Jetzt);
+	TransferBudget += FM13Transfers::JsRunden((double)Jetzt * 0.85);
+	if (bMitBeteiligung)
+	{
+		FFM13SellOn S;
+		S.PlayerName = T.Name;
+		S.BuyingClub = O.Club;
+		S.Percent = YouthSellOnPercent;
+		S.OriginalSaleValue = Jetzt;
+		SellOnClauses.Add(S);
+	}
+	YouthTalents.RemoveAt(TIndex);
+	// removeYouthTalentById(): alle Angebote fuer dieses Talent fallen weg
+	for (int32 i = YouthOffers.Num() - 1; i >= 0; --i) if (YouthOffers[i].PlayerId == O.PlayerId) YouthOffers.RemoveAt(i);
+	AddMessage(FString(TEXT("Talent verkauft: ")) + T.Name, FString::Printf(TEXT("%s wechselt fuer %lld Euro zu %s."), *T.Name, (long long)Jetzt, *O.Club));
+	return true;
+}
+
+// rejectYouthOffer(): das Talent bleibt; ein Top-Talent unter seinem Potenzial wird bestaetigt (+1 Stärke)
+bool FFM13World::RejectYouthOffer(int32 Index, FString& OutReason)
+{
+	if (!YouthOffers.IsValidIndex(Index)) { OutReason = TEXT("Dieses Angebot gilt nicht mehr."); return false; }
+	const int32 PlayerId = YouthOffers[Index].PlayerId;
+	YouthOffers.RemoveAt(Index);
+	for (FFM13Player& T : YouthTalents)
+		if (T.Id == PlayerId && T.PotentialTier == 3 && T.Strength < T.Potential) T.Strength++;
+	return true;
 }
 
 // Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen
