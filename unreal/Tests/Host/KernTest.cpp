@@ -1751,6 +1751,55 @@ static void TestVertragsultimatum()
 	PRUEFE(W.ResolveUltimatumSell(G) && !W.Ultimatum.bAktiv, "Verkauf loest das Ultimatum (%s)", *G);
 }
 
+static void TestSaisonziele()
+{
+	std::printf("Saisonziele: Auswahl, Praemie je Liga, Fortschritt, Saisonende, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Ziele"), 201, 0);
+	W.LeagueLevel = 0;
+	W.Money = 500000;
+	W.EnsureSeasonObjectives();
+	PRUEFE(W.SeasonObjectives.Num() >= 1 && W.SeasonObjectives.Num() <= 4, "Drei bis vier Ziele je Saison (%d)", W.SeasonObjectives.Num());
+	bool bDoppelt = false;
+	for (int32 i = 0; i < W.SeasonObjectives.Num(); ++i) for (int32 j = i + 1; j < W.SeasonObjectives.Num(); ++j) if (W.SeasonObjectives[i].Typ == W.SeasonObjectives[j].Typ) bDoppelt = true;
+	PRUEFE(!bDoppelt, "Keine doppelten Ziele");
+	PRUEFE(W.ObjectiveReward(EFM13Objective::Finanz, 0) == 200000 && W.ObjectiveReward(EFM13Objective::Aufstieg, 1) == 687500, "Praemie: Basis x Schwierigkeit x Liga-Faktor (Finanz 200.000, Aufstieg 2. Liga 687.500)");
+	W.LeagueLevel = 5;
+	PRUEFE(W.ObjectiveReward(EFM13Objective::Pokal, 5) == 15000, "Landesliga: Pokal 250.000 x 1,5 x 0,04 = 15.000 (%lld)", (long long)W.ObjectiveReward(EFM13Objective::Pokal, 5));
+	// Fortschritt: Finanzziel erfuellt bei einer Million auf dem Konto
+	W.LeagueLevel = 0;
+	W.SeasonObjectives.Empty();
+	FFM13World::FFM13Objective F;
+	F.Typ = EFM13Objective::Finanz; F.Name = TEXT("Finanz"); F.Praemie = 200000; F.Schwierigkeit = 0; F.StartLiga = 0; F.StartSeason = W.Season;
+	W.SeasonObjectives.Add(F);
+	W.ObjectivesSeason = W.Season;
+	W.Money = 1000000;
+	const int64 Vorher = W.Money;
+	W.TickSeasonObjectives();
+	PRUEFE(W.SeasonObjectives[0].bErreicht && W.Money == Vorher + 200000 && W.ObjectiveRewardsSeason == 200000, "Finanzziel zahlt die Praemie");
+	W.TickSeasonObjectives();
+	PRUEFE(W.Money == Vorher + 200000, "Ein erreichtes Ziel zahlt nur einmal");
+	// Siegesserie: fuenf Spiele ohne Niederlage
+	W.SeasonObjectives.Empty();
+	FFM13World::FFM13Objective Se; Se.Typ = EFM13Objective::Serie; Se.Name = TEXT("Serie"); Se.Praemie = 300000;
+	W.SeasonObjectives.Add(Se);
+	W.OwnRecentForm = { 1, 0, 1, 1, 0 };
+	W.TickSeasonObjectives();
+	PRUEFE(W.SeasonObjectives[0].bErreicht, "Fuenf Spiele ohne Niederlage erfuellen die Siegesserie");
+	// Saisonende: Aufstieg nur mit Aufstieg, Meister nur auf Platz 1
+	W.SeasonObjectives.Empty();
+	FFM13World::FFM13Objective A; A.Typ = EFM13Objective::Aufstieg; A.Name = TEXT("Aufstieg"); A.Praemie = 500000; A.StartLiga = 1;
+	FFM13World::FFM13Objective M; M.Typ = EFM13Objective::Meister; M.Name = TEXT("Meister"); M.Praemie = 750000; M.StartLiga = 1;
+	W.SeasonObjectives.Add(A); W.SeasonObjectives.Add(M);
+	W.ObjectivesSeason = W.Season;
+	W.EvaluateSeasonEndObjectives(3, true);
+	PRUEFE(W.SeasonObjectives[0].bErreicht && !W.SeasonObjectives[1].bErreicht, "Aufstieg auf Platz 3 mit Aufstieg erreicht, Meister nicht");
+	// Speichern
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.SeasonObjectives.Num() == 2 && L.SeasonObjectives[0].bErreicht && L.ObjectiveRewardsSeason == W.ObjectiveRewardsSeason, "Saisonziele bleiben beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -3207,6 +3256,7 @@ int main()
 	TestJugendangebote();
 	TestNamensrechte();
 	TestVertragsultimatum();
+	TestSaisonziele();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

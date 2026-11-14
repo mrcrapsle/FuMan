@@ -405,6 +405,19 @@ public:
 	// Vertragsultimatum (js/contract-ultimatum.js): ein starker, unzufriedener Spieler fordert Verlaengerung oder Verkauf
 	struct FFM13Ultimatum { bool bAktiv = false; int32 PlayerId = 0; int32 Frist = 0; bool bErinnert = false; bool bPresse = false; };
 	FFM13Ultimatum Ultimatum;
+	// Saisonziele (js/season-objectives.js): drei bis vier Ziele je Saison, Prämie bei Erreichen
+	struct FFM13Objective { EFM13Objective Typ = EFM13Objective::Aufstieg; FString Name; int32 Schwierigkeit = 0; int64 Praemie = 0; int32 StartLiga = 0; int32 StartSeason = 0; bool bErreicht = false; };
+	TArray<FFM13Objective> SeasonObjectives;
+	int32 ObjectivesSeason = 0;          // Saison, für die die Ziele gelten (0 = noch keine)
+	int64 ObjectiveRewardsSeason = 0;    // Prämien dieser Saison
+	int32 SeasonCleanSheets = 0;         // Liga-Siege zu Null (Saison)
+	int32 SeasonHomeFillSum = 0;         // Auslastung je Heimspiel in Promille, Summe (Saison)
+	int32 SeasonHomeCount = 0;           // Heimspiele dieser Saison mit Zuschauerzahl
+	void EnsureSeasonObjectives();                                    // Ziele der laufenden Saison bereitstellen
+	void GenerateSeasonObjectives();                                  // generateSeasonObjectives()
+	void TickSeasonObjectives();                                      // jeden Spieltag: Fortschritt, Prämie bei Erreichen
+	void EvaluateSeasonEndObjectives(int32 FinalRank, bool bPromoted); // Saisonabschluss mit Endstand
+	int64 ObjectiveReward(EFM13Objective Typ, int32 Liga) const;      // Basis x Schwierigkeit x Liga-Faktor
 	void TickContractUltimatum();                                    // jeden Spieltag: Ausloesung, Erinnerung, Frist
 	bool ResolveUltimatumRenew(FString& OutReason);                  // Verlaengerung ab 15 % Marktwert, je Wiederholung teurer
 	bool ResolveUltimatumSell(FString& OutReason);                   // Verkauf

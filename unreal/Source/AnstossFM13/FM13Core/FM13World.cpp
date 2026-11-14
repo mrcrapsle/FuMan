@@ -300,6 +300,10 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	// Formkurve fuer das naechste Spiel (das aktuelle zaehlt nicht mehr fuer seinen eigenen Zuschauerschnitt)
 	OwnRecentForm.Insert(OwnGoals > OppGoals ? 1 : (OwnGoals < OppGoals ? -1 : 0), 0);
 	while (OwnRecentForm.Num() > 5) OwnRecentForm.RemoveAt(OwnRecentForm.Num() - 1);
+	EnsureSeasonObjectives();
+	if (OppGoals == 0 && OwnGoals > 0) SeasonCleanSheets++;
+	if (bHome && StadiumTotal() > 0) { SeasonHomeFillSum += Att * 1000 / StadiumTotal(); SeasonHomeCount++; }
+	TickSeasonObjectives();
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
@@ -729,6 +733,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	WinterWindowCloseMatchday = 0;
 	bStrategySet = false;
 	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
+	EvaluateSeasonEndObjectives(Rank, Outcome == EFM13SeasonOutcome::Promoted);
 	DevelopPlayers(S);
 	YouthIntake(S);
 
@@ -1990,6 +1995,135 @@ bool FFM13World::IgnoreUltimatum(FString& OutReason)
 	AddMessage(TEXT("Ultimatum ignoriert"), TEXT("Der Spieler ist veraergert ueber die fehlende Reaktion."));
 	Ultimatum = FFM13Ultimatum();
 	return true;
+}
+
+// ---------- Saisonziele (js/season-objectives.js) ----------
+namespace
+{
+	struct FZielRegel { const TCHAR* Name; int64 Basis; int32 Schwer; };   // Schwer: 0 leicht, 1 mittel, 2 schwer
+	const FZielRegel ZielRegeln[10] = {
+		{ TEXT("Aufstieg"), 500000, 2 }, { TEXT("Meisterschaft"), 750000, 2 }, { TEXT("Pokalsieg"), 250000, 1 },
+		{ TEXT("Europa-Teilnahme"), 400000, 2 }, { TEXT("Finanzielle Stabilitaet"), 200000, 0 }, { TEXT("Siegesserie"), 300000, 1 },
+		{ TEXT("Nachwuchserfolg"), 350000, 1 }, { TEXT("Zuschauer-Erlebnis"), 150000, 0 }, { TEXT("Torschuetzen-Koenig"), 200000, 1 },
+		{ TEXT("Defensive Stabilitaet"), 200000, 1 } };
+	const double ZielSchwerFaktor[3] = { 1.0, 1.5, 2.5 };
+	const double ZielLigaFaktor[6] = { 1.0, 0.55, 0.3, 0.15, 0.08, 0.04 };
+}
+
+int64 FFM13World::ObjectiveReward(EFM13Objective Typ, int32 Liga) const
+{
+	const FZielRegel& R = ZielRegeln[(int32)Typ];
+	return (int64)((double)R.Basis * ZielSchwerFaktor[R.Schwer] * ZielLigaFaktor[FMath::Clamp(Liga, 0, 5)]);
+}
+
+// generateSeasonObjectives(): Typen, die schon erfuellt oder unerreichbar sind, fallen weg; 3 oder 4 Wuerfe, Doppelte zaehlen nicht
+void FFM13World::GenerateSeasonObjectives()
+{
+	SeasonObjectives.Reset();
+	ObjectivesSeason = Season;
+	ObjectiveRewardsSeason = 0;
+	SeasonCleanSheets = 0;
+	SeasonHomeFillSum = 0;
+	SeasonHomeCount = 0;
+	TArray<int32> Verfuegbar;
+	for (int32 t = 0; t < 10; ++t)
+	{
+		if (t == 0 && LeagueLevel == 0) continue;                       // Aufstieg nicht in der 1. Liga
+		if (t == 3 && LeagueLevel != 0) continue;                       // Europa nur aus der 1. Liga
+		if (t == 4 && Money >= 1000000) continue;                       // Finanzziel schon erfuellt
+		if (t == 7 && LigaZuschauerDecke[FMath::Clamp(LeagueLevel, 0, 5)] < 0.6) continue;   // 80 % Auslastung nur in den oberen Ligen
+		Verfuegbar.Add(t);
+	}
+	if (Verfuegbar.Num() == 0) return;
+	const int32 Anzahl = 3 + (FM13Transfers::HashEinheit(Season, 5301) < 0.5 ? 0 : 1);
+	TArray<int32> Gewaehlt;
+	for (int32 i = 0; i < Anzahl; ++i)
+	{
+		const int32 k = FMath::Min(Verfuegbar.Num() - 1, (int32)(FM13Transfers::HashEinheit(Season * 10 + i, 5302) * Verfuegbar.Num()));
+		const int32 t = Verfuegbar[k];
+		if (Gewaehlt.Contains(t)) continue;
+		Gewaehlt.Add(t);
+		FFM13Objective O;
+		O.Typ = (EFM13Objective)t;
+		O.Name = ZielRegeln[t].Name;
+		O.Schwierigkeit = ZielRegeln[t].Schwer;
+		O.Praemie = ObjectiveReward((EFM13Objective)t, LeagueLevel);
+		O.StartLiga = LeagueLevel;
+		O.StartSeason = Season;
+		SeasonObjectives.Add(O);
+	}
+}
+
+void FFM13World::EnsureSeasonObjectives()
+{
+	if (ObjectivesSeason != Season) GenerateSeasonObjectives();
+}
+
+// Fortschritt je Spieltag; Ziele mit Endstand (Aufstieg, Meister, Pokal, Europa) entscheidet erst EvaluateSeasonEndObjectives
+void FFM13World::TickSeasonObjectives()
+{
+	EnsureSeasonObjectives();
+	for (FFM13Objective& O : SeasonObjectives)
+	{
+		if (O.bErreicht) continue;
+		bool bFertig = false;
+		switch (O.Typ)
+		{
+		case EFM13Objective::Finanz: bFertig = Money >= 1000000; break;
+		case EFM13Objective::Serie:
+		{
+			bFertig = OwnRecentForm.Num() >= 5;
+			for (int32 i = 0; bFertig && i < 5; ++i) if (OwnRecentForm[i] < 0) bFertig = false;   // fuenf Spiele ungeschlagen
+			break;
+		}
+		case EFM13Objective::Nachwuchs:
+		{
+			int32 Einsaetze = 0;
+			for (const FFM13Player& P : Squad) if (P.Age < 21) Einsaetze += P.Appearances;
+			bFertig = Einsaetze >= 5;
+			break;
+		}
+		case EFM13Objective::Zuschauer: bFertig = SeasonHomeCount >= 3 && SeasonHomeFillSum >= 800 * SeasonHomeCount; break;   // Schnitt 80 %
+		case EFM13Objective::Torjaeger:
+		{
+			int32 Beste = 0;
+			for (const FFM13Player& P : Squad) Beste = FMath::Max(Beste, P.GoalsSeason);
+			bFertig = Beste >= 10;
+			break;
+		}
+		case EFM13Objective::ZuNull: bFertig = SeasonCleanSheets >= 10; break;
+		default: break;
+		}
+		if (!bFertig) continue;
+		O.bErreicht = true;
+		Book(TEXT("Saisonziel-Praemie"), O.Praemie);
+		ObjectiveRewardsSeason += O.Praemie;
+		AddMessage(FString(TEXT("Ziel erreicht: ")) + O.Name, FString::Printf(TEXT("Praemie: %lld Euro."), (long long)O.Praemie));
+	}
+}
+
+// Saisonabschluss mit Endstand, vor dem Zuruecksetzen der Saison und der Pokale
+void FFM13World::EvaluateSeasonEndObjectives(int32 FinalRank, bool bPromoted)
+{
+	TickSeasonObjectives();
+	for (FFM13Objective& O : SeasonObjectives)
+	{
+		if (O.bErreicht) continue;
+		bool bFertig = false;
+		switch (O.Typ)
+		{
+		case EFM13Objective::Aufstieg: bFertig = bPromoted; break;
+		case EFM13Objective::Meister: bFertig = FinalRank == 1; break;
+		case EFM13Objective::Pokal: bFertig = DfbPokal.Winner == ClubName || Landespokal.Winner == ClubName; break;
+		case EFM13Objective::Europa: bFertig = (FinalRank >= 1 && FinalRank <= 4 && O.StartLiga == 0) || DfbPokal.Winner == ClubName; break;
+		default: break;
+		}
+		if (!bFertig) continue;
+		O.bErreicht = true;
+		Book(TEXT("Saisonziel-Praemie"), O.Praemie);
+		ObjectiveRewardsSeason += O.Praemie;
+		AddMessage(FString(TEXT("Ziel erreicht: ")) + O.Name, FString::Printf(TEXT("Praemie: %lld Euro."), (long long)O.Praemie));
+	}
 }
 
 // Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen

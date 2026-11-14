@@ -495,6 +495,11 @@ namespace FM13Save
 		for (int32 Z : S.HeimZuschauer) { W.ElementObject(); W.Field(TEXT("z"), Z); W.EndObject(); }
 		W.EndArray();
 		W.Field(TEXT("namingSponsor"), S.NamingRightsSponsor); W.Field(TEXT("namingPerMatch"), S.NamingRightsPerMatch);
+		W.Field(TEXT("objSeason"), (int64)S.ObjectivesSeason); W.Field(TEXT("objRewards"), S.ObjectiveRewardsSeason);
+		W.Field(TEXT("objCleanSheets"), (int64)S.SeasonCleanSheets); W.Field(TEXT("objHomeSum"), (int64)S.SeasonHomeFillSum); W.Field(TEXT("objHomeCount"), (int64)S.SeasonHomeCount);
+		W.ArrayKey(TEXT("objectives"));
+		for (const FFM13World::FFM13Objective& O : S.SeasonObjectives) { W.ElementObject(); W.Field(TEXT("typ"), (int64)(uint8)O.Typ); W.Field(TEXT("name"), O.Name); W.Field(TEXT("schwer"), (int64)O.Schwierigkeit); W.Field(TEXT("praemie"), O.Praemie); W.Field(TEXT("liga"), (int64)O.StartLiga); W.Field(TEXT("saison"), (int64)O.StartSeason); W.FieldBool(TEXT("erreicht"), O.bErreicht); W.EndObject(); }
+		W.EndArray();
 		W.ArrayKey(TEXT("youthOffers"));
 		for (const FFM13World::FFM13YouthOffer& O : S.YouthOffers) { W.ElementObject(); W.Field(TEXT("pid"), O.PlayerId); W.Field(TEXT("club"), O.Club); W.Field(TEXT("betrag"), O.Betrag); W.Field(TEXT("season"), O.Season); W.Field(TEXT("bis"), O.Bis); W.EndObject(); }
 		W.EndArray();
@@ -1301,6 +1306,20 @@ namespace FM13Save
 		for (int32 N : R.Items(Root, TEXT("ownRecentForm"))) W.OwnRecentForm.Add((int32)R.Int(N, TEXT("v"), 0));
 		W.NamingRightsSponsor = R.Str(Root, TEXT("namingSponsor"), TEXT(""));
 		W.NamingRightsPerMatch = R.Int(Root, TEXT("namingPerMatch"), 0);
+		W.ObjectivesSeason = (int32)R.Int(Root, TEXT("objSeason"), 0); W.ObjectiveRewardsSeason = R.Int(Root, TEXT("objRewards"), 0);
+		W.SeasonCleanSheets = (int32)R.Int(Root, TEXT("objCleanSheets"), 0); W.SeasonHomeFillSum = (int32)R.Int(Root, TEXT("objHomeSum"), 0); W.SeasonHomeCount = (int32)R.Int(Root, TEXT("objHomeCount"), 0);
+		for (int32 N : R.Items(Root, TEXT("objectives")))
+		{
+			FFM13World::FFM13Objective O;
+			O.Typ = (EFM13Objective)(uint8)R.Int(N, TEXT("typ"), 0);
+			O.Name = R.Str(N, TEXT("name"), TEXT(""));
+			O.Schwierigkeit = (int32)R.Int(N, TEXT("schwer"), 0);
+			O.Praemie = R.Int(N, TEXT("praemie"), 0);
+			O.StartLiga = (int32)R.Int(N, TEXT("liga"), 0);
+			O.StartSeason = (int32)R.Int(N, TEXT("saison"), 0);
+			O.bErreicht = R.Bool(N, TEXT("erreicht"), false);
+			W.SeasonObjectives.Add(O);
+		}
 		for (int32 N : R.Items(Root, TEXT("youthOffers")))
 		{
 			FFM13World::FFM13YouthOffer O;

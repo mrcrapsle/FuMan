@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 37 teilweise, 64 offen, 11 entfallen** (von 145 Modulen in `js/`; die Zahlen stammen aus der Tabelle unten).
+Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 39 teilweise, 62 offen, 11 entfallen** (von 145 Modulen in `js/`; die Zahlen stammen aus der Tabelle unten).
 
 ## Ordner
 
@@ -84,7 +84,7 @@ Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 37 teilwe
 | `promotion-boost.js` | 53 | teilweise | Aufstiegsschub | Aufstiegseuphorie +3 bis Spieltag 10, +1,5 bis 17. Offen: Aufstiegsbudget, TV-Vorschuss |
 | `season-events.js` | 243 | offen | Saison-Ereignisse (Phase 15): Saisoneröffnung vor dem 1. Spieltag, Hallenturnier in der |  |
 | `season-preview.js` | 151 | offen | Saisonvorschau & Experten-Check: vor jeder Saison tippen die Experten die komplette Tabell |  |
-| `season-objectives.js` | 391 | offen | Season Goals & Objectives System |  |
+| `season-objectives.js` | 391 | teilweise | Saisonziele | Zehn Zieltypen, drei bis vier Ziele je Saison (Auswahl ohne Doppelte, Wegfall schon erfüllter Ziele), Prämie = Basis × Schwierigkeit × Liga-Faktor, Fortschritt je Spieltag, Auswertung am Saisonende mit Endstand. Gespeichert. Offen: Anzeige (Panel mit Fortschrittsbalken), Ziele-Verlauf |  |
 | `scenarios.js` | 174 | offen | Karriere-Szenarien: beim "Neues Spiel" wählbare Herausforderungen mit eigenem Start |  |
 | `club-geo.js` | 456 | offen | Vereine mit echten Orten und regionale Ligen (Phase 24.1). |  |
 | `ai-clubs.js` | 136 | portiert | KI-Vereine: jeder KI-Klub hat einen namentlich bekannten Star (team.star). In beiden |  |
@@ -243,7 +243,7 @@ Die Einordnung ist eine Einschätzung aus Titel und Inhalt der Module, nicht aus
 
 | Rang | Modul | Zeilen | Stufe | Warum |
 |---|---|---|---|---|
-| 1 | `season-objectives.js` | 391 | 1 | Saisonziele bestimmen die Vorstandszufriedenheit und damit die Entlassung |
+| 1 | `season-objectives.js` | 391 | 1 | Saisonziele zahlen Prämien (kein Einfluss auf den Vorstand); Kern ist portiert, offen ist die Anzeige |
 | 2 | `women-team.js` | 388 | 1 | Frauenmannschaft mit eigener Liga und Einnahmen |
 | 3 | `secondteam.js` | 919 | 1 | Zweite Mannschaft als eigener Klub mit Kader und Ligaspielen parallel zur Ersten |
 | 4 | `scouting.js` | 366 | 1 | Weltweites Scouting; hier kommen die Talente her |

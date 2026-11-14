@@ -30,6 +30,8 @@ enum class EFM13Position : uint8 { TW = 0, ABW = 1, MIT = 2, ST = 3 };
 enum class EFM13Playstyle : uint8 { Offensiv = 0, Defensiv = 1, Ausgeglichen = 2, Konter = 3 };
 enum class EFM13Expectation : uint8 { Favorit = 0, Offen = 1, Aussenseiter = 2 };
 enum class EFM13SeasonOutcome : uint8 { Stayed = 0, Promoted = 1, Relegated = 2 };
+// Saisonziele (js/season-objectives.js): Reihenfolge wie OBJECTIVE_TYPES
+enum class EFM13Objective : uint8 { Aufstieg = 0, Meister, Pokal, Europa, Finanz, Serie, Nachwuchs, Zuschauer, Torjaeger, ZuNull };
 
 const TCHAR* FM13PositionName(EFM13Position Pos);
 const TCHAR* FM13CharacterName(uint8 Character);
