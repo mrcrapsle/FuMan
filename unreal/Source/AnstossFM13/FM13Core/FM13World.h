@@ -436,6 +436,22 @@ public:
 		FFM13FrauenSponsor Sponsor;
 	};
 	FFM13Frauen Frauen;
+	// Zweite Mannschaft (js/secondteam.js, Schritt 1): eigener Klub, der als Verein in der untersten Liga steht
+	struct FFM13ZweiteMannschaft
+	{
+		bool bAktiv = false;
+		FString Name;
+		int32 Liga = FM13::NumLeagues - 1;
+		FString Formation = TEXT("4-4-2");
+		FString Taktik = TEXT("ausgeglichen");     // ausgeglichen, offensiv, defensiv: offensiv und defensiv geben +1 Stärke
+		TArray<FFM13Player> Kader;
+		TArray<int32> Aufstellung;                  // Indizes in den Kader
+	};
+	FFM13ZweiteMannschaft ZweiteMannschaft;
+	int32 ZweiteStaerke() const;                    // calcSecondTeamStrength(): Mittel der Kondition-bereinigten Stärke, +1 bei klarer Taktik
+	bool FoundZweiteMannschaft(FString& OutReason); // 350.000 Euro, startet in der untersten Liga
+	void SyncZweiteMannschaft();                    // Stärke des Vereins in der Liga nachführen, nach Bedarf neu einhängen
+
 	FRandomStream RngFrauen;                  // eigener Zufall fuer Frauen-Spiele, Markt und Entwicklung
 	bool FoundWomenTeam(FString& OutReason);                         // 60.000 Euro, startet in der Regionalliga
 	bool UpgradeFrauenFoerderung(FString& OutReason);                // Foerderung 1 bis 3

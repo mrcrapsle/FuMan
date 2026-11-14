@@ -306,6 +306,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	if (bHome && StadiumTotal() > 0) { SeasonHomeFillSum += Att * 1000 / StadiumTotal(); SeasonHomeCount++; }
 	TickSeasonObjectives();
 	TickWomenTeam();
+	SyncZweiteMannschaft();
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
@@ -2442,6 +2443,76 @@ void FFM13World::BuildFrauenLiga(int32 Liga)
 	Frauen.LetzteZuschauer = 0;
 	Frauen.ZuschauerSumme = 0;
 	Frauen.ZuschauerSpiele = 0;
+}
+
+// ---------- Zweite Mannschaft (js/secondteam.js, Schritt 1: Gruendung, Staerke, Einhaengen in die Liga) ----------
+namespace
+{
+	const int64 ZweiteGruendungKosten = 350000;
+	// Kader wie in foundSecondTeam(): Position, Staerkespanne
+	struct FZweiteSpieler { EFM13Position Pos; int32 Min; int32 Max; };
+	const FZweiteSpieler ZweiteKaderPlan[18] = {
+		{ EFM13Position::TW, 32, 37 }, { EFM13Position::TW, 28, 33 },
+		{ EFM13Position::ABW, 33, 38 }, { EFM13Position::ABW, 32, 37 }, { EFM13Position::ABW, 30, 35 }, { EFM13Position::ABW, 28, 33 }, { EFM13Position::ABW, 27, 32 }, { EFM13Position::ABW, 26, 31 },
+		{ EFM13Position::MIT, 33, 39 }, { EFM13Position::MIT, 32, 37 }, { EFM13Position::MIT, 30, 35 }, { EFM13Position::MIT, 28, 33 }, { EFM13Position::MIT, 27, 32 }, { EFM13Position::MIT, 26, 31 },
+		{ EFM13Position::ST, 34, 40 }, { EFM13Position::ST, 32, 37 }, { EFM13Position::ST, 29, 34 }, { EFM13Position::ST, 27, 32 } };
+}
+
+int32 FFM13World::ZweiteStaerke() const
+{
+	const FFM13ZweiteMannschaft& Z = ZweiteMannschaft;
+	if (Z.Kader.Num() == 0) return 30;
+	double Summe = 0.0;
+	for (const FFM13Player& P : Z.Kader) Summe += (double)P.Strength * ((double)P.Fitness / 100.0);
+	double Mittel = Summe / (double)Z.Kader.Num();
+	if (Z.Taktik == TEXT("offensiv") || Z.Taktik == TEXT("defensiv")) Mittel += 1.0;
+	return FM13Transfers::JsRunden(Mittel);
+}
+
+// slot = relocateNamedTeamToLevel(): den Verein suchen oder den schwaechsten KI-Verein der Liga ersetzen
+void FFM13World::SyncZweiteMannschaft()
+{
+	FFM13ZweiteMannschaft& Z = ZweiteMannschaft;
+	if (!Z.bAktiv || !Leagues.IsValidIndex(Z.Liga)) return;
+	FFM13League& L = Leagues[Z.Liga];
+	int32 Index = L.FindClub(Z.Name);
+	if (Index < 0)
+	{
+		int32 Schwaechster = -1;
+		for (int32 i = 0; i < L.Clubs.Num(); ++i)
+		{
+			if (L.Clubs[i].bOwn) continue;
+			if (Schwaechster < 0 || L.Clubs[i].Strength < L.Clubs[Schwaechster].Strength) Schwaechster = i;
+		}
+		if (Schwaechster < 0) return;
+		Index = Schwaechster;
+		L.Clubs[Index].Name = Z.Name;
+	}
+	L.Clubs[Index].Strength = ZweiteStaerke();
+}
+
+// foundSecondTeam(): 350.000 Euro, 18 Spielerinnen-Plaetze nach Plan, Aufstellung nach Staerke
+bool FFM13World::FoundZweiteMannschaft(FString& OutReason)
+{
+	FFM13ZweiteMannschaft& Z = ZweiteMannschaft;
+	if (Z.bAktiv) { OutReason = TEXT("Die zweite Mannschaft gibt es schon."); return false; }
+	if (Money < ZweiteGruendungKosten) { OutReason = FString::Printf(TEXT("Nicht genug Vereinskapital (%lld Euro noetig)."), (long long)ZweiteGruendungKosten); return false; }
+	Book(TEXT("Zweite Mannschaft: Gruendung"), -ZweiteGruendungKosten);
+	Z = FFM13ZweiteMannschaft();
+	Z.bAktiv = true;
+	Z.Liga = FM13::NumLeagues - 1;
+	Z.Name = ClubName + TEXT(" II");
+	for (const FZweiteSpieler& Plan : ZweiteKaderPlan) Z.Kader.Add(CreatePlayer(Plan.Pos, Plan.Min, Plan.Max, 18, 30));
+	// Aufstellung: die elf Staerksten
+	TArray<int32> Reihenfolge;
+	for (int32 i = 0; i < Z.Kader.Num(); ++i) Reihenfolge.Add(i);
+	for (int32 k = 0; k < 11 && k < Reihenfolge.Num(); ++k)
+		for (int32 j = Reihenfolge.Num() - 1; j > k; --j)
+			if (Z.Kader[Reihenfolge[j]].Strength > Z.Kader[Reihenfolge[k]].Strength) { const int32 Merk = Reihenfolge[k]; Reihenfolge[k] = Reihenfolge[j]; Reihenfolge[j] = Merk; }
+	for (int32 k = 0; k < 11 && k < Reihenfolge.Num(); ++k) Z.Aufstellung.Add(Reihenfolge[k]);
+	SyncZweiteMannschaft();
+	AddMessage(TEXT("Zweite Mannschaft gegruendet"), Z.Name + TEXT(" startet in der untersten Liga."));
+	return true;
 }
 
 // Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen

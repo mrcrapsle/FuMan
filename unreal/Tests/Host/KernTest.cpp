@@ -1837,6 +1837,30 @@ static void TestFrauenmannschaft()
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.Frauen.Kader.Num() == W.Frauen.Kader.Num() && L.Frauen.Tabelle.Num() == 12 && L.Frauen.Foerderung == 1, "Frauenmannschaft bleibt beim Speichern erhalten (%s)", *Fehler);
 }
 
+static void TestZweiteMannschaft()
+{
+	std::printf("Zweite Mannschaft: Gruendung, Einhaengen in die Liga, Taktik, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Reserve"), 221, 0);
+	W.Money = 10000000;
+	FString G;
+	PRUEFE(W.FoundZweiteMannschaft(G) && W.ZweiteMannschaft.bAktiv, "Gruendung klappt (%s)", *G);
+	PRUEFE(W.Money == 10000000 - 350000, "350.000 Euro kostet die Gruendung");
+	PRUEFE(W.ZweiteMannschaft.Kader.Num() == 18 && W.ZweiteMannschaft.Aufstellung.Num() == 11, "18 Spieler, elf in der Aufstellung");
+	const FFM13League& Unten = W.Leagues[FM13::NumLeagues - 1];
+	const int32 Index = Unten.FindClub(W.ZweiteMannschaft.Name);
+	PRUEFE(Index >= 0 && Unten.Clubs[Index].Strength == W.ZweiteStaerke(), "Die zweite Mannschaft steht in der untersten Liga mit ihrer Staerke");
+	PRUEFE(!W.FoundZweiteMannschaft(G), "Zweite Gruendung wird abgelehnt");
+	const int32 Basis = W.ZweiteStaerke();
+	W.ZweiteMannschaft.Taktik = TEXT("offensiv");
+	PRUEFE(W.ZweiteStaerke() == Basis + 1, "Offensive Taktik gibt +1 Staerke");
+	W.SyncZweiteMannschaft();
+	PRUEFE(W.Leagues[FM13::NumLeagues - 1].Clubs[Index].Strength == W.ZweiteStaerke(), "Die Liga uebernimmt die neue Staerke");
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.ZweiteMannschaft.Kader.Num() == 18 && L.ZweiteMannschaft.Name == W.ZweiteMannschaft.Name && L.ZweiteMannschaft.Taktik == TEXT("offensiv"), "Zweite Mannschaft bleibt beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -3295,6 +3319,7 @@ int main()
 	TestVertragsultimatum();
 	TestSaisonziele();
 	TestFrauenmannschaft();
+	TestZweiteMannschaft();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();

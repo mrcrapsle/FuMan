@@ -519,6 +519,14 @@ namespace FM13Save
 		W.ArrayKey(TEXT("frauenAngebote"));
 		for (const FFM13FrauenSponsor& O : S.Frauen.Angebote) { W.ElementObject(); W.Field(TEXT("name"), O.Name); W.Field(TEXT("geld"), O.JeSpieltag); W.Field(TEXT("saison"), (int64)O.Saison); W.EndObject(); }
 		W.EndArray();
+		W.FieldBool(TEXT("zweiteAktiv"), S.ZweiteMannschaft.bAktiv); W.Field(TEXT("zweiteName"), S.ZweiteMannschaft.Name); W.Field(TEXT("zweiteLiga"), (int64)S.ZweiteMannschaft.Liga);
+		W.Field(TEXT("zweiteFormation"), S.ZweiteMannschaft.Formation); W.Field(TEXT("zweiteTaktik"), S.ZweiteMannschaft.Taktik);
+		W.ArrayKey(TEXT("zweiteKader"));
+		for (const FFM13Player& P : S.ZweiteMannschaft.Kader) { W.ElementObject(); W.Field(TEXT("name"), P.Name); W.Field(TEXT("pos"), (int64)(uint8)P.Pos); W.Field(TEXT("alter"), (int64)P.Age); W.Field(TEXT("staerke"), (int64)P.Strength); W.Field(TEXT("potential"), (int64)P.Potential); W.Field(TEXT("kondition"), (int64)P.Fitness); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("zweiteAufstellung"));
+		for (int32 Index : S.ZweiteMannschaft.Aufstellung) { W.ElementObject(); W.Field(TEXT("index"), (int64)Index); W.EndObject(); }
+		W.EndArray();
 		W.ArrayKey(TEXT("youthOffers"));
 		for (const FFM13World::FFM13YouthOffer& O : S.YouthOffers) { W.ElementObject(); W.Field(TEXT("pid"), O.PlayerId); W.Field(TEXT("club"), O.Club); W.Field(TEXT("betrag"), O.Betrag); W.Field(TEXT("season"), O.Season); W.Field(TEXT("bis"), O.Bis); W.EndObject(); }
 		W.EndArray();
@@ -1384,6 +1392,23 @@ namespace FM13Save
 			O.Name = R.Str(N, TEXT("name"), TEXT("")); O.JeSpieltag = R.Int(N, TEXT("geld"), 0); O.Saison = (int32)R.Int(N, TEXT("saison"), 0);
 			W.Frauen.Angebote.Add(O);
 		}
+		W.ZweiteMannschaft.bAktiv = R.Bool(Root, TEXT("zweiteAktiv"), false);
+		W.ZweiteMannschaft.Name = R.Str(Root, TEXT("zweiteName"), TEXT(""));
+		W.ZweiteMannschaft.Liga = (int32)R.Int(Root, TEXT("zweiteLiga"), FM13::NumLeagues - 1);
+		W.ZweiteMannschaft.Formation = R.Str(Root, TEXT("zweiteFormation"), TEXT("4-4-2"));
+		W.ZweiteMannschaft.Taktik = R.Str(Root, TEXT("zweiteTaktik"), TEXT("ausgeglichen"));
+		for (int32 N : R.Items(Root, TEXT("zweiteKader")))
+		{
+			FFM13Player ZP;
+			ZP.Name = R.Str(N, TEXT("name"), TEXT(""));
+			ZP.Pos = (EFM13Position)(uint8)R.Int(N, TEXT("pos"), 2);
+			ZP.Age = (int32)R.Int(N, TEXT("alter"), 20);
+			ZP.Strength = (int32)R.Int(N, TEXT("staerke"), 40);
+			ZP.Potential = (int32)R.Int(N, TEXT("potential"), 40);
+			ZP.Fitness = (int32)R.Int(N, TEXT("kondition"), 100);
+			W.ZweiteMannschaft.Kader.Add(ZP);
+		}
+		for (int32 N : R.Items(Root, TEXT("zweiteAufstellung"))) W.ZweiteMannschaft.Aufstellung.Add((int32)R.Int(N, TEXT("index"), 0));
 		for (int32 N : R.Items(Root, TEXT("youthOffers")))
 		{
 			FFM13World::FFM13YouthOffer O;
