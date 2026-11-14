@@ -75,6 +75,7 @@ void FFM13World::NewGame(const FString& InClubName, int32 Seed, int32 StartLevel
 	RngTransfer.Initialize(Seed * 31337 + 7);
 	RngIndustrie.Initialize(Seed * 15485863 + 11);
 	RngSponsor.Initialize(Seed * 32452843 + 5);
+	RngFrauen.Initialize(Seed * 49979687 + 17);
 	TransferBudget = LeagueTransferBudget(StartLevel);
 	ResetOekonomieGrunddaten();
 	ClubName = InClubName.IsEmpty() ? FString(TEXT("1.FC Moritz Leipzig")) : InClubName;
@@ -304,6 +305,7 @@ void FFM13World::PlayOwnFixture(FFM13League& L, FFM13Fixture& F)
 	if (OppGoals == 0 && OwnGoals > 0) SeasonCleanSheets++;
 	if (bHome && StadiumTotal() > 0) { SeasonHomeFillSum += Att * 1000 / StadiumTotal(); SeasonHomeCount++; }
 	TickSeasonObjectives();
+	TickWomenTeam();
 	ApplyMatchdayFinances(bHome, OwnGoals > OppGoals, Att);
 	CheckReleaseClauseTriggers();
 	CheckSellOnClausePayouts();
@@ -734,6 +736,7 @@ FFM13SeasonSummary FFM13World::ConcludeSeason()
 	bStrategySet = false;
 	if (Outcome == EFM13SeasonOutcome::Promoted && LeagueLevel == 0) Unlock(TEXT("bundesliga"), &S.NewAchievements);
 	EvaluateSeasonEndObjectives(Rank, Outcome == EFM13SeasonOutcome::Promoted);
+	ConcludeWomenSeason();
 	DevelopPlayers(S);
 	YouthIntake(S);
 
@@ -2124,6 +2127,321 @@ void FFM13World::EvaluateSeasonEndObjectives(int32 FinalRank, bool bPromoted)
 		ObjectiveRewardsSeason += O.Praemie;
 		AddMessage(FString(TEXT("Ziel erreicht: ")) + O.Name, FString::Printf(TEXT("Praemie: %lld Euro."), (long long)O.Praemie));
 	}
+}
+
+// ---------- Frauenmannschaft (js/women-team.js) ----------
+namespace
+{
+	const TCHAR* const FrauenLigaName[3] = { TEXT("Frauen-Bundesliga"), TEXT("2. Frauen-Bundesliga"), TEXT("Frauen-Regionalliga") };
+	const int32 FrauenMinStaerke[3] = { 58, 44, 30 };
+	const int32 FrauenMaxStaerke[3] = { 76, 58, 44 };
+	const int64 FrauenLohn[3] = { 1800, 700, 220 };
+	const int64 FrauenEinnahmen[3] = { 9000, 3200, 900 };
+	const int32 FrauenStadion[3] = { 2500, 900, 350 };
+	const int64 FrauenFoerderKosten[4] = { 0, 40000, 150000, 400000 };
+	const int32 FrauenFoerderWachstum[4] = { 0, 1, 2, 3 };
+	const double FrauenFoerderLohn[4] = { 1.0, 1.2, 1.5, 1.9 };
+	const double FrauenSponsorAnteil[3] = { 0.25, 0.45, 0.7 };
+	const int32 FrauenTeams = 12;
+	const int32 FrauenSpieltage = 22;
+	const int32 FrauenMaxKader = 22;
+	const int32 FrauenMarktGroesse = 4;
+	const int64 FrauenGruendung = 60000;
+	const int64 FrauenTicketPreis = 8;
+	const TCHAR* const FrauenSponsorNamen[8] = { TEXT("Stadtwerke"), TEXT("Autohaus"), TEXT("Sportmarke"), TEXT("Versicherung"), TEXT("Baeckerei-Kette"), TEXT("Energieversorger"), TEXT("Drogeriemarkt"), TEXT("Regionalbank") };
+	const TCHAR* const FrauenVornamen[12] = { TEXT("Lena"), TEXT("Anna"), TEXT("Marie"), TEXT("Sophie"), TEXT("Laura"), TEXT("Julia"), TEXT("Lea"), TEXT("Hannah"), TEXT("Mia"), TEXT("Emma"), TEXT("Sarah"), TEXT("Nina") };
+	const TCHAR* const FrauenNachnamen[12] = { TEXT("Brandt"), TEXT("Keller"), TEXT("Vogel"), TEXT("Jansen"), TEXT("Kraus"), TEXT("Lehmann"), TEXT("Arnold"), TEXT("Busch"), TEXT("Ziegler"), TEXT("Winkler"), TEXT("Seidel"), TEXT("Kaya") };
+	const TCHAR* const FrauenOrte[8] = { TEXT("Gruenwald"), TEXT("Birkenfeld"), TEXT("Seestadt"), TEXT("Lindenau"), TEXT("Talheim"), TEXT("Hohenwart"), TEXT("Muehlbach"), TEXT("Kirchhain") };
+	const TCHAR* const FrauenPraefix[4] = { TEXT("SV"), TEXT("FC"), TEXT("TSV"), TEXT("SC") };
+
+	int32 FrauRand(FRandomStream& R, int32 Min, int32 Max) { return R.RandRange(Min, Max); }
+
+	// Poisson-aehnliche Tore: Erwartungswert aus der Staerkedifferenz, hoechstens neun
+	int32 FrauTore(FRandomStream& R, double Att, double Def)
+	{
+		const double Lambda = FMath::Max(0.2, 1.35 + (Att - Def) * 0.06);
+		int32 Tore = 0;
+		double P = std::exp(-Lambda), S = P;
+		const double U = R.FRand();
+		while (U > S && Tore < 9) { Tore++; P *= Lambda / (double)Tore; S += P; }
+		return Tore;
+	}
+}
+
+
+// Spielerin: Alter 17 bis 32, Staerke der Liga, Potenzial bis 27 Jahre (createWomenPlayer)
+FFM13Frauenspielerin FFM13World::CreateFrauenSpielerin(int32 Liga, const TCHAR* Pos, int32 Staerke)
+{
+	FFM13Frauenspielerin P;
+	P.Alter = FrauRand(RngFrauen, 17, 32);
+	P.Name = FString(FrauenVornamen[FrauRand(RngFrauen, 0, 11)]) + TEXT(" ") + FrauenNachnamen[FrauRand(RngFrauen, 0, 11)];
+	P.Pos = Pos;
+	P.Staerke = Staerke > 0 ? Staerke : FrauRand(RngFrauen, FrauenMinStaerke[Liga] - 2, (FrauenMinStaerke[Liga] + FrauenMaxStaerke[Liga]) / 2);
+	P.Potential = P.Staerke + (P.Alter <= 24 ? FrauRand(RngFrauen, 4, 14) : FrauRand(RngFrauen, 0, 3));
+	return P;
+}
+
+// Markt: je Liga vier Spielerinnen, deren Staerke im oberen Teil der Liga liegt
+void FFM13World::RefreshFrauenMarkt()
+{
+	const int32 Liga = Frauen.Liga;
+	Frauen.Markt.Reset();
+	for (int32 i = 0; i < FrauenMarktGroesse; ++i)
+	{
+		const TCHAR* const Positionen[4] = { TEXT("TW"), TEXT("ABW"), TEXT("MF"), TEXT("ST") };
+		Frauen.Markt.Add(CreateFrauenSpielerin(Liga, Positionen[FrauRand(RngFrauen, 0, 3)], FrauRand(RngFrauen, FrauenMinStaerke[Liga] + 2, FrauenMaxStaerke[Liga])));
+	}
+}
+
+// Drei Sponsorangebote mit verschiedenen Namen; Anteil am Liga-Einkommen
+void FFM13World::RefreshFrauenSponsoren()
+{
+	Frauen.Angebote.Reset();
+	TArray<int32> Frei;
+	for (int32 i = 0; i < 8; ++i) Frei.Add(i);
+	for (int32 k = 0; k < 3; ++k)
+	{
+		const int32 Wahl = FMath::Min(Frei.Num() - 1, FrauRand(RngFrauen, 0, Frei.Num() - 1));
+		FFM13FrauenSponsor S;
+		S.Name = FrauenSponsorNamen[Frei[Wahl]];
+		S.JeSpieltag = FM13Transfers::JsRunden((double)FrauenEinnahmen[Frauen.Liga] * FrauenSponsorAnteil[k]);
+		Frauen.Angebote.Add(S);
+		Frei.RemoveAt(Wahl);
+	}
+}
+
+double FFM13World::WomenOwnStrength() const
+{
+	std::vector<int32> V;
+	for (const FFM13Frauenspielerin& P : Frauen.Kader) V.push_back(P.Staerke);
+	std::sort(V.begin(), V.end(), [](int32 a, int32 b) { return a > b; });
+	const int32 Anzahl = FMath::Min((int32)V.size(), 11);
+	if (Anzahl == 0) return 0.0;
+	double Summe = 0.0;
+	for (int32 i = 0; i < Anzahl; ++i) Summe += V[i];
+	return Summe / (double)Anzahl;
+}
+
+// Tabelle nach Punkten, Tordifferenz und Toren (getWomenTableSorted)
+int32 FFM13World::WomenRank() const
+{
+	std::vector<FFM13FrauenTabelle> V;
+	for (const FFM13FrauenTabelle& T : Frauen.Tabelle) V.push_back(T);
+	std::sort(V.begin(), V.end(), [](const FFM13FrauenTabelle& a, const FFM13FrauenTabelle& b)
+	{
+		if (a.Punkte != b.Punkte) return a.Punkte > b.Punkte;
+		if (a.Tore - a.Gegentore != b.Tore - b.Gegentore) return (a.Tore - a.Gegentore) > (b.Tore - b.Gegentore);
+		return a.Tore > b.Tore;
+	});
+	for (int32 i = 0; i < (int32)V.size(); ++i) if (V[i].bEigen) return i + 1;
+	return FrauenTeams;
+}
+
+// Besucher eines eigenen Heimspiels: Kapazitaet der Liga, gefuellt nach Fans, Staerke und Foerderung
+int32 FFM13World::WomenAttendance()
+{
+	const double Min = FrauenMinStaerke[Frauen.Liga], Max = FrauenMaxStaerke[Frauen.Liga];
+	const double Relativ = FMath::Clamp((WomenOwnStrength() - Min) / (Max - Min), 0.0, 1.0);
+	const double Quote = FMath::Min(0.95, 0.3 + (double)Fans / 250.0 + Relativ * 0.2 + (double)Frauen.Foerderung * 0.04);
+	return (int32)FM13Transfers::JsRunden((double)FrauenStadion[Frauen.Liga] * Quote * (0.9 + 0.2 * RngFrauen.FRand()));
+}
+
+// Eine Runde der Frauen-Liga: Tore, Tabelle, Torschuetzinnen, Zuschauer am eigenen Heimspiel
+void FFM13World::PlayFrauenRunde()
+{
+	const double Eigen = WomenOwnStrength();
+	Frauen.LetzteZuschauer = 0;
+	for (const FFM13FrauenPaar& P : Frauen.Spielplan)
+	{
+		if (P.Runde != Frauen.Runde) continue;
+		FFM13FrauenTabelle& H = Frauen.Tabelle[P.Heim];
+		FFM13FrauenTabelle& A = Frauen.Tabelle[P.Gast];
+		const double Sh = (H.bEigen ? Eigen : (double)H.Staerke) + 2.0;   // Heimvorteil
+		const double Sa = A.bEigen ? Eigen : (double)A.Staerke;
+		const int32 Gh = FrauTore(RngFrauen, Sh, Sa), Ga = FrauTore(RngFrauen, Sa, Sh);
+		H.Gespielt++; A.Gespielt++;
+		H.Tore += Gh; H.Gegentore += Ga; A.Tore += Ga; A.Gegentore += Gh;
+		if (Gh > Ga) { H.Siege++; H.Punkte += 3; A.Niederlagen++; }
+		else if (Gh == Ga) { H.Remis++; A.Remis++; H.Punkte++; A.Punkte++; }
+		else { A.Siege++; A.Punkte += 3; H.Niederlagen++; }
+		if (H.bEigen || A.bEigen)
+		{
+			const int32 EigeneTore = H.bEigen ? Gh : Ga;
+			const int32 Feldspielerinnen = Frauen.Kader.Num();
+			for (int32 i = 0; i < EigeneTore && Feldspielerinnen > 0; ++i)
+			{
+				int32 Wahl = FrauRand(RngFrauen, 0, Feldspielerinnen - 1);
+				for (int32 k = 0; k < Feldspielerinnen; ++k)
+				{
+					const int32 Index = (Wahl + k) % Feldspielerinnen;
+					if (Frauen.Kader[Index].Pos != TEXT("TW")) { Frauen.Kader[Index].Tore++; break; }
+				}
+			}
+		}
+		if (H.bEigen)
+		{
+			const int32 Att = WomenAttendance();
+			Frauen.LetzteZuschauer = Att;
+			Frauen.ZuschauerSumme += Att;
+			Frauen.ZuschauerSpiele++;
+		}
+	}
+	Frauen.Runde++;
+}
+
+// Gruendung: 60.000 Euro, 18 Spielerinnen, startet in der Regionalliga
+bool FFM13World::FoundWomenTeam(FString& OutReason)
+{
+	if (Frauen.bGegruendet) { OutReason = TEXT("Die Frauenmannschaft gibt es schon."); return false; }
+	if (Money < FrauenGruendung) { OutReason = FString::Printf(TEXT("Fuer die Gruendung fehlen %lld Euro."), (long long)(FrauenGruendung - Money)); return false; }
+	Book(TEXT("Frauenmannschaft: Gruendung"), -FrauenGruendung);
+	Frauen = FFM13Frauen();
+	Frauen.bGegruendet = true;
+	Frauen.Liga = 2;
+	const TCHAR* const Positionen[18] = { TEXT("TW"), TEXT("TW"), TEXT("ABW"), TEXT("ABW"), TEXT("ABW"), TEXT("ABW"), TEXT("ABW"), TEXT("ABW"),
+		TEXT("MF"), TEXT("MF"), TEXT("MF"), TEXT("MF"), TEXT("MF"), TEXT("MF"), TEXT("ST"), TEXT("ST"), TEXT("ST"), TEXT("ST") };
+	for (const TCHAR* Pos : Positionen) Frauen.Kader.Add(CreateFrauenSpielerin(2, Pos, 0));
+	BuildFrauenLiga(2);
+	RefreshFrauenMarkt();
+	RefreshFrauenSponsoren();
+	AddMessage(TEXT("Frauenmannschaft gegruendet"), FString(TEXT("Sie startet in der ")) + FrauenLigaName[2] + TEXT("."));
+	return true;
+}
+
+bool FFM13World::UpgradeFrauenFoerderung(FString& OutReason)
+{
+	if (!Frauen.bGegruendet) { OutReason = TEXT("Zuerst die Frauenmannschaft gruenden."); return false; }
+	if (Frauen.Foerderung >= 3) { OutReason = TEXT("Die hoechste Foerderung ist erreicht."); return false; }
+	const int64 Kosten = FrauenFoerderKosten[Frauen.Foerderung + 1];
+	if (Money < Kosten) { OutReason = FString::Printf(TEXT("Nicht genug Geld (%lld Euro)."), (long long)Kosten); return false; }
+	Book(TEXT("Frauenmannschaft: Foerderung"), -Kosten);
+	Frauen.Foerderung++;
+	return true;
+}
+
+bool FFM13World::SignWomenPlayer(int32 MarktIndex, FString& OutReason)
+{
+	if (!Frauen.bGegruendet || !Frauen.Markt.IsValidIndex(MarktIndex)) { OutReason = TEXT("Diese Spielerin ist nicht mehr zu haben."); return false; }
+	const FFM13Frauenspielerin P = Frauen.Markt[MarktIndex];
+	const int64 Ablöse = (int64)P.Staerke * P.Staerke * 5;
+	if (Frauen.Kader.Num() >= FrauenMaxKader) { OutReason = TEXT("Der Kader ist voll."); return false; }
+	if (Money < Ablöse) { OutReason = FString::Printf(TEXT("Es fehlen %lld Euro Ablöse."), (long long)(Ablöse - Money)); return false; }
+	Book(TEXT("Frauenmannschaft: Abloese"), -Ablöse);
+	Frauen.Kader.Add(P);
+	Frauen.Markt.RemoveAt(MarktIndex);
+	return true;
+}
+
+bool FFM13World::SignWomenSponsor(int32 AngebotIndex, FString& OutReason)
+{
+	if (!Frauen.bGegruendet || !Frauen.Angebote.IsValidIndex(AngebotIndex)) { OutReason = TEXT("Dieses Angebot gibt es nicht mehr."); return false; }
+	if (Frauen.Sponsor.Saison == Season) { OutReason = TEXT("Fuer diese Saison gibt es schon einen Sponsor."); return false; }
+	Frauen.Sponsor = Frauen.Angebote[AngebotIndex];
+	Frauen.Sponsor.Saison = Season;
+	Frauen.Angebote.Reset();
+	return true;
+}
+
+// Jeder Herren-Spieltag: eine Frauen-Runde (solange die Saison laeuft), dann Gehaelter und Einnahmen
+void FFM13World::TickWomenTeam()
+{
+	if (!Frauen.bGegruendet) return;
+	const bool bGespielt = Frauen.Runde < FrauenSpieltage;
+	if (bGespielt) PlayFrauenRunde();
+	const int32 Rang = WomenRank();
+	const int64 Gehaelter = FM13Transfers::JsRunden((double)FrauenLohn[Frauen.Liga] * (double)Frauen.Kader.Num() * FrauenFoerderLohn[Frauen.Foerderung] / 4.0);
+	const int64 Verband = FM13Transfers::JsRunden((double)FrauenEinnahmen[Frauen.Liga] * (1.3 - (double)Rang / (double)FrauenTeams * 0.6) * (0.6 + (double)Fans / 125.0));
+	const int64 Tickets = bGespielt ? (int64)Frauen.LetzteZuschauer * FrauenTicketPreis : 0;
+	const int64 Sponsorgeld = bGespielt && Frauen.Sponsor.Saison == Season ? Frauen.Sponsor.JeSpieltag : 0;
+	Book(TEXT("Frauenmannschaft: Gehaelter"), -Gehaelter);
+	Book(TEXT("Frauenmannschaft: Verbandsanteil"), Verband);
+	if (Tickets > 0) Book(TEXT("Frauenmannschaft: Zuschauer"), Tickets);
+	if (Sponsorgeld > 0) Book(TEXT("Frauenmannschaft: Sponsor"), Sponsorgeld);
+}
+
+// Saisonende (concludeWomenSeason): Rest der Runden spielen, Auf-/Abstieg, Entwicklung, neue Liga und neuer Markt
+void FFM13World::ConcludeWomenSeason()
+{
+	if (!Frauen.bGegruendet) return;
+	while (Frauen.Runde < FrauenSpieltage) PlayFrauenRunde();
+	const int32 Rang = WomenRank();
+	const int32 AlteLiga = Frauen.Liga;
+	int32 NeueLiga = AlteLiga;
+	if (Rang == 1 && AlteLiga > 0) NeueLiga--;
+	else if (Rang >= FrauenTeams - 1 && AlteLiga < 2) NeueLiga++;
+	const bool bMeisterin = Rang == 1 && AlteLiga == 0;
+	if (bMeisterin) Fans = FMath::Min(100, Fans + 3);
+	const int32 Wachstum = FrauenFoerderWachstum[Frauen.Foerderung];
+	for (FFM13Frauenspielerin& P : Frauen.Kader)
+	{
+		P.Alter++;
+		const int32 Alterseffekt = P.Alter <= 23 ? 2 : (P.Alter >= 31 ? -2 : 0);
+		int32 Neu = P.Staerke + FrauRand(RngFrauen, -1, 2) + Wachstum + Alterseffekt;
+		if (P.Alter <= 27 && Neu > P.Potential) Neu = FMath::Max(P.Staerke, P.Potential);
+		P.Staerke = FMath::Clamp(Neu, 20, 90);
+		P.Tore = 0;
+	}
+	for (int32 i = 0; i < Frauen.Kader.Num(); ++i)
+		if (Frauen.Kader[i].Alter >= 34)
+		{
+			const FString Pos = Frauen.Kader[i].Pos;
+			Frauen.Kader[i] = CreateFrauenSpielerin(NeueLiga, *Pos, 0);
+		}
+	BuildFrauenLiga(NeueLiga);
+	Frauen.Sponsor = FFM13FrauenSponsor();
+	RefreshFrauenMarkt();
+	RefreshFrauenSponsoren();
+	AddMessage(FString(TEXT("Frauenmannschaft: Platz ")) + FString::Printf(TEXT("%d"), Rang), NeueLiga > AlteLiga ? FString(TEXT("Abstieg in die ")) + FrauenLigaName[NeueLiga] : (NeueLiga < AlteLiga ? FString(TEXT("Aufstieg in die ")) + FrauenLigaName[NeueLiga] : FString(TEXT("Klassenerhalt."))));
+}
+
+// Kreisverfahren wie in buildWomenLeague: zuerst Hin-, dann Rueckrunde mit getauschten Heimspielen
+void FFM13World::BuildFrauenLiga(int32 Liga)
+{
+	Frauen.Liga = Liga;
+	Frauen.Tabelle.Reset();
+	FFM13FrauenTabelle Eigen;
+	Eigen.Name = ClubName + TEXT(" Frauen");
+	Eigen.bEigen = true;
+	Frauen.Tabelle.Add(Eigen);
+	while (Frauen.Tabelle.Num() < FrauenTeams)
+	{
+		const FString Name = FString(FrauenPraefix[FrauRand(RngFrauen, 0, 3)]) + TEXT(" ") + FrauenOrte[FrauRand(RngFrauen, 0, 7)];
+		bool bDoppelt = false;
+		for (const FFM13FrauenTabelle& T : Frauen.Tabelle) if (T.Name == Name) bDoppelt = true;
+		if (bDoppelt) continue;
+		FFM13FrauenTabelle T;
+		T.Name = Name;
+		T.Staerke = FrauRand(RngFrauen, FrauenMinStaerke[Liga], FrauenMaxStaerke[Liga]);
+		Frauen.Tabelle.Add(T);
+	}
+	Frauen.Spielplan.Reset();
+	TArray<int32> Idx;
+	for (int32 i = 0; i < FrauenTeams; ++i) Idx.Add(i);
+	for (int32 r = 0; r < FrauenTeams - 1; ++r)
+	{
+		for (int32 i = 0; i < FrauenTeams / 2; ++i)
+		{
+			int32 H = Idx[i], A = Idx[FrauenTeams - 1 - i];
+			if (r % 2 == 1) { const int32 Merk = H; H = A; A = Merk; }
+			FFM13FrauenPaar P; P.Runde = r; P.Heim = H; P.Gast = A;
+			Frauen.Spielplan.Add(P);
+		}
+		const int32 Letzter = Idx.Last();
+		Idx.RemoveAt(Idx.Num() - 1);
+		Idx.Insert(Letzter, 1);
+	}
+	const int32 Hinrunde = FrauenTeams - 1;
+	for (int32 k = 0; k < Hinrunde * (FrauenTeams / 2); ++k)
+	{
+		FFM13FrauenPaar P = Frauen.Spielplan[k];
+		P.Runde = P.Runde + Hinrunde;
+		{ const int32 Merk = P.Heim; P.Heim = P.Gast; P.Gast = Merk; }
+		Frauen.Spielplan.Add(P);
+	}
+	Frauen.Runde = 0;
+	Frauen.LetzteZuschauer = 0;
+	Frauen.ZuschauerSumme = 0;
+	Frauen.ZuschauerSpiele = 0;
 }
 
 // Einnahmen eines Heimspiels nach Kategorie (matchRevenue in js/finances.js): Stehplaetze, Sitzplaetze, VIP begrenzt auf die Logen

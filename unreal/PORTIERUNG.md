@@ -8,7 +8,7 @@ Bedeutung der Spalte „Stand“:
 - **offen**: Noch nicht in Unreal.
 - **entfällt**: Gehört zur Browser-Oberfläche. In Unreal übernimmt das die Engine selbst (Slate, Eingaben, Lokalisierung).
 
-Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 39 teilweise, 62 offen, 11 entfallen** (von 145 Modulen in `js/`; die Zahlen stammen aus der Tabelle unten).
+Stand nach den Saisonzielen und der Frauenmannschaft: **33 portiert, 40 teilweise, 61 offen, 11 entfallen** (von 145 Modulen in `js/`; die Zahlen stammen aus der Tabelle unten).
 
 ## Ordner
 
@@ -111,7 +111,7 @@ Stand nach den Bot-Schritten und den Vertragsultimaten: **33 portiert, 39 teilwe
 | `bonusclauses.js` | 140 | portiert | ERFOLGSBASIERTE VERTRAGSBONI |  |
 | `pro-loans.js` | 74 | offen | Profis verleihen (Phase 25.20): bisher ließen sich nur Spieler der zweiten Mannschaft und  |  |
 | `secondteam.js` | 919 | offen | ZWEITE MANNSCHAFT: eigenständiger Klub, der parallel zur ersten Mannschaft ganz |  |
-| `women-team.js` | 388 | offen | Frauenmannschaft: eigenes Team mit Kader, eigener Liga (12 Teams, 22 Spieltage parallel zu |  |
+| `women-team.js` | 388 | teilweise | Frauenmannschaft | Gründung (60.000 €), drei Ligen mit zwölf Teams und 22 Runden parallel zu den Herren-Spieltagen, Kreisverfahren-Spielplan, Tore nach Poisson-Verteilung, Tabelle, Zuschauer (Kapazität je Liga, Förderung, Fans), Finanzen je Spieltag (Gehälter nach Förderung, Verbandsanteil, Tickets, Sponsor), Förderung 1 bis 3, Spielerinnenmarkt mit Ablöse, Sponsorwahl, Saisonende mit Auf- und Abstieg und Entwicklung. Gespeichert. Offen: Anzeige (Panel, Tabelle, Kader), Saisonhistorie, Pokal-Meldung und Titelliste |  |
 | `avatars.js` | 152 | offen | SPIELERPORTRÄTS: PROZEDURALE AVATARE |  |
 
 ### Transfers

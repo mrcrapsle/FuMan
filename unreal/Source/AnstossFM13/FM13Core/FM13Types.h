@@ -31,6 +31,11 @@ enum class EFM13Playstyle : uint8 { Offensiv = 0, Defensiv = 1, Ausgeglichen = 2
 enum class EFM13Expectation : uint8 { Favorit = 0, Offen = 1, Aussenseiter = 2 };
 enum class EFM13SeasonOutcome : uint8 { Stayed = 0, Promoted = 1, Relegated = 2 };
 // Saisonziele (js/season-objectives.js): Reihenfolge wie OBJECTIVE_TYPES
+// Frauenmannschaft (js/women-team.js): Spielerin, Tabellenzeile, Spielpaar, Sponsor
+struct FFM13Frauenspielerin { FString Name; FString Pos; int32 Alter = 20; int32 Staerke = 40; int32 Potential = 40; int32 Tore = 0; };
+struct FFM13FrauenTabelle { FString Name; bool bEigen = false; int32 Staerke = 40; int32 Gespielt = 0; int32 Siege = 0; int32 Remis = 0; int32 Niederlagen = 0; int32 Tore = 0; int32 Gegentore = 0; int32 Punkte = 0; };
+struct FFM13FrauenPaar { int32 Runde = 0; int32 Heim = 0; int32 Gast = 0; };
+struct FFM13FrauenSponsor { FString Name; int64 JeSpieltag = 0; int32 Saison = 0; };
 enum class EFM13Objective : uint8 { Aufstieg = 0, Meister, Pokal, Europa, Finanz, Serie, Nachwuchs, Zuschauer, Torjaeger, ZuNull };
 
 const TCHAR* FM13PositionName(EFM13Position Pos);

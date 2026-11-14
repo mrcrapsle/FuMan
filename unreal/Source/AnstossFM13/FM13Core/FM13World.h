@@ -418,6 +418,39 @@ public:
 	void TickSeasonObjectives();                                      // jeden Spieltag: Fortschritt, Prämie bei Erreichen
 	void EvaluateSeasonEndObjectives(int32 FinalRank, bool bPromoted); // Saisonabschluss mit Endstand
 	int64 ObjectiveReward(EFM13Objective Typ, int32 Liga) const;      // Basis x Schwierigkeit x Liga-Faktor
+	// Frauenmannschaft (js/women-team.js): eigene Liga parallel zu den Herren-Spieltagen
+	struct FFM13Frauen
+	{
+		bool bGegruendet = false;
+		int32 Liga = 2;                       // 0 Bundesliga, 1 2. Liga, 2 Regionalliga
+		int32 Foerderung = 0;                 // 0 bis 3
+		int32 Runde = 0;                      // gespielte Runden (22 je Saison)
+		int32 LetzteZuschauer = 0;            // Zuschauer des letzten eigenen Heimspiels
+		int64 ZuschauerSumme = 0;
+		int32 ZuschauerSpiele = 0;
+		TArray<FFM13Frauenspielerin> Kader;
+		TArray<FFM13Frauenspielerin> Markt;
+		TArray<FFM13FrauenTabelle> Tabelle;   // Index 0 ist der eigene Verein
+		TArray<FFM13FrauenPaar> Spielplan;
+		TArray<FFM13FrauenSponsor> Angebote;
+		FFM13FrauenSponsor Sponsor;
+	};
+	FFM13Frauen Frauen;
+	FRandomStream RngFrauen;                  // eigener Zufall fuer Frauen-Spiele, Markt und Entwicklung
+	bool FoundWomenTeam(FString& OutReason);                         // 60.000 Euro, startet in der Regionalliga
+	bool UpgradeFrauenFoerderung(FString& OutReason);                // Foerderung 1 bis 3
+	bool SignWomenPlayer(int32 MarktIndex, FString& OutReason);      // Ablöse sofort fällig
+	bool SignWomenSponsor(int32 AngebotIndex, FString& OutReason);
+	void TickWomenTeam();                                            // jeden Herren-Spieltag: Runde und Finanzen
+	void ConcludeWomenSeason();                                      // Saisonende: Auf-/Abstieg, Entwicklung, neuer Markt
+	FFM13Frauenspielerin CreateFrauenSpielerin(int32 Liga, const TCHAR* Pos, int32 Staerke);
+	void RefreshFrauenMarkt();
+	void RefreshFrauenSponsoren();
+	void BuildFrauenLiga(int32 Liga);
+	void PlayFrauenRunde();
+	int32 WomenRank() const;
+	int32 WomenAttendance();
+	double WomenOwnStrength() const;                                 // Mittel der elf besten Spielerinnen
 	void TickContractUltimatum();                                    // jeden Spieltag: Ausloesung, Erinnerung, Frist
 	bool ResolveUltimatumRenew(FString& OutReason);                  // Verlaengerung ab 15 % Marktwert, je Wiederholung teurer
 	bool ResolveUltimatumSell(FString& OutReason);                   // Verkauf

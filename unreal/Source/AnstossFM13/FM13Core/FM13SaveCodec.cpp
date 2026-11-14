@@ -500,6 +500,25 @@ namespace FM13Save
 		W.ArrayKey(TEXT("objectives"));
 		for (const FFM13World::FFM13Objective& O : S.SeasonObjectives) { W.ElementObject(); W.Field(TEXT("typ"), (int64)(uint8)O.Typ); W.Field(TEXT("name"), O.Name); W.Field(TEXT("schwer"), (int64)O.Schwierigkeit); W.Field(TEXT("praemie"), O.Praemie); W.Field(TEXT("liga"), (int64)O.StartLiga); W.Field(TEXT("saison"), (int64)O.StartSeason); W.FieldBool(TEXT("erreicht"), O.bErreicht); W.EndObject(); }
 		W.EndArray();
+		W.FieldBool(TEXT("frauenGegruendet"), S.Frauen.bGegruendet); W.Field(TEXT("frauenLiga"), (int64)S.Frauen.Liga); W.Field(TEXT("frauenFoerderung"), (int64)S.Frauen.Foerderung);
+		W.Field(TEXT("frauenRunde"), (int64)S.Frauen.Runde); W.Field(TEXT("frauenLetzte"), (int64)S.Frauen.LetzteZuschauer); W.Field(TEXT("frauenZuschSumme"), S.Frauen.ZuschauerSumme); W.Field(TEXT("frauenZuschSpiele"), (int64)S.Frauen.ZuschauerSpiele);
+		W.Field(TEXT("frauenSponsorName"), S.Frauen.Sponsor.Name); W.Field(TEXT("frauenSponsorGeld"), S.Frauen.Sponsor.JeSpieltag); W.Field(TEXT("frauenSponsorSaison"), (int64)S.Frauen.Sponsor.Saison);
+		W.Field(TEXT("rngFrauenSeed"), (int64)S.RngFrauen.GetCurrentSeed());
+		W.ArrayKey(TEXT("frauenKader"));
+		for (const FFM13Frauenspielerin& P : S.Frauen.Kader) { W.ElementObject(); W.Field(TEXT("name"), P.Name); W.Field(TEXT("pos"), P.Pos); W.Field(TEXT("alter"), (int64)P.Alter); W.Field(TEXT("staerke"), (int64)P.Staerke); W.Field(TEXT("potential"), (int64)P.Potential); W.Field(TEXT("tore"), (int64)P.Tore); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("frauenMarkt"));
+		for (const FFM13Frauenspielerin& P : S.Frauen.Markt) { W.ElementObject(); W.Field(TEXT("name"), P.Name); W.Field(TEXT("pos"), P.Pos); W.Field(TEXT("alter"), (int64)P.Alter); W.Field(TEXT("staerke"), (int64)P.Staerke); W.Field(TEXT("potential"), (int64)P.Potential); W.Field(TEXT("tore"), (int64)P.Tore); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("frauenTabelle"));
+		for (const FFM13FrauenTabelle& T : S.Frauen.Tabelle) { W.ElementObject(); W.Field(TEXT("name"), T.Name); W.FieldBool(TEXT("eigen"), T.bEigen); W.Field(TEXT("staerke"), (int64)T.Staerke); W.Field(TEXT("gespielt"), (int64)T.Gespielt); W.Field(TEXT("siege"), (int64)T.Siege); W.Field(TEXT("remis"), (int64)T.Remis); W.Field(TEXT("niederlagen"), (int64)T.Niederlagen); W.Field(TEXT("tore"), (int64)T.Tore); W.Field(TEXT("gegentore"), (int64)T.Gegentore); W.Field(TEXT("punkte"), (int64)T.Punkte); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("frauenSpielplan"));
+		for (const FFM13FrauenPaar& P : S.Frauen.Spielplan) { W.ElementObject(); W.Field(TEXT("runde"), (int64)P.Runde); W.Field(TEXT("heim"), (int64)P.Heim); W.Field(TEXT("gast"), (int64)P.Gast); W.EndObject(); }
+		W.EndArray();
+		W.ArrayKey(TEXT("frauenAngebote"));
+		for (const FFM13FrauenSponsor& O : S.Frauen.Angebote) { W.ElementObject(); W.Field(TEXT("name"), O.Name); W.Field(TEXT("geld"), O.JeSpieltag); W.Field(TEXT("saison"), (int64)O.Saison); W.EndObject(); }
+		W.EndArray();
 		W.ArrayKey(TEXT("youthOffers"));
 		for (const FFM13World::FFM13YouthOffer& O : S.YouthOffers) { W.ElementObject(); W.Field(TEXT("pid"), O.PlayerId); W.Field(TEXT("club"), O.Club); W.Field(TEXT("betrag"), O.Betrag); W.Field(TEXT("season"), O.Season); W.Field(TEXT("bis"), O.Bis); W.EndObject(); }
 		W.EndArray();
@@ -1319,6 +1338,51 @@ namespace FM13Save
 			O.StartSeason = (int32)R.Int(N, TEXT("saison"), 0);
 			O.bErreicht = R.Bool(N, TEXT("erreicht"), false);
 			W.SeasonObjectives.Add(O);
+		}
+		W.Frauen.bGegruendet = R.Bool(Root, TEXT("frauenGegruendet"), false);
+		W.Frauen.Liga = (int32)R.Int(Root, TEXT("frauenLiga"), 2);
+		W.Frauen.Foerderung = (int32)R.Int(Root, TEXT("frauenFoerderung"), 0);
+		W.Frauen.Runde = (int32)R.Int(Root, TEXT("frauenRunde"), 0);
+		W.Frauen.LetzteZuschauer = (int32)R.Int(Root, TEXT("frauenLetzte"), 0);
+		W.Frauen.ZuschauerSumme = R.Int(Root, TEXT("frauenZuschSumme"), 0);
+		W.Frauen.ZuschauerSpiele = (int32)R.Int(Root, TEXT("frauenZuschSpiele"), 0);
+		W.Frauen.Sponsor.Name = R.Str(Root, TEXT("frauenSponsorName"), TEXT(""));
+		W.Frauen.Sponsor.JeSpieltag = R.Int(Root, TEXT("frauenSponsorGeld"), 0);
+		W.Frauen.Sponsor.Saison = (int32)R.Int(Root, TEXT("frauenSponsorSaison"), 0);
+		W.RngFrauen.Initialize((int32)R.Int(Root, TEXT("rngFrauenSeed"), 1));
+		for (int32 N : R.Items(Root, TEXT("frauenKader")))
+		{
+			FFM13Frauenspielerin FP;
+			FP.Name = R.Str(N, TEXT("name"), TEXT("")); FP.Pos = R.Str(N, TEXT("pos"), TEXT("MF")); FP.Alter = (int32)R.Int(N, TEXT("alter"), 20);
+			FP.Staerke = (int32)R.Int(N, TEXT("staerke"), 40); FP.Potential = (int32)R.Int(N, TEXT("potential"), 40); FP.Tore = (int32)R.Int(N, TEXT("tore"), 0);
+			W.Frauen.Kader.Add(FP);
+		}
+		for (int32 N : R.Items(Root, TEXT("frauenMarkt")))
+		{
+			FFM13Frauenspielerin FP;
+			FP.Name = R.Str(N, TEXT("name"), TEXT("")); FP.Pos = R.Str(N, TEXT("pos"), TEXT("MF")); FP.Alter = (int32)R.Int(N, TEXT("alter"), 20);
+			FP.Staerke = (int32)R.Int(N, TEXT("staerke"), 40); FP.Potential = (int32)R.Int(N, TEXT("potential"), 40); FP.Tore = (int32)R.Int(N, TEXT("tore"), 0);
+			W.Frauen.Markt.Add(FP);
+		}
+		for (int32 N : R.Items(Root, TEXT("frauenTabelle")))
+		{
+			FFM13FrauenTabelle T;
+			T.Name = R.Str(N, TEXT("name"), TEXT("")); T.bEigen = R.Bool(N, TEXT("eigen"), false); T.Staerke = (int32)R.Int(N, TEXT("staerke"), 40);
+			T.Gespielt = (int32)R.Int(N, TEXT("gespielt"), 0); T.Siege = (int32)R.Int(N, TEXT("siege"), 0); T.Remis = (int32)R.Int(N, TEXT("remis"), 0);
+			T.Niederlagen = (int32)R.Int(N, TEXT("niederlagen"), 0); T.Tore = (int32)R.Int(N, TEXT("tore"), 0); T.Gegentore = (int32)R.Int(N, TEXT("gegentore"), 0); T.Punkte = (int32)R.Int(N, TEXT("punkte"), 0);
+			W.Frauen.Tabelle.Add(T);
+		}
+		for (int32 N : R.Items(Root, TEXT("frauenSpielplan")))
+		{
+			FFM13FrauenPaar FPaar;
+			FPaar.Runde = (int32)R.Int(N, TEXT("runde"), 0); FPaar.Heim = (int32)R.Int(N, TEXT("heim"), 0); FPaar.Gast = (int32)R.Int(N, TEXT("gast"), 0);
+			W.Frauen.Spielplan.Add(FPaar);
+		}
+		for (int32 N : R.Items(Root, TEXT("frauenAngebote")))
+		{
+			FFM13FrauenSponsor O;
+			O.Name = R.Str(N, TEXT("name"), TEXT("")); O.JeSpieltag = R.Int(N, TEXT("geld"), 0); O.Saison = (int32)R.Int(N, TEXT("saison"), 0);
+			W.Frauen.Angebote.Add(O);
 		}
 		for (int32 N : R.Items(Root, TEXT("youthOffers")))
 		{

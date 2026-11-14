@@ -1800,6 +1800,43 @@ static void TestSaisonziele()
 	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.SeasonObjectives.Num() == 2 && L.SeasonObjectives[0].bErreicht && L.ObjectiveRewardsSeason == W.ObjectiveRewardsSeason, "Saisonziele bleiben beim Speichern erhalten (%s)", *Fehler);
 }
 
+static void TestFrauenmannschaft()
+{
+	std::printf("Frauenmannschaft: Gruendung, 22 Runden, Zuschauer und Finanzen, Saisonende, Speichern\n");
+	FFM13World W;
+	W.NewGame(TEXT("Frauen"), 211, 0);
+	W.Money = 100000000;
+	FString G;
+	PRUEFE(W.FoundWomenTeam(G) && W.Frauen.bGegruendet, "Gruendung klappt (%s)", *G);
+	PRUEFE(W.Money == 100000000 - 60000 && W.Frauen.Liga == 2 && W.Frauen.Kader.Num() == 18, "60.000 Euro, Regionalliga, 18 Spielerinnen");
+	PRUEFE(W.Frauen.Tabelle.Num() == 12 && W.Frauen.Spielplan.Num() == 132, "Zwoelf Teams, zwei Runden je Gegner (132 Spiele)");
+	PRUEFE(!W.FoundWomenTeam(G), "Zweite Gruendung wird abgelehnt");
+	const int64 Vorher = W.Money;
+	for (int32 t = 0; t < 22; ++t) W.TickWomenTeam();
+	int32 Spiele = 0;
+	for (const FFM13FrauenTabelle& T : W.Frauen.Tabelle) if (T.Gespielt == 22) Spiele++;
+	PRUEFE(W.Frauen.Runde == 22 && Spiele == 12, "Nach 22 Spieltagen hat jede Mannschaft 22 Spiele");
+	PRUEFE(W.Frauen.ZuschauerSpiele == 11, "Elf eigene Heimspiele (%d)", W.Frauen.ZuschauerSpiele);
+	PRUEFE(W.Money != Vorher, "Gehaelter und Verbandsanteil werden je Spieltag gebucht");
+	// Punkte: jedes Spiel gibt drei Punkte oder zwei Punkte mit einem Remis
+	int32 Punkte = 0;
+	for (const FFM13FrauenTabelle& T : W.Frauen.Tabelle) Punkte += T.Punkte;
+	PRUEFE(Punkte >= 22 * 6 * 2 && Punkte <= 22 * 6 * 3, "Punkte summieren sich (%d)", Punkte);
+	PRUEFE(W.UpgradeFrauenFoerderung(G) && W.Frauen.Foerderung == 1, "Foerderung 1 kostet 40.000 (%s)", *G);
+	PRUEFE(W.SignWomenPlayer(0, G) && W.Frauen.Kader.Num() == 19, "Spielerin verpflichtet (%s)", *G);
+	PRUEFE(W.SignWomenSponsor(0, G) && W.Frauen.Sponsor.Saison == W.Season, "Sponsor unterschrieben (%s)", *G);
+	PRUEFE(!W.SignWomenSponsor(0, G), "Zweiter Sponsor in derselben Saison wird abgelehnt");
+	// Saisonende: Auf-/Abstieg, neue Runde, Entwicklung
+	const int32 Alter = W.Frauen.Kader[0].Alter;
+	W.ConcludeWomenSeason();
+	PRUEFE(W.Frauen.Runde == 0 && W.Frauen.Kader[0].Alter == Alter + 1, "Neue Saison: Runde 0, Spielerinnen werden ein Jahr aelter");
+	PRUEFE(W.Frauen.Angebote.Num() == 3 && W.Frauen.Markt.Num() == 4, "Neuer Markt und drei Sponsorangebote");
+	// Speichern
+	FFM13World L;
+	FString Fehler;
+	PRUEFE(FM13Save::Decode(FM13Save::Encode(W), L, Fehler) && L.Frauen.Kader.Num() == W.Frauen.Kader.Num() && L.Frauen.Tabelle.Num() == 12 && L.Frauen.Foerderung == 1, "Frauenmannschaft bleibt beim Speichern erhalten (%s)", *Fehler);
+}
+
 static void TestCampusInternat()
 {
 	std::printf("Campus-Internat: Kosten je Stufe, Bauzeit, Lizenzanzeige, Nachwuchs, Speichern\n");
@@ -3257,6 +3294,7 @@ int main()
 	TestNamensrechte();
 	TestVertragsultimatum();
 	TestSaisonziele();
+	TestFrauenmannschaft();
 	TestDfbNachfrist();
 	TestKonditionSaison();
 	TestSpielerNoten();
